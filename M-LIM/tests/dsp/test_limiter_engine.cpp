@@ -698,3 +698,130 @@ TEST_CASE("test_mono_metering_mirrors_L_to_R", "[LimiterEngine]")
     REQUIRE(md.inputLevelR == Catch::Approx(md.inputLevelL).margin(1e-6f));
     REQUIRE(md.outputLevelR == Catch::Approx(md.outputLevelL).margin(1e-6f));
 }
+
+// ============================================================================
+// test_no_deferred_flag_when_factor_unchanged
+// After prepare() with default oversampling (factor=0), processing a block
+// must NOT set the deferred oversampling flag.
+// ============================================================================
+TEST_CASE("test_no_deferred_flag_when_factor_unchanged", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);  // factor=0 by default
+
+    // No setOversamplingFactor() call — mParamsDirty is false after prepare()
+    juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+    engine.process(buf);
+
+    REQUIRE(engine.hasDeferredOversamplingChange() == false);
+}
+
+// ============================================================================
+// test_deferred_flag_set_after_factor_change
+// After prepare() at factor=0, calling setOversamplingFactor(2) and then
+// processing one block must set hasDeferredOversamplingChange() to true.
+// ============================================================================
+TEST_CASE("test_deferred_flag_set_after_factor_change", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);  // factor=0
+
+    engine.setOversamplingFactor(2);  // change to 4x — marks params dirty
+
+    juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+    engine.process(buf);  // applyPendingParams() detects mismatch, sets deferred flag
+
+    REQUIRE(engine.hasDeferredOversamplingChange() == true);
+}
+
+// ============================================================================
+// test_deferred_flag_cleared_after_reprepare
+// Once the deferred flag is set, calling prepare() (the "message-thread action")
+// with the new factor must clear the flag. A subsequent process() block must
+// also leave the flag false.
+// ============================================================================
+TEST_CASE("test_deferred_flag_cleared_after_reprepare", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);  // factor=0
+
+    // Trigger deferred change
+    engine.setOversamplingFactor(2);
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+        engine.process(buf);
+    }
+    REQUIRE(engine.hasDeferredOversamplingChange() == true);
+
+    // Simulate message-thread response: re-prepare with the new factor already
+    // stored in mOversamplingFactor (setOversamplingFactor already set it).
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    REQUIRE(engine.hasDeferredOversamplingChange() == false);
+
+    // Processing a further block must not re-set the flag
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+        engine.process(buf);
+    }
+    REQUIRE(engine.hasDeferredOversamplingChange() == false);
+}
+
+// ============================================================================
+// test_audio_bounded_during_deferred_period
+// While an oversampling factor change is pending (between setOversamplingFactor
+// and re-prepare), the engine must continue processing at the OLD factor and
+// must not produce output that exceeds the ceiling.
+// ============================================================================
+TEST_CASE("test_audio_bounded_during_deferred_period", "[LimiterEngine]")
+{
+    const float ceilingLin = 1.0f;  // 0 dBFS
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);  // factor=0
+    engine.setOutputCeiling(0.0f);
+
+    // Trigger the deferred oversampling change
+    engine.setOversamplingFactor(2);
+
+    // Process several blocks — change is deferred, engine runs at old factor
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(5.0f, kBlockSize);  // loud signal
+        engine.process(buf);
+
+        const float peak = maxAbsValue(buf);
+        INFO("Deferred period block " << i << " peak: " << peak);
+        REQUIRE(peak <= ceilingLin + 0.01f);  // must stay within ceiling
+    }
+
+    REQUIRE(engine.hasDeferredOversamplingChange() == true);
+}
+
+// ============================================================================
+// test_latency_changes_after_reprepare
+// getLatencySamples() should reflect the new oversampling factor after
+// re-prepare is called. Factor=0 (no oversampling) has lower latency than
+// factor=2 (4x oversampling) which adds oversampler latency.
+// ============================================================================
+TEST_CASE("test_latency_changes_after_reprepare", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+
+    // Prepare with no oversampling (factor=0)
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    const int latencyNoOS = engine.getLatencySamples();
+    INFO("Latency at factor=0: " << latencyNoOS);
+    REQUIRE(latencyNoOS >= 0);
+
+    // Request factor=2 (4x oversampling) and re-prepare (message-thread action)
+    engine.setOversamplingFactor(2);
+    engine.prepare(kSampleRate, kBlockSize, 2);  // re-prepare with factor=2 active
+    const int latencyWithOS = engine.getLatencySamples();
+    INFO("Latency at factor=2: " << latencyWithOS);
+
+    // 4x oversampling adds latency through the polyphase filter
+    REQUIRE(latencyWithOS > latencyNoOS);
+
+    // Deferred flag must be clear after prepare()
+    REQUIRE(engine.hasDeferredOversamplingChange() == false);
+}
