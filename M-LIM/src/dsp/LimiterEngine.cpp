@@ -297,6 +297,16 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // ------------------------------------------------------------------
     // Step 11: Meter — measure output and true peak
     // ------------------------------------------------------------------
+    const float grL = mTransientLimiter.getGainReduction();
+    const float grS = mLevelingLimiter.getGainReduction();
+    const float totalGR = juce::jmax(grL + grS, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
+    snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);
+}
+
+void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
+                                         float inLevelL, float inLevelR,
+                                         float totalGR, int numChannels, int numSamples)
+{
     float outLevelL = peakLevel(buffer, 0, numSamples);
     float outLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outLevelL;
 
@@ -310,10 +320,6 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
             mTruePeakR.processBlock(buffer.getReadPointer(0), numSamples);
     }
 
-    // Combined GR from both stages
-    const float grL = mTransientLimiter.getGainReduction();
-    const float grS = mLevelingLimiter.getGainReduction();
-    const float totalGR = juce::jmax(grL + grS, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
     mGRdB.store(totalGR);
     mTruePkL.store(mTruePeakL.getPeak());
     mTruePkR.store(mTruePeakR.getPeak());
