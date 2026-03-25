@@ -23,6 +23,7 @@ set(MLIM_TEST_CASES
     dsp/test_leveling_limiter.cpp
     dsp/test_true_peak.cpp
     dsp/test_loudness_meter_accuracy.cpp
+    dsp/test_dsp_edge_cases.cpp
 )
 
 # Catch2 test executable
