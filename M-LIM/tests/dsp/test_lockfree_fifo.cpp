@@ -154,8 +154,8 @@ TEST_CASE("test_waveform_buffer_roundtrip", "[lockfree_fifo]")
     LockFreeFIFO<MeterData> fifo(4);
 
     MeterData in;
-    in.waveformSize = 512;
-    for (int i = 0; i < 512; ++i)
+    in.waveformSize = MeterData::kMaxWaveformSamples;
+    for (int i = 0; i < MeterData::kMaxWaveformSamples; ++i)
         in.waveformBuffer[static_cast<std::size_t>(i)] = static_cast<float>(i) * 0.001f;
 
     REQUIRE(fifo.push(in));
@@ -163,8 +163,8 @@ TEST_CASE("test_waveform_buffer_roundtrip", "[lockfree_fifo]")
     MeterData out;
     REQUIRE(fifo.pop(out));
 
-    CHECK(out.waveformSize == 512);
-    for (int i = 0; i < 512; ++i)
+    CHECK(out.waveformSize == MeterData::kMaxWaveformSamples);
+    for (int i = 0; i < MeterData::kMaxWaveformSamples; ++i)
         CHECK(out.waveformBuffer[static_cast<std::size_t>(i)]
               == Catch::Approx(static_cast<float>(i) * 0.001f));
 }
