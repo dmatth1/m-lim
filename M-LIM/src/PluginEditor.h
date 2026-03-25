@@ -65,7 +65,7 @@ private:
     static constexpr int kOutputMeterW   = 20;
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
-    static constexpr int kGainSliderW    = 34;  // waveform-edge input gain slider width
+    static constexpr int kGainSliderW    = 20;  // waveform-edge input gain slider width
     static constexpr int kGainLabelH     = 14;  // "GAIN" label height
     static constexpr int kGainValueH     = 12;  // value readout height
 

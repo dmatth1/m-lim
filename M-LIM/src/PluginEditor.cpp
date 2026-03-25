@@ -29,9 +29,9 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputGainSlider_.setSliderStyle (juce::Slider::LinearVertical);
     inputGainSlider_.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     inputGainSlider_.setRange (-12.0, 36.0, 0.01);
-    inputGainSlider_.setColour (juce::Slider::backgroundColourId, juce::Colour (0xff1A1A2E));
-    inputGainSlider_.setColour (juce::Slider::trackColourId,      MLIMColours::sliderFill.withAlpha (0.8f));
-    inputGainSlider_.setColour (juce::Slider::thumbColourId,      juce::Colour (0xffE0E0E0));
+    inputGainSlider_.setColour (juce::Slider::backgroundColourId, juce::Colour (0x30FFFFFF));
+    inputGainSlider_.setColour (juce::Slider::trackColourId,      juce::Colour (0x50FFFFFF));
+    inputGainSlider_.setColour (juce::Slider::thumbColourId,      juce::Colour (0xC0FFFFFF));
     addAndMakeVisible (inputGainSlider_);
 
     inputGainLabel_.setText ("GAIN", juce::dontSendNotification);
