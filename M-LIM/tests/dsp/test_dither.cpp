@@ -221,6 +221,104 @@ TEST_CASE("test_noise_shaping_stable_96k", "[Dither]")
     }
 }
 
+TEST_CASE("test_bit_depth_change_16_to_24_no_nan", "[Dither]")
+{
+    // Process at 16-bit, then switch to 24-bit mid-stream.
+    // All output samples must be finite and within [-1, 1].
+    Dither dither;
+    dither.prepare(44100.0);
+    dither.setBitDepth(16);
+    dither.setNoiseShaping(1); // Optimized (first-order feedback)
+
+    const int numSamples = 1000;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / 44100.0f);
+
+    dither.process(signal.data(), numSamples);
+
+    // Now switch bit depth mid-session
+    dither.setBitDepth(24);
+
+    std::vector<float> signal2(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal2[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i + numSamples) / 44100.0f);
+
+    dither.process(signal2.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        REQUIRE(std::isfinite(signal2[i]));
+        REQUIRE(signal2[i] >= -1.0f);
+        REQUIRE(signal2[i] <= 1.0f);
+    }
+}
+
+TEST_CASE("test_bit_depth_change_24_to_16_no_nan", "[Dither]")
+{
+    // Process at 24-bit, then switch to 16-bit mid-stream.
+    // All output samples must be finite and within [-1, 1].
+    Dither dither;
+    dither.prepare(44100.0);
+    dither.setBitDepth(24);
+    dither.setNoiseShaping(1); // Optimized (first-order feedback)
+
+    const int numSamples = 1000;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / 44100.0f);
+
+    dither.process(signal.data(), numSamples);
+
+    // Now switch bit depth mid-session
+    dither.setBitDepth(16);
+
+    std::vector<float> signal2(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal2[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i + numSamples) / 44100.0f);
+
+    dither.process(signal2.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        REQUIRE(std::isfinite(signal2[i]));
+        REQUIRE(signal2[i] >= -1.0f);
+        REQUIRE(signal2[i] <= 1.0f);
+    }
+}
+
+TEST_CASE("test_bit_depth_change_quantization_correct_after", "[Dither]")
+{
+    // After switching from 16-bit to 24-bit, outputs must be quantized to 24-bit steps.
+    Dither dither;
+    dither.prepare(44100.0);
+    dither.setBitDepth(16);
+    dither.setNoiseShaping(0); // Basic — no error feedback, easiest to verify step alignment
+
+    const int numSamples = 512;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = -0.5f + static_cast<float>(i) / static_cast<float>(numSamples - 1);
+
+    dither.process(signal.data(), numSamples);
+
+    // Switch to 24-bit
+    dither.setBitDepth(24);
+
+    const float step24    = std::pow(2.0f, 1.0f - 24.0f);
+    const float epsilon24 = step24 * 0.01f;
+
+    std::vector<float> signal2(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal2[i] = -0.5f + static_cast<float>(i) / static_cast<float>(numSamples - 1);
+
+    dither.process(signal2.data(), numSamples);
+
+    // All samples after the bit-depth change should be quantized to 24-bit boundaries.
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(isQuantized(signal2[i], step24, epsilon24));
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
