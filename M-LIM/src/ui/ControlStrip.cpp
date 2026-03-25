@@ -34,23 +34,23 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
 {
     // ── Knobs: set labels, ranges, suffixes ────────────────────────────────
     // Note: inputGain is now a waveform-overlay slider in PluginEditor.
-    lookaheadKnob_.setLabel ("Lookahead");
+    lookaheadKnob_.setLabel ("LOOKAHEAD");
     lookaheadKnob_.setSuffix ("ms");
     lookaheadKnob_.setRange (0.0f, 5.0f, 0.01f);
 
-    attackKnob_.setLabel ("Attack");
+    attackKnob_.setLabel ("ATTACK");
     attackKnob_.setSuffix ("ms");
     attackKnob_.setRange (0.0f, 100.0f, 0.01f);
 
-    releaseKnob_.setLabel ("Release");
+    releaseKnob_.setLabel ("RELEASE");
     releaseKnob_.setSuffix ("ms");
     releaseKnob_.setRange (10.0f, 1000.0f, 0.1f);
 
-    channelLinkTransientsKnob_.setLabel ("Tr Link");
+    channelLinkTransientsKnob_.setLabel ("TRANSIENTS");
     channelLinkTransientsKnob_.setSuffix ("%");
     channelLinkTransientsKnob_.setRange (0.0f, 100.0f, 0.1f);
 
-    channelLinkReleaseKnob_.setLabel ("Rel Link");
+    channelLinkReleaseKnob_.setLabel ("RELEASE");
     channelLinkReleaseKnob_.setSuffix ("%");
     channelLinkReleaseKnob_.setRange (0.0f, 100.0f, 0.1f);
 
@@ -423,6 +423,17 @@ void ControlStrip::paint (juce::Graphics& g)
     g.setColour (MLIMColours::panelBorder);
     int sepY = kKnobRowH + kPadding;
     g.drawHorizontalLine (sepY, 0.0f, static_cast<float> (getWidth()));
+
+    // Draw "STYLE" label above the algorithm selector
+    {
+        auto algoB = algorithmSelector_.getBounds();
+        g.setColour (MLIMColours::textSecondary);
+        g.setFont (juce::Font (juce::FontOptions().withHeight (9.0f).withStyle ("Bold")));
+        g.drawText ("STYLE",
+                    algoB.getX(), algoB.getY() - 12,
+                    algoB.getWidth(), 12,
+                    juce::Justification::centred, false);
+    }
 
     // Draw CHANNEL LINKING expanded panel overlay when advanced is open
     if (isAdvancedExpanded_)
