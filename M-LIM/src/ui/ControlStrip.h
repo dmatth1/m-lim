@@ -14,11 +14,13 @@
  *  Top row:    [InputGain] [AlgorithmSelector] [Lookahead] [Attack] [Release]
  *              [ChannelLinkTransients] [ChannelLinkRelease] [OutputCeiling]
  *
- *  Bottom row: [TP] [Oversampling▾] [Dither▾] [DC] | [Bypass] [Unity] [Delta]
+ *  Status bar: [MIDI Learn] [● True Peak Limiting] [Oversampling: Xx] [Dither: XX Bits]
+ *              ... [TP] [≋] [Loudness] [||] [Short Term] [Out: X.X dBTP]
  *
  * All controls are attached to the AudioProcessorValueTreeState.
  */
-class ControlStrip : public juce::Component
+class ControlStrip : public juce::Component,
+                     private juce::ComboBox::Listener
 {
 public:
     explicit ControlStrip (juce::AudioProcessorValueTreeState& apvts);
@@ -26,6 +28,9 @@ public:
 
     void paint (juce::Graphics& g) override;
     void resized() override;
+
+    /** Update the "Out: X.X dBTP" readout in the status bar. */
+    void setOutputLevel (float dBTPValue);
 
 private:
     juce::AudioProcessorValueTreeState& apvts_;
@@ -40,7 +45,7 @@ private:
     RotaryKnob channelLinkReleaseKnob_;
     RotaryKnob outputCeilingKnob_;
 
-    // ── Bottom row: toggles & dropdowns ──────────────────────────────────────
+    // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
     juce::TextButton truePeakButton_    { "TP" };
     juce::ComboBox   oversamplingBox_;
     juce::TextButton ditherButton_      { "DITHER" };
@@ -50,6 +55,20 @@ private:
     juce::TextButton bypassButton_      { "BYPASS" };
     juce::TextButton unityButton_       { "1:1" };
     juce::TextButton deltaButton_       { "DELTA" };
+
+    // ── Pro-L 2 status bar: left section ─────────────────────────────────────
+    juce::TextButton midiLearnButton_          { "MIDI Learn" };
+    juce::TextButton truePeakLimitingButton_   { "True Peak Limiting" };
+    juce::Label      oversamplingStatusLabel_;  // "Oversampling: Xx"
+    juce::Label      ditherStatusLabel_;        // "Dither: XX Bits (O)"
+
+    // ── Pro-L 2 status bar: right section ────────────────────────────────────
+    juce::TextButton truePeakWaveformButton_   { "TP" };
+    juce::TextButton waveformModeButton_       { juce::CharPointer_UTF8 ("\xe2\x89\x8b") }; // ≋
+    juce::TextButton loudnessToggleButton_     { "Loudness" };
+    juce::TextButton pauseMeasurementButton_   { "||" };
+    juce::TextButton measurementModeButton_    { "Short Term" };
+    juce::Label      outputLevelLabel_;         // "Out: X.X dBTP"
 
     // ── APVTS attachments ─────────────────────────────────────────────────────
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>  inputGainAttach_;
@@ -71,12 +90,25 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   unityAttach_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   deltaAttach_;
 
+    // ── Measurement mode cycling ───────────────────────────────────────────────
+    enum class MeasurementMode { ShortTerm, Momentary, Integrated };
+    MeasurementMode measurementMode_ { MeasurementMode::ShortTerm };
+
     void setupButtons();
     void setupComboBoxes();
+    void setupStatusBar();
     void createAttachments();
+    void updateStatusLabels();
+    void cycleMeasurementMode();
+
+    /** Called when oversamplingBox_ or dither boxes change. */
+    void comboBoxChanged (juce::ComboBox* comboBox) override;
 
     /** Style a toggle TextButton for the bottom row. */
     static void styleToggleButton (juce::TextButton& btn);
+
+    /** Style a small status-bar TextButton (non-toggling). */
+    static void styleStatusButton (juce::TextButton& btn);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ControlStrip)
 };
