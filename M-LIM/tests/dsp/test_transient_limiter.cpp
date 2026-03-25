@@ -705,17 +705,14 @@ TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
                                    ? (threshold / peakAbs)
                                    : 1.0f;
 
-        // Instant attack, dB-domain release (matches TransientLimiter smoothing)
+        // Instant attack, linear-domain release (matches TransientLimiter smoothing)
         if (required < gainState)
         {
             gainState = required;
         }
         else
         {
-            const float gDb      = 20.0f * std::log10(std::max(gainState,  1e-6f));
-            const float tDb      = 20.0f * std::log10(std::max(required,   1e-6f));
-            const float smoothed = gDb + (tDb - gDb) * (1.0f - releaseCoeff);
-            gainState = std::pow(10.0f, smoothed / 20.0f);
+            gainState = gainState * releaseCoeff + required * (1.0f - releaseCoeff);
         }
         gainState = std::clamp(gainState, 1e-6f, 1.0f);
 

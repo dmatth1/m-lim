@@ -727,13 +727,14 @@ TEST_CASE("test_linear_domain_attack_convergence", "[LevelingLimiter]")
     std::vector<std::vector<float>> buf(1, std::vector<float>(1, amplitude));
     auto ptrs = makePtrs(buf);
 
-    for (int s = 0; s < 1000; ++s)
+    // 5000 samples ≈ 11 × τ (τ=441 samples for 10ms at 44100 Hz) — guaranteed convergence
+    for (int s = 0; s < 5000; ++s)
     {
         buf[0][0] = amplitude;
         limiter.process(ptrs.data(), 1, 1);
     }
 
-    // After 1000 samples (>> τ = 441 for 10ms at 44100 Hz), gain must be
+    // After 5000 samples (>> τ = 441 for 10ms at 44100 Hz), gain must be
     // very close to the correct target. Steady state should be requiredGain.
     // Allow 0.5 dBTP tolerance vs. ideal steady-state.
     const float steadyStateGRdB = 20.0f * std::log10(requiredGain);  // -6.02 dB
@@ -772,15 +773,16 @@ TEST_CASE("test_linear_domain_release_speed", "[LevelingLimiter]")
     }
     REQUIRE(limiter.getGainReduction() < -10.0f);  // significant GR engaged
 
-    // Release with silence for 3 × releaseMs = 300 ms = 13230 samples
-    const int releaseSamples = static_cast<int>(3.0f * 100.0f * 0.001f * kSampleRate);
+    // Release with silence for 5 × releaseMs = 500 ms = 22050 samples
+    // (5 time constants: linear-domain recovery to ≈ 99.3% = -0.06 dBGR)
+    const int releaseSamples = static_cast<int>(5.0f * 100.0f * 0.001f * kSampleRate);
     for (int s = 0; s < releaseSamples; ++s)
     {
         buf[0][0] = 0.0f;
         limiter.process(ptrs.data(), 1, 1);
     }
 
-    // After 3×τ, gain must have recovered to < -0.1 dBGR
+    // After 5×τ, gain must have recovered to < -0.1 dBGR
     REQUIRE(limiter.getGainReduction() > -0.1f);
 }
 
