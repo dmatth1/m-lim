@@ -19,11 +19,13 @@ void RotaryKnob::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    // Reserve space at the bottom for label and value text
-    const float textHeight = 28.0f;
+    // Reserve space: label row above, value row below
+    const float labelH     = 13.0f;
+    const float valueH     = 13.0f;
+    const float textHeight = labelH + valueH;
     const float knobSize   = juce::jmin (bounds.getWidth(), bounds.getHeight() - textHeight);
     const float knobX      = bounds.getCentreX() - knobSize * 0.5f;
-    const float knobY      = bounds.getY();
+    const float knobY      = bounds.getY() + labelH;
 
     const float centreX = knobX + knobSize * 0.5f;
     const float centreY = knobY + knobSize * 0.5f;
@@ -117,32 +119,32 @@ void RotaryKnob::paint (juce::Graphics& g)
         g.fillPath (pointer);
     }
 
-    // Label text (below knob)
-    const float textY = knobY + knobSize + 2.0f;
+    // Label text ABOVE the knob
     g.setColour (MLIMColours::textSecondary);
     g.setFont (juce::Font (11.0f));
     g.drawFittedText (labelText,
-                      juce::Rectangle<int> ((int)knobX, (int)textY,
-                                            (int)knobSize, 13),
+                      juce::Rectangle<int> ((int)knobX, (int)bounds.getY(),
+                                            (int)knobSize, (int)labelH),
                       juce::Justification::centred, 1);
 
-    // Value + suffix text (cached; updated only on value/suffix change)
+    // Value + suffix text BELOW the knob (cached; updated only on value/suffix change)
     g.setColour (MLIMColours::textPrimary);
     g.setFont (juce::Font (11.0f));
     g.drawFittedText (cachedValueStr_,
-                      juce::Rectangle<int> ((int)knobX, (int)textY + 13,
-                                            (int)knobSize, 13),
+                      juce::Rectangle<int> ((int)knobX, (int)(knobY + knobSize + 2),
+                                            (int)knobSize, (int)valueH),
                       juce::Justification::centred, 1);
 }
 
 void RotaryKnob::resized()
 {
     const auto bounds = getLocalBounds();
-    const float textHeight = 28.0f;
+    const float labelH     = 13.0f;
+    const float textHeight = labelH + 13.0f;
     const float knobSize   = juce::jmin ((float)bounds.getWidth(),
                                          (float)bounds.getHeight() - textHeight);
     const int knobX        = bounds.getCentreX() - (int)(knobSize * 0.5f);
-    slider.setBounds (knobX, bounds.getY(), (int)knobSize, (int)knobSize);
+    slider.setBounds (knobX, bounds.getY() + (int)labelH, (int)knobSize, (int)knobSize);
 }
 
 void RotaryKnob::setRange (float min, float max, float step)
