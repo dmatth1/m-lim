@@ -32,8 +32,8 @@ private:
     static constexpr float kMaxDB =   0.0f;
 
     // dB thresholds for colour zones
-    static constexpr float kWarnDB  = -6.0f;
-    static constexpr float kDangerDB = -1.0f;
+    static constexpr float kWarnDB   = -3.0f;
+    static constexpr float kDangerDB = -0.5f;
 
     float levelL_ = kMinDB;
     float levelR_ = kMinDB;
