@@ -19,6 +19,7 @@ set(MLIM_TEST_CASES
     dsp/test_lockfree_fifo.cpp
     state/test_undo_manager.cpp
     state/test_preset_manager.cpp
+    state/test_preset_manager_errors.cpp
 )
 
 # Catch2 test executable — DSP sources come from MLIMLib
