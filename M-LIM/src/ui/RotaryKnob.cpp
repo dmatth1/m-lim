@@ -28,11 +28,19 @@ void RotaryKnob::paint (juce::Graphics& g)
     const float centreY = knobY + knobSize * 0.5f;
     const float radius  = knobSize * 0.5f - 4.0f;
 
-    // Knob face
+    // Knob face — 3D sphere gradient (lighter top-left, darker bottom-right)
     const float faceRadius = radius * 0.78f;
-    g.setColour (MLIMColours::knobFace);
-    g.fillEllipse (centreX - faceRadius, centreY - faceRadius,
-                   faceRadius * 2.0f, faceRadius * 2.0f);
+    {
+        juce::ColourGradient gradient (
+            MLIMColours::knobFaceHighlight,
+            centreX - faceRadius * 0.3f, centreY - faceRadius * 0.3f,
+            MLIMColours::knobFaceShadow,
+            centreX + faceRadius * 0.4f, centreY + faceRadius * 0.4f,
+            true);
+        g.setGradientFill (gradient);
+        g.fillEllipse (centreX - faceRadius, centreY - faceRadius,
+                       faceRadius * 2.0f, faceRadius * 2.0f);
+    }
 
     // Graduation tick marks (behind arcs, above knob face)
     {
