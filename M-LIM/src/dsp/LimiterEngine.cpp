@@ -28,6 +28,11 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mOversampler.setFactor(mCurrentOversamplingFactor);
     mOversampler.prepare(sampleRate, maxBlockSize, numChannels);
 
+    // Sidechain oversampler mirrors the main oversampler so sidechain data is
+    // the same length as the upsampled main audio when passed to the limiters.
+    mSidechainOversampler.setFactor(mCurrentOversamplingFactor);
+    mSidechainOversampler.prepare(sampleRate, maxBlockSize, numChannels);
+
     const int   osFactorPow2 = (mCurrentOversamplingFactor > 0)
                                    ? (1 << mCurrentOversamplingFactor) : 1;
     const double usSampleRate = sampleRate * osFactorPow2;
@@ -195,21 +200,26 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     juce::AudioBuffer<float> sideBuf(buffer);
     mSidechainFilter.process(sideBuf);
 
-    // Copy to sidechain float** arrays
-    std::vector<const float*> sidePtrs(numChannels);
-    for (int ch = 0; ch < numChannels; ++ch)
-        sidePtrs[ch] = sideBuf.getReadPointer(ch);
+    // ------------------------------------------------------------------
+    // Step 3: Oversample up — both main audio and sidechain so the buffers
+    // are the same length when passed to the oversampled limiters.
+    // Upsampling sideBuf separately via mSidechainOversampler avoids the
+    // OOB read that would occur if the original (numSamples-long) sidePtrs
+    // were passed to limiters expecting upSamples elements.
+    // ------------------------------------------------------------------
+    juce::dsp::AudioBlock<float> upBlock    = mOversampler.upsample(buffer);
+    juce::dsp::AudioBlock<float> upSideBlock = mSidechainOversampler.upsample(sideBuf);
 
-    // ------------------------------------------------------------------
-    // Step 3: Oversample up
-    // ------------------------------------------------------------------
-    juce::dsp::AudioBlock<float> upBlock = mOversampler.upsample(buffer);
     const int upSamples  = static_cast<int>(upBlock.getNumSamples());
     const int upChannels = static_cast<int>(upBlock.getNumChannels());
 
-    std::vector<float*> upPtrs(upChannels);
+    std::vector<float*>       upPtrs(upChannels);
+    std::vector<const float*> sidePtrs(upChannels);
     for (int ch = 0; ch < upChannels; ++ch)
-        upPtrs[ch] = upBlock.getChannelPointer(ch);
+    {
+        upPtrs[ch]  = upBlock.getChannelPointer(ch);
+        sidePtrs[ch] = upSideBlock.getChannelPointer(ch);
+    }
 
     // ------------------------------------------------------------------
     // Step 4: TransientLimiter (Stage 1)

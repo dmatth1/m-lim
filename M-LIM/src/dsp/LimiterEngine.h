@@ -97,6 +97,7 @@ private:
     // DSP components
     // -----------------------------------------------------------------------
     Oversampler      mOversampler;
+    Oversampler      mSidechainOversampler;  // mirrors mOversampler for sidechain path
     TransientLimiter mTransientLimiter;
     LevelingLimiter  mLevelingLimiter;
     TruePeakDetector mTruePeakL;

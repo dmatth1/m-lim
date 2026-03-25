@@ -366,3 +366,65 @@ TEST_CASE("test_ceiling_below_zero_dbfs", "[LimiterEngine]")
     INFO("Max inter-sample step: " << maxStep);
     REQUIRE(maxStep < 0.5f);  // sanity check — no pathological discontinuities
 }
+
+// ============================================================================
+// test_oversampling_with_sidechain
+// Process a buffer through LimiterEngine with oversampling enabled and the
+// sidechain filter active. Before the fix, the sidechain buffer was only
+// numSamples long but was read at upSamples (= numSamples * oversamplingFactor),
+// causing an OOB read / crash. This test verifies:
+//   1. No crash (UB sanitizer or AddressSanitizer would catch the OOB)
+//   2. Output is valid (finite, within ceiling)
+//   3. GR is reported correctly
+// ============================================================================
+TEST_CASE("test_oversampling_with_sidechain", "[LimiterEngine]")
+{
+    // Test with several oversampling factors to exercise the OOB-prone path
+    const int factors[] = { 1, 2, 3 };  // 2x, 4x, 8x
+
+    for (int factor : factors)
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setOversamplingFactor(factor);
+
+        // Trigger the param update (oversampling factor change requires reprepare)
+        {
+            juce::AudioBuffer<float> warmup(2, kBlockSize);
+            warmup.clear();
+            engine.process(warmup);
+        }
+
+        // Process several blocks of a loud signal — no crash is the primary
+        // check, output validity is secondary.
+        for (int block = 0; block < 5; ++block)
+        {
+            juce::AudioBuffer<float> buf = makeSine(3.0f, kBlockSize);
+            engine.process(buf);
+
+            // All output samples must be finite
+            for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+            {
+                const float* data = buf.getReadPointer(ch);
+                for (int s = 0; s < buf.getNumSamples(); ++s)
+                {
+                    INFO("factor=" << factor << " block=" << block
+                         << " ch=" << ch << " s=" << s << " val=" << data[s]);
+                    REQUIRE(std::isfinite(data[s]));
+                }
+            }
+
+            // Output must not exceed the ceiling
+            const float peak = maxAbsValue(buf);
+            INFO("factor=" << factor << " block=" << block << " peak=" << peak);
+            REQUIRE(peak <= 1.02f);  // allow tiny rounding margin
+        }
+
+        // Gain reduction must be finite and non-positive
+        const float gr = engine.getGainReduction();
+        INFO("factor=" << factor << " GR=" << gr);
+        REQUIRE(std::isfinite(gr));
+        REQUIRE(gr <= 0.0f);
+    }
+}
