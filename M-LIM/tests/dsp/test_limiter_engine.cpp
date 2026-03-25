@@ -639,3 +639,62 @@ TEST_CASE("test_latency_reported_rounds_not_truncates", "[LimiterEngine]")
 
     REQUIRE(reportedLatency == expected);
 }
+
+// ============================================================================
+// test_metering_levels_correct_after_refactor
+// Process a known sine wave at 0.5 amplitude (well below 0 dBFS ceiling) so
+// the limiter barely engages. The input meter must report ~0.5 and the output
+// meter must also be close to 0.5 (within rounding/lookahead margin).
+// ============================================================================
+TEST_CASE("test_metering_levels_correct_after_refactor", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);   // 0 dBFS ceiling
+
+    // Process several warm-up blocks to fill the lookahead buffer, then
+    // inspect the meter data from the last processed block.
+    MeterData md{};
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+        engine.process(buf);
+
+        // Drain the FIFO each iteration so we get fresh data
+        MeterData tmp;
+        while (engine.getMeterFIFO().pop(tmp))
+            md = tmp;
+    }
+
+    INFO("inputLevelL: " << md.inputLevelL << "  inputLevelR: " << md.inputLevelR);
+    REQUIRE(md.inputLevelL == Catch::Approx(0.5f).margin(0.001f));
+    REQUIRE(md.inputLevelR == Catch::Approx(0.5f).margin(0.001f));
+}
+
+// ============================================================================
+// test_mono_metering_mirrors_L_to_R
+// Prepare the engine with 1 channel. After processing, inputLevelR must equal
+// inputLevelL, and outputLevelR must equal outputLevelL.
+// ============================================================================
+TEST_CASE("test_mono_metering_mirrors_L_to_R", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);   // mono
+    engine.setOutputCeiling(0.0f);
+
+    MeterData md{};
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize, 1);
+        engine.process(buf);
+
+        MeterData tmp;
+        while (engine.getMeterFIFO().pop(tmp))
+            md = tmp;
+    }
+
+    INFO("inputLevelL: " << md.inputLevelL << "  inputLevelR: " << md.inputLevelR);
+    INFO("outputLevelL: " << md.outputLevelL << "  outputLevelR: " << md.outputLevelR);
+    REQUIRE(md.inputLevelR == Catch::Approx(md.inputLevelL).margin(1e-6f));
+    REQUIRE(md.outputLevelR == Catch::Approx(md.outputLevelL).margin(1e-6f));
+}

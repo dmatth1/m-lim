@@ -147,9 +147,10 @@ void LimiterEngine::applyPendingParams()
 float LimiterEngine::peakLevel(const juce::AudioBuffer<float>& buf,
                                 int channel, int numSamples) noexcept
 {
+    const float* ptr = buf.getReadPointer(channel);
     float level = 0.0f;
     for (int s = 0; s < numSamples; ++s)
-        level = std::max(level, std::abs(buf.getSample(channel, s)));
+        level = std::max(level, std::abs(ptr[s]));
     return level;
 }
 
