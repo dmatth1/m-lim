@@ -702,6 +702,125 @@ TEST_CASE("test_lra_always_nonnegative", "[LoudnessMeter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_silence_not_nan
+// Processing 5 seconds of all-zero stereo audio must never produce NaN for
+// any meter output.  Results must be either a finite value or exactly
+// -infinity (no valid gated windows → -inf sentinel).  +inf is also rejected.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_silence_not_nan", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // 5 seconds of silence — fills all windows and triggers integrated update
+    feedSilence(meter, kSampleRate, 5.0);
+
+    const float momentary  = meter.getMomentaryLUFS();
+    const float shortTerm  = meter.getShortTermLUFS();
+    const float integrated = meter.getIntegratedLUFS();
+
+    INFO("Momentary LUFS:  " << momentary);
+    INFO("Short-term LUFS: " << shortTerm);
+    INFO("Integrated LUFS: " << integrated);
+
+    // Must not be NaN
+    CHECK(!std::isnan(momentary));
+    CHECK(!std::isnan(shortTerm));
+    CHECK(!std::isnan(integrated));
+
+    // Must not be +infinity
+    CHECK(!(std::isinf(momentary)  && momentary  > 0.0f));
+    CHECK(!(std::isinf(shortTerm)  && shortTerm  > 0.0f));
+    CHECK(!(std::isinf(integrated) && integrated > 0.0f));
+
+    // Must be either finite or -infinity
+    const bool momentaryOk  = std::isfinite(momentary)  || (std::isinf(momentary)  && momentary  < 0.0f);
+    const bool shortTermOk  = std::isfinite(shortTerm)  || (std::isinf(shortTerm)  && shortTerm  < 0.0f);
+    const bool integratedOk = std::isfinite(integrated) || (std::isinf(integrated) && integrated < 0.0f);
+    CHECK(momentaryOk);
+    CHECK(shortTermOk);
+    CHECK(integratedOk);
+}
+
+// ---------------------------------------------------------------------------
+// test_reset_clears_integrated
+// After feeding audio so integrated LUFS is a real finite value, calling
+// resetIntegrated() must discard all accumulated data.  Subsequent audio
+// must produce a value that reflects only the post-reset signal, not a
+// mixture with the pre-reset audio.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reset_clears_integrated", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // Feed 3 seconds of a -18 LUFS-level sine to build up an integrated reading.
+    // -18 dBFS amplitude → stereo sum ~-18 LUFS (within a few LU).
+    const float amp18 = static_cast<float>(std::pow(10.0, -18.0 / 20.0));
+    feedSine(meter, 1000.0, amp18, kSampleRate, 3.0);
+    REQUIRE(std::isfinite(meter.getIntegratedLUFS()));
+
+    // Reset — must clear history so old audio no longer contributes.
+    meter.resetIntegrated();
+
+    // Immediately after reset, integrated must be -infinity.
+    CHECK(std::isinf(meter.getIntegratedLUFS()));
+    CHECK(meter.getIntegratedLUFS() < 0.0f);
+
+    // Feed 2 seconds of a much louder -6 dBFS signal so the integrated LUFS
+    // accumulates enough blocks for at least one update cycle (kUpdateFreq=10).
+    const float amp6 = static_cast<float>(std::pow(10.0, -6.0 / 20.0));
+    feedSine(meter, 1000.0, amp6, kSampleRate, 2.0);
+
+    const float integratedAfter = meter.getIntegratedLUFS();
+    INFO("Integrated after reset + loud signal: " << integratedAfter);
+
+    // Result must be either still -inf (too few blocks) OR a value near -6 LUFS.
+    // What is NOT acceptable is a value pulled toward -18 LUFS by pre-reset data.
+    // A true -6 dBFS stereo sine yields integrated ≈ -6.7 LUFS.
+    // If still building up, it is -inf.  Either is acceptable; -18 is not.
+    // Either still accumulating (-inf) or clearly above the -18 LUFS pre-reset level.
+    const bool validOutcome = std::isinf(integratedAfter) || (integratedAfter > -12.0f);
+    CHECK(validOutcome);
+}
+
+// ---------------------------------------------------------------------------
+// test_reprepare_clears_state
+// Calling prepare() a second time (simulating a DAW restart) must reset all
+// internal state — including integrated LUFS accumulated from prior audio.
+// Silence fed after the second prepare() must NOT inherit the earlier reading.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reprepare_clears_state", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+
+    // First session: prepare and feed a loud tone so integrated is finite.
+    meter.prepare(kSampleRate, 2);
+    const float amp = static_cast<float>(std::pow(10.0, -10.0 / 20.0));
+    feedSine(meter, 1000.0, amp, kSampleRate, 5.0);
+    REQUIRE(std::isfinite(meter.getIntegratedLUFS()));
+
+    // Second prepare — simulates a DAW restart or sample-rate change.
+    meter.prepare(kSampleRate, 2);
+
+    // Immediately after re-prepare, all meters must be reset to -infinity.
+    INFO("Integrated after re-prepare (before any audio): " << meter.getIntegratedLUFS());
+    CHECK(std::isinf(meter.getIntegratedLUFS()));
+    CHECK(meter.getIntegratedLUFS() < 0.0f);
+
+    // Feed 5 seconds of silence — all blocks are below the absolute gate.
+    feedSilence(meter, kSampleRate, 5.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Integrated after re-prepare + 5s silence: " << integrated);
+
+    // Silence gates out every block → integrated must remain -infinity.
+    // It must NOT carry a finite value inherited from before the second prepare().
+    CHECK(std::isinf(integrated));
+    CHECK(integrated < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
 // test_momentary_lufs_ring_buffer
 // The ring-buffer implementation must produce the same momentary LUFS as the
 // reference deque-based computation.  We verify by comparing the ring buffer
