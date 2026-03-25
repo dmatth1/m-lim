@@ -93,3 +93,101 @@ TEST_CASE("test_can_undo_redo_flags", "[UndoManager]")
     REQUIRE(manager.canUndo() == true);
     REQUIRE(manager.canRedo() == false);
 }
+
+TEST_CASE("test_multi_step_undo", "[UndoManager]")
+{
+    UndoManager manager;
+    auto& juce = manager.getJuceUndoManager();
+
+    int value = 0;
+    const int steps = 5;
+    const int vals[steps] = { 10, 20, 30, 40, 50 };
+
+    // Perform 5 separate transactions
+    for (int i = 0; i < steps; ++i)
+    {
+        manager.beginNewTransaction();
+        juce.perform(new SetValueAction(value, vals[i]));
+        REQUIRE(value == vals[i]);
+    }
+
+    // Undo each step and verify the intermediate values
+    for (int i = steps - 1; i >= 1; --i)
+    {
+        manager.undo();
+        REQUIRE(value == vals[i - 1]);
+    }
+
+    // Final undo returns to initial value
+    manager.undo();
+    REQUIRE(value == 0);
+}
+
+TEST_CASE("test_new_action_clears_redo_stack", "[UndoManager]")
+{
+    UndoManager manager;
+    auto& juce = manager.getJuceUndoManager();
+
+    int value = 0;
+
+    manager.beginNewTransaction();
+    juce.perform(new SetValueAction(value, 42));
+
+    manager.undo();
+    REQUIRE(manager.canRedo() == true);
+
+    // Performing a new action after undo should clear the redo stack
+    manager.beginNewTransaction();
+    juce.perform(new SetValueAction(value, 99));
+
+    REQUIRE(manager.canRedo() == false);
+    REQUIRE(value == 99);
+}
+
+TEST_CASE("test_transaction_grouping", "[UndoManager]")
+{
+    UndoManager manager;
+    auto& juce = manager.getJuceUndoManager();
+
+    int valueA = 0;
+    int valueB = 0;
+
+    // Two performs inside one transaction should be a single undo step
+    manager.beginNewTransaction();
+    juce.perform(new SetValueAction(valueA, 10));
+    juce.perform(new SetValueAction(valueB, 20));
+
+    REQUIRE(valueA == 10);
+    REQUIRE(valueB == 20);
+
+    // A single undo should revert both
+    manager.undo();
+    REQUIRE(valueA == 0);
+    REQUIRE(valueB == 0);
+
+    // Nothing more to undo
+    REQUIRE(manager.canUndo() == false);
+}
+
+TEST_CASE("test_many_actions_no_crash", "[UndoManager]")
+{
+    UndoManager manager;
+    auto& juce = manager.getJuceUndoManager();
+
+    int value = 0;
+    const int count = 100;
+
+    // Create 100 transactions
+    for (int i = 1; i <= count; ++i)
+    {
+        manager.beginNewTransaction();
+        juce.perform(new SetValueAction(value, i));
+    }
+    REQUIRE(value == count);
+
+    // Undo all of them one by one without crash
+    while (manager.canUndo())
+        manager.undo();
+
+    REQUIRE(value == 0);
+}
