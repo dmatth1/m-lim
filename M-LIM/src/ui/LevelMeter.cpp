@@ -45,6 +45,20 @@ void LevelMeter::resetPeakHold()
     repaint();
 }
 
+void LevelMeter::setClip (bool left, bool right)
+{
+    if (left)  clipL_ = true;
+    if (right) clipR_ = true;
+    repaint();
+}
+
+void LevelMeter::resetClip()
+{
+    clipL_ = false;
+    clipR_ = false;
+    repaint();
+}
+
 //==============================================================================
 float LevelMeter::dbToNorm (float db) noexcept
 {
@@ -55,7 +69,8 @@ float LevelMeter::dbToNorm (float db) noexcept
 void LevelMeter::drawChannel (juce::Graphics& g,
                                juce::Rectangle<float> bar,
                                float levelDB,
-                               float peakDB) const
+                               float peakDB,
+                               bool  clipped) const
 {
     const float barH   = bar.getHeight();
     const float barTop = bar.getY();
@@ -121,6 +136,14 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         g.fillRect (bar.getX(), peakY, bar.getWidth(), kPeakLineH);
     }
 
+    // --- clip indicator at the very top of the bar ---
+    constexpr float clipBoxH = 4.0f;
+    if (clipped)
+        g.setColour (MLIMColours::meterDanger);
+    else
+        g.setColour (MLIMColours::displayBackground);
+    g.fillRect (bar.getX(), barTop, bar.getWidth(), clipBoxH);
+
     // Thin border
     g.setColour (MLIMColours::panelBorder);
     g.drawRect (bar, 1.0f);
@@ -160,6 +183,14 @@ void LevelMeter::drawScale (juce::Graphics& g) const
 //==============================================================================
 void LevelMeter::resized() {}
 
+void LevelMeter::mouseDown (const juce::MouseEvent& e)
+{
+    // Reset clip indicators if user clicks anywhere on the meter
+    // (Pro-L style: clicking the meter clears clip latches)
+    resetClip();
+    juce::ignoreUnused (e);
+}
+
 void LevelMeter::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
@@ -174,7 +205,7 @@ void LevelMeter::paint (juce::Graphics& g)
     auto barL = juce::Rectangle<float> (x, y, barW, h);
     auto barR = juce::Rectangle<float> (x + barW + gap, y, barW, h);
 
-    drawChannel (g, barL, levelL_, peakL_);
-    drawChannel (g, barR, levelR_, peakR_);
+    drawChannel (g, barL, levelL_, peakL_, clipL_);
+    drawChannel (g, barR, levelR_, peakR_, clipR_);
     drawScale (g);
 }

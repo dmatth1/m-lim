@@ -24,8 +24,15 @@ public:
     /** Reset peak hold markers. */
     void resetPeakHold();
 
+    /** Latch clip indicators. Only cleared by resetClip() or a click. */
+    void setClip (bool left, bool right);
+
+    /** Reset both clip indicators. */
+    void resetClip();
+
     void paint (juce::Graphics& g) override;
     void resized() override;
+    void mouseDown (const juce::MouseEvent& e) override;
 
 private:
     static constexpr float kMinDB = -60.0f;
@@ -39,15 +46,18 @@ private:
     float levelR_ = kMinDB;
     float peakL_  = kMinDB;
     float peakR_  = kMinDB;
+    bool  clipL_  = false;
+    bool  clipR_  = false;
 
     /** Map a dB value to a normalised 0-1 position (0 = bottom, 1 = top). */
     static float dbToNorm (float db) noexcept;
 
-    /** Draw one channel bar (including peak hold line) at the given rectangle. */
+    /** Draw one channel bar (including peak hold line and clip indicator). */
     void drawChannel (juce::Graphics& g,
                       juce::Rectangle<float> bar,
                       float levelDB,
-                      float peakDB) const;
+                      float peakDB,
+                      bool  clipped) const;
 
     /** Draw dB scale labels on the right edge of the component. */
     void drawScale (juce::Graphics& g) const;
