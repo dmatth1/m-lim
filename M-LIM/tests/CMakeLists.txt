@@ -3,11 +3,13 @@ cmake_minimum_required(VERSION 3.22)
 # Collect plugin source files for testing (populated by each DSP task)
 set(MLIM_TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/DCFilter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/Dither.cpp
 )
 
 # Collect test source files (populated by each test task)
 set(MLIM_TEST_CASES
     dsp/test_dc_filter.cpp
+    dsp/test_dither.cpp
 )
 
 # Catch2 test executable
