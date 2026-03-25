@@ -28,7 +28,7 @@ AlgorithmSelector::AlgorithmSelector()
     // Style the combo box
     comboBox.setJustificationType(juce::Justification::centred);
     comboBox.setColour(juce::ComboBox::backgroundColourId,   MLIMColours::displayBackground);
-    comboBox.setColour(juce::ComboBox::textColourId,         MLIMColours::knobArc);
+    comboBox.setColour(juce::ComboBox::textColourId,         MLIMColours::textPrimary);
     comboBox.setColour(juce::ComboBox::outlineColourId,      MLIMColours::panelBorder);
     comboBox.setColour(juce::ComboBox::arrowColourId,        MLIMColours::textSecondary);
     comboBox.setColour(juce::ComboBox::focusedOutlineColourId, MLIMColours::accentBlue);

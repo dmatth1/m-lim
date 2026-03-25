@@ -19,8 +19,9 @@ namespace MLIMColours
 
     // Knob colours
     const juce::Colour knobFace         { 0xff3A3A3A };
-    const juce::Colour knobArc          { 0xff4FC3F7 };
+    const juce::Colour knobArc          { 0xff5C6A84 };  // subtle blue-grey arc
     const juce::Colour knobPointer      { 0xffFFFFFF };
+    const juce::Colour sliderFill       { 0xff2196F3 };  // accent blue for linear slider fills
 
     // Text colours
     const juce::Colour textPrimary      { 0xffE0E0E0 };

@@ -14,7 +14,7 @@ MLIMLookAndFeel::MLIMLookAndFeel()
 
     // Slider colours
     setColour (juce::Slider::thumbColourId,             MLIMColours::knobPointer);
-    setColour (juce::Slider::trackColourId,             MLIMColours::knobArc);
+    setColour (juce::Slider::trackColourId,             MLIMColours::sliderFill);
     setColour (juce::Slider::backgroundColourId,        MLIMColours::knobFace);
     setColour (juce::Slider::textBoxTextColourId,       MLIMColours::textPrimary);
     setColour (juce::Slider::textBoxBackgroundColourId, MLIMColours::displayBackground);
@@ -78,7 +78,7 @@ void MLIMLookAndFeel::drawLinearSlider (juce::Graphics& g,
         else
             filledRect = { (float)x, y + height * 0.5f - 2.0f, sliderPos - x, 4.0f };
 
-        g.setColour (MLIMColours::knobArc);
+        g.setColour (MLIMColours::sliderFill);
         g.fillRoundedRectangle (filledRect, 2.0f);
 
         // Thumb
