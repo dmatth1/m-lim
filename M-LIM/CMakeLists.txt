@@ -89,6 +89,7 @@ target_sources(MLIM
         src/ui/LookAndFeel.cpp
         src/ui/AlgorithmSelector.cpp
         src/ui/RotaryKnob.cpp
+        src/ui/LevelMeter.cpp
 )
 
 target_compile_definitions(MLIM
