@@ -1,4 +1,4 @@
-# Task 111: Input Gain Slider Is Too Wide and Visually Intrusive
+# Task 131: Input Gain Slider Is Too Wide and Visually Intrusive
 
 ## Description
 The input gain slider is currently a full-height vertical slider overlaid on the left edge of the waveform display at `kGainSliderW = 34` pixels wide with a prominent blue track and large thumb. This is too intrusive — it significantly overlaps the waveform display area.

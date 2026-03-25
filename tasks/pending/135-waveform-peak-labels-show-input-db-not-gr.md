@@ -1,4 +1,4 @@
-# Task 114: Waveform Peak Labels Should Show Input dBFS Values, Not GR Amount
+# Task 135: Waveform Peak Labels Should Show Input dBFS Values, Not GR Amount
 
 ## Description
 In `WaveformDisplay::drawPeakMarkers()`, peak labels are drawn showing the **gain reduction amount** (e.g., "3.5dB", "6.2dB"). However, in the Pro-L 2 reference (`prol2-main-ui.jpg`, `v1-0030.png`), the peak labels in the waveform display show the **input peak level in dBFS** (e.g., "-0.5 dB", "-1.6 dB", "-5.0 dB") — these are the input signal peaks that triggered limiting.

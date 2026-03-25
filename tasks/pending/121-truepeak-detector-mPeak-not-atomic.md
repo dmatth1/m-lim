@@ -1,4 +1,4 @@
-# Task 108: TruePeakDetector::mPeak Is Not Atomic — Data Race Between Audio and UI Threads
+# Task 121: TruePeakDetector::mPeak Is Not Atomic — Data Race Between Audio and UI Threads
 
 ## Description
 `TruePeakDetector::mPeak` (`TruePeakDetector.h` line 68) is declared as a plain

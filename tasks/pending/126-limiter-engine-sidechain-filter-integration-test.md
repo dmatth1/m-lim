@@ -1,4 +1,4 @@
-# Task 110: LimiterEngine Sidechain Filter Integration Tests
+# Task 126: LimiterEngine Sidechain Filter Integration Tests
 
 ## Description
 `LimiterEngine` exposes `setSidechainHPFreq()`, `setSidechainLPFreq()`, and `setSidechainTilt()`

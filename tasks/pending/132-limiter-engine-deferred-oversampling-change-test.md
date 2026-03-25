@@ -1,4 +1,4 @@
-# Task 112: LimiterEngine Deferred Oversampling Change Mechanism Tests
+# Task 132: LimiterEngine Deferred Oversampling Change Mechanism Tests
 
 ## Description
 `LimiterEngine::setOversamplingFactor()` uses a deferred-change mechanism: because changing

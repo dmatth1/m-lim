@@ -1,4 +1,4 @@
-# Task 108: Sidechain Data Path Tests for TransientLimiter and LevelingLimiter
+# Task 120: Sidechain Data Path Tests for TransientLimiter and LevelingLimiter
 
 ## Description
 Both `TransientLimiter::process()` and `LevelingLimiter::process()` accept an optional

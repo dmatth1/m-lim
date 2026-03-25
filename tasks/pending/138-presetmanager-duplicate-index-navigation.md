@@ -1,4 +1,4 @@
-# Task 116: PresetManager Has Four Functions with Duplicate Index-Navigation Logic
+# Task 138: PresetManager Has Four Functions with Duplicate Index-Navigation Logic
 
 ## Description
 `PresetManager.cpp` contains four separate functions that each independently

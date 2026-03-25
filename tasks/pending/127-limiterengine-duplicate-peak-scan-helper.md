@@ -1,4 +1,4 @@
-# Task 110: LimiterEngine::process() Contains Three Identical Peak-Scan Loops — Extract Helper
+# Task 127: LimiterEngine::process() Contains Three Identical Peak-Scan Loops — Extract Helper
 
 ## Description
 `LimiterEngine::process()` (`LimiterEngine.cpp`) contains three nearly-identical

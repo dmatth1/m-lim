@@ -1,4 +1,4 @@
-# Task 108: displayMode APVTS Parameter Not Wired to WaveformDisplay
+# Task 118: displayMode APVTS Parameter Not Wired to WaveformDisplay
 
 ## Description
 `ParamID::displayMode` is a 5-choice APVTS parameter ("Fast"/"Slow"/"SlowDown"/"Infinite"/"Off")

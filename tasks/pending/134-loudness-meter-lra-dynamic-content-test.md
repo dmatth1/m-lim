@@ -1,4 +1,4 @@
-# Task 114: LoudnessMeter LRA with Dynamic Content Test
+# Task 134: LoudnessMeter LRA with Dynamic Content Test
 
 ## Description
 `LoudnessMeter::getLoudnessRange()` is tested only with a **constant-loudness signal**,

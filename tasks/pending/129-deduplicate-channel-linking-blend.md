@@ -1,4 +1,4 @@
-# Task 111: Channel-Linking Blend Logic Duplicated in TransientLimiter and LevelingLimiter
+# Task 129: Channel-Linking Blend Logic Duplicated in TransientLimiter and LevelingLimiter
 
 ## Description
 Both `TransientLimiter::process()` and `LevelingLimiter::process()` contain

@@ -1,4 +1,4 @@
-# Task 115: Custom Threshold Enforcement Tests for TransientLimiter and LevelingLimiter
+# Task 136: Custom Threshold Enforcement Tests for TransientLimiter and LevelingLimiter
 
 ## Description
 Both `TransientLimiter::setThreshold()` and `LevelingLimiter::setThreshold()` accept a linear

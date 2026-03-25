@@ -1,4 +1,4 @@
-# Task 109: loudnessTarget APVTS Parameter Not Synced to LoudnessPanel on State Restore
+# Task 124: loudnessTarget APVTS Parameter Not Synced to LoudnessPanel on State Restore
 
 ## Description
 `ParamID::loudnessTarget` is a 5-choice APVTS parameter that controls the reference

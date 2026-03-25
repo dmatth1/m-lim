@@ -1,4 +1,4 @@
-# Task 115: LoudnessPanel AlertWindow Uses Raw new/delete — Replace with RAII
+# Task 137: LoudnessPanel AlertWindow Uses Raw new/delete — Replace with RAII
 
 ## Description
 `LoudnessPanel.cpp` (lines 46–68) allocates a `juce::AlertWindow` with a raw

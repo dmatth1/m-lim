@@ -1,4 +1,4 @@
-# Task 109: Dither — Second-Order Noise Shaping at 44.1 kHz Uses Marginally Stable Feedback Loop
+# Task 123: Dither — Second-Order Noise Shaping at 44.1 kHz Uses Marginally Stable Feedback Loop
 
 ## Description
 

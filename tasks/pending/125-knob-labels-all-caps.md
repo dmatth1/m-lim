@@ -1,4 +1,4 @@
-# Task 110: Knob Labels Should Be ALL CAPS to Match Pro-L 2
+# Task 125: Knob Labels Should Be ALL CAPS to Match Pro-L 2
 
 ## Description
 In the reference (`prol2-features.jpg`, `prol2-main-ui.jpg`, `v1-0020.png`), all knob labels in the control strip are rendered in **ALL CAPS**: "LOOKAHEAD", "ATTACK", "RELEASE", "STYLE". The current implementation uses title case: "Lookahead", "Attack", "Release".
