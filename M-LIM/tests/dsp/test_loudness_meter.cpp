@@ -368,6 +368,143 @@ TEST_CASE("test_no_alloc_in_processblock", "[LoudnessMeter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_mono_input_no_crash
+// prepare() with 1 channel, process 100 blocks of sine → getIntegratedLUFS()
+// is finite and negative (no crash, no NaN).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_mono_input_no_crash", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 1);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // 100 blocks ≈ 10 s of mono sine at -20 dBFS
+    feedSine(meter, 1000.0, amp, fs, 10.0, 512, 1);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Mono integrated LUFS: " << integrated);
+
+    CHECK(std::isfinite(integrated));
+    CHECK(integrated < 0.0f);
+
+    const float momentary = meter.getMomentaryLUFS();
+    INFO("Mono momentary LUFS: " << momentary);
+    CHECK(std::isfinite(momentary));
+    CHECK(momentary < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_absolute_gate_excludes_silence
+// Feed 5 s of silence (below -70 LUFS absolute gate) then 5 s of -20 dBFS
+// tone.  The integrated result must reflect only the tone period, not be
+// dragged down by the silent blocks.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_absolute_gate_excludes_silence", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // 5 s silence → all blocks have power 0 → below absolute gate → excluded
+    feedSilence(meter, fs, 5.0);
+
+    // 5 s of tone at -20 dBFS
+    feedSine(meter, 1000.0, amp, fs, 5.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Integrated LUFS after silence + tone: " << integrated);
+
+    // Must be finite (not dragged to -inf by silence blocks)
+    REQUIRE(std::isfinite(integrated));
+
+    // Stereo -20 dBFS 1 kHz sine → expected ≈ -20.69 LUFS; allow ±3 LU
+    CHECK(integrated > -24.0f);
+    CHECK(integrated < -17.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_reset_integrated_does_not_affect_momentary
+// Call resetIntegrated() mid-session; getMomentaryLUFS() must remain valid
+// since the momentary ring buffer is independent of the integrated history.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reset_integrated_does_not_affect_momentary", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // Build up a valid momentary reading
+    feedSine(meter, 1000.0, amp, fs, 5.0);
+    REQUIRE(std::isfinite(meter.getMomentaryLUFS()));
+    REQUIRE(std::isfinite(meter.getIntegratedLUFS()));
+
+    // Reset integrated only
+    meter.resetIntegrated();
+
+    // Momentary ring buffer must still be valid (not reset)
+    const float momentaryAfterReset = meter.getMomentaryLUFS();
+    INFO("Momentary after resetIntegrated: " << momentaryAfterReset);
+    CHECK(std::isfinite(momentaryAfterReset));
+    CHECK(momentaryAfterReset < 0.0f);
+
+    // Short-term should also be unaffected
+    CHECK(std::isfinite(meter.getShortTermLUFS()));
+
+    // Continue processing — momentary should stay valid
+    feedSine(meter, 1000.0, amp, fs, 2.0);
+    CHECK(std::isfinite(meter.getMomentaryLUFS()));
+}
+
+// ---------------------------------------------------------------------------
+// test_lra_zero_for_constant_signal
+// 10 s of constant loudness → all 3 s windows have identical LUFS →
+// 10th and 95th percentiles lie in the same histogram bin → LRA ≈ 0 LU.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_zero_for_constant_signal", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    // -23 dBFS stereo sine: constant loudness throughout
+    const float amp = static_cast<float>(std::pow(10.0, -23.0 / 20.0));
+    feedSine(meter, 1000.0, amp, fs, 10.0);
+
+    const float lra = meter.getLoudnessRange();
+    INFO("LRA for constant signal: " << lra << " LU");
+
+    // All windows have identical loudness → range should be 0 (or very small)
+    CHECK(lra < 0.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_silence_integrated_is_minus_infinity
+// Processing only silence for the entire session: getIntegratedLUFS() must
+// return negative infinity (all blocks below the -70 LUFS absolute gate).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_silence_integrated_is_minus_infinity", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    // Feed >1 s of silence so integrated update fires at least once
+    feedSilence(meter, fs, 3.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Integrated LUFS (silence only): " << integrated);
+
+    CHECK(std::isinf(integrated));
+    CHECK(integrated < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
 // test_momentary_lufs_ring_buffer
 // The ring-buffer implementation must produce the same momentary LUFS as the
 // reference deque-based computation.  We verify by comparing the ring buffer
