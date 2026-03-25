@@ -288,7 +288,7 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
     }
 
     // Small ceiling label on the right edge of scale area
-    juce::String label = juce::String (ceilingDB_, 1) + "dB";
+    juce::String label = juce::String (ceilingDB_, 1) + " dB";
     auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 2.0f,
                                               y - 6.0f,
                                               scaleArea.getWidth() - 4.0f,
