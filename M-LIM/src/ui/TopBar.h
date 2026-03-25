@@ -41,7 +41,7 @@ private:
     juce::Label      presetLabel_;
     juce::TextButton nextButton_    { ">" };
     juce::TextButton abToggleButton_{ "A/B" };
-    juce::TextButton abCopyButton_  { "A→B" };
+    juce::TextButton abCopyButton_  { "Copy" };
     juce::TextButton undoButton_    { "Undo" };
     juce::TextButton redoButton_    { "Redo" };
 
