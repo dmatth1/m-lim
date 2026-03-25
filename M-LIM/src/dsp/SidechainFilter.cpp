@@ -1,4 +1,5 @@
 #include "SidechainFilter.h"
+#include "DspUtil.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -79,12 +80,6 @@ void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
     }
 }
 
-// Exact bit-pattern equality — intentional, detects unchanged parameter values
-// to avoid redundant coefficient recomputation without triggering -Wfloat-equal.
-static bool floatBitsEqual (float a, float b) noexcept
-{
-    return std::memcmp (&a, &b, sizeof(float)) == 0;
-}
 
 void SidechainFilter::setHighPassFreq(float hz)
 {

@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <algorithm>
+#include <cstring>
 
 static constexpr float kDspUtilMinGain = 1e-6f;  // -120 dB floor
 
@@ -32,6 +33,15 @@ inline float decibelsToGain(float dB)
 inline float clampThreshold(float linear) noexcept
 {
     return std::clamp(linear, kDspUtilMinGain, 1.0f);
+}
+
+// ---------------------------------------------------------------------------
+// Bit-exact float comparison — avoids spurious parameter updates when an
+// atomic float is written with the same value it already holds.
+// ---------------------------------------------------------------------------
+inline bool floatBitsEqual(float a, float b) noexcept
+{
+    return std::memcmp(&a, &b, sizeof(float)) == 0;
 }
 
 inline void applyChannelLinking(float* perChGain, int chCount, float link) noexcept

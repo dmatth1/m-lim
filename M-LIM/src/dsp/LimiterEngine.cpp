@@ -346,12 +346,6 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
 // Parameter setters
 // ============================================================================
 
-// Bit-exact float comparison — avoids -Wfloat-equal warnings while catching
-// the common case where an unchanged parameter is written every block.
-static bool floatBitsEqual(float a, float b) noexcept
-{
-    return std::memcmp(&a, &b, sizeof(float)) == 0;
-}
 
 void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
 {
