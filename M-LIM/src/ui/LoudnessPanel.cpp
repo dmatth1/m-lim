@@ -375,7 +375,7 @@ juce::Colour LoudnessPanel::histogramBarColour (float binLUFS,
     else if (diff >= -6.0f)
         return MLIMColours::meterWarning;                         // approaching: yellow
     else
-        return MLIMColours::textPrimary.withAlpha (0.75f);        // below target: light gray
+        return MLIMColours::meterSafe.withAlpha (0.85f);           // below target: steel blue
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
