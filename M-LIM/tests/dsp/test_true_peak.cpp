@@ -166,6 +166,53 @@ TEST_CASE("test_getpeak_matches_processsample_and_reset_clears", "[TruePeakDetec
     REQUIRE(det.getPeak() == 0.0f);
 }
 
+TEST_CASE("test_processblock_vs_processsample_same_peak", "[TruePeakDetector]")
+{
+    // Verify that processBlock() and a loop of processSample() produce identical getPeak()
+    // results for the same input, catching any structural divergence between the two paths.
+    TruePeakDetector blockDet;
+    TruePeakDetector sampleDet;
+    blockDet.prepare(kSampleRate);
+    sampleDet.prepare(kSampleRate);
+
+    const int numSamples = 256;
+    std::vector<float> signal(numSamples);
+    double freq = kSampleRate / 4.0; // Nyquist/4 sine — same as test_detects_intersample_peak
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * freq * i / kSampleRate));
+
+    // Process via processBlock on one instance
+    blockDet.processBlock(signal.data(), numSamples);
+
+    // Process via individual processSample calls on the other instance
+    for (int i = 0; i < numSamples; ++i)
+        sampleDet.processSample(signal[i]);
+
+    float blockPeak  = blockDet.getPeak();
+    float samplePeak = sampleDet.getPeak();
+
+    // Both paths must agree within ±0.001 — structural divergence would exceed this
+    REQUIRE(std::abs(blockPeak - samplePeak) < 0.001f);
+}
+
+TEST_CASE("test_processblock_returns_correct_peak_object", "[TruePeakDetector]")
+{
+    // Verify that processBlock() updates the internal peak state accessible via getPeak().
+    // For a sine with amplitude 0.9f, the inter-sample peak should be at least 0.9f.
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    const int numSamples = 256;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = 0.9f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+    det.processBlock(signal.data(), numSamples);
+
+    // True peak must be at least as large as the largest sample peak
+    REQUIRE(det.getPeak() >= 0.9f);
+}
+
 TEST_CASE("test_fir_coefficient_integrity", "[TruePeakDetector]")
 {
     // Verify that the transposed kCoeffsByTap table contains identical values
