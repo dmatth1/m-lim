@@ -40,6 +40,18 @@ void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numC
     mSidechainDelayBuffers.assign(numChannels, std::vector<float>(mMaxLookaheadSamples + 1, 0.0f));
     mSidechainWritePos.assign(numChannels, 0);
 
+    // Pre-allocate sliding-window maximum deques (no audio-thread heap allocs)
+    const int deqCap = mMaxLookaheadSamples + 1;
+    mMainDeques.resize(numChannels);
+    mSCDeques.resize(numChannels);
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        mMainDeques[ch].reserve(deqCap);
+        mSCDeques[ch].reserve(deqCap);
+    }
+    mMainWriteCount.assign(numChannels, 0);
+    mSCWriteCount.assign(numChannels, 0);
+
     // Default release: ~50 ms
     const float releaseMs = 50.0f;
     mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(sampleRate)));
@@ -173,25 +185,46 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
     for (int s = 0; s < numSamples; ++s)
     {
-        // --- 1. Write input (and sidechain) into delay buffers -----------------
+        // --- 1. Write input (and sidechain) into delay buffers + update sliding max ---
         for (int ch = 0; ch < chCount; ++ch)
         {
             if (!bypassDelay)
             {
+                // Main path: write sample and update monotone deque
+                const float mainAbs = std::abs(channelData[ch][s]);
                 mDelayBuffers[ch][mWritePos[ch]] = channelData[ch][s];
                 mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
 
+                SWDeque& md = mMainDeques[ch];
+                int&     mc = mMainWriteCount[ch];
+                while (!md.empty() && md.back().value <= mainAbs)
+                    md.pop_back();
+                md.push_back({mainAbs, mc});
+                while (!md.empty() && md.front().pos <= mc - lookahead)
+                    md.pop_front();
+                ++mc;
+
                 if (sidechainData != nullptr)
                 {
+                    const float scAbs = std::abs(sidechainData[ch][s]);
                     mSidechainDelayBuffers[ch][mSidechainWritePos[ch]] = sidechainData[ch][s];
                     mSidechainWritePos[ch] = (mSidechainWritePos[ch] + 1) % bufSize;
+
+                    SWDeque& sd = mSCDeques[ch];
+                    int&     sc = mSCWriteCount[ch];
+                    while (!sd.empty() && sd.back().value <= scAbs)
+                        sd.pop_back();
+                    sd.push_back({scAbs, sc});
+                    while (!sd.empty() && sd.front().pos <= sc - lookahead)
+                        sd.pop_front();
+                    ++sc;
                 }
             }
         }
 
         // --- 2. Find per-channel peak in lookahead window ----------------------
-        //        When sidechain provided, scan sidechain delay buffer.
-        //        Otherwise scan main delay buffer.
+        //        When sidechain provided, read sidechain deque maximum.
+        //        Otherwise read main deque maximum.
         //        For bypass path: just use current input sample directly.
         float perChRequiredGain[8];  // supports up to 8 channels (7.1 surround)
         for (int ch = 0; ch < chCount; ++ch)
@@ -208,25 +241,9 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
             }
             else
             {
-                // Choose which delay buffer to scan for detection:
-                // - sidechain path: scan sidechain delay buffer
-                // - main path: scan main delay buffer
-                const std::vector<float>& scanBuf = (sidechainData != nullptr)
-                                                        ? mSidechainDelayBuffers[ch]
-                                                        : mDelayBuffers[ch];
-                const int scanWritePos = (sidechainData != nullptr)
-                                             ? mSidechainWritePos[ch]
-                                             : mWritePos[ch];
-
-                peakAbs = 0.0f;
-                int rpos = (scanWritePos - 1 + bufSize) % bufSize;  // most recently written
-                for (int k = 0; k < lookahead; ++k)
-                {
-                    const float val = std::abs(scanBuf[rpos]);
-                    if (val > peakAbs)
-                        peakAbs = val;
-                    rpos = (rpos - 1 + bufSize) % bufSize;
-                }
+                // O(1) lookup: front of the monotone deque is the window maximum
+                SWDeque& deq = (sidechainData != nullptr) ? mSCDeques[ch] : mMainDeques[ch];
+                peakAbs = deq.empty() ? 0.0f : deq.front().value;
             }
 
             perChRequiredGain[ch] = computeRequiredGain(peakAbs);

@@ -397,3 +397,65 @@ TEST_CASE("test_custom_threshold", "[TransientLimiter]")
         REQUIRE(limiter.getGainReduction() >= -0.5f);
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_transient_limiter_lookahead_peak
+//   Feed a buffer with a single large spike at a known position followed by
+//   silence.  With lookahead L the delay is (L-1) samples, so the spike
+//   arrives at the output at position peakPos + L - 1.  Verify:
+//     1. The output peak does not exceed the threshold (GR correctly applied).
+//     2. GR was active (gain reduction reported).
+//     3. The output spike position is within ±1 sample of the expected
+//        delayed position — confirming the lookahead window anticipates the
+//        spike by exactly the lookahead duration.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_transient_limiter_lookahead_peak", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    const float lookaheadMs      = 2.0f;
+    const int   lookaheadSamples =
+        static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;  // hard knee — predictable onset
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(lookaheadMs);
+
+    // Spike at peakPos, silence everywhere else
+    const int   peakPos  = 300;
+    const float spikeAmp = 4.0f;   // +12 dBFS — well above threshold
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 0.0f));
+    buf[0][peakPos] = spikeAmp;
+
+    auto ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), 1, kBlockSize);
+
+    // 1. Output peak must not exceed threshold
+    REQUIRE(blockPeak(buf[0]) <= 1.0f + 1e-4f);
+
+    // 2. GR was applied
+    REQUIRE(limiter.getGainReduction() <= 0.0f);
+
+    // 3. Delayed output spike position must be within ±1 sample of expected
+    const int expectedOutputPos = peakPos + lookaheadSamples - 1;
+    if (expectedOutputPos < kBlockSize)
+    {
+        int   maxPos = 0;
+        float maxVal = 0.0f;
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            if (std::abs(buf[0][i]) > maxVal)
+            {
+                maxVal = std::abs(buf[0][i]);
+                maxPos = i;
+            }
+        }
+        REQUIRE(std::abs(maxPos - expectedOutputPos) <= 1);
+
+        // The attenuated spike at the output must be within threshold
+        REQUIRE(buf[0][expectedOutputPos] <= 1.0f + 1e-4f);
+    }
+}

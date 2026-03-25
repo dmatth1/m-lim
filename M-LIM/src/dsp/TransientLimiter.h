@@ -75,6 +75,53 @@ private:
     // Per-channel smoothed gain state (linear, 0–1; 1 = unity, <1 = reducing)
     std::vector<float> mGainState;
 
+    // Sliding-window maximum deque for O(1) amortised peak detection.
+    // Maintained as a monotone non-increasing deque: the front is always
+    // the window maximum.  A fixed-size circular buffer avoids heap
+    // allocations on the audio thread.
+    struct SWDequeEntry { float value; int pos; };
+    struct SWDeque
+    {
+        std::vector<SWDequeEntry> data; // pre-allocated, capacity = mMaxLookaheadSamples + 1
+        int head = 0, tail = 0, count = 0;
+
+        void reserve (int cap)
+        {
+            data.assign (cap + 1, SWDequeEntry{});
+            head = tail = count = 0;
+        }
+        void reset () noexcept { head = tail = count = 0; }
+        bool empty () const noexcept { return count == 0; }
+        SWDequeEntry& front () noexcept { return data[head]; }
+        SWDequeEntry& back  () noexcept
+        {
+            int idx = tail - 1;
+            if (idx < 0) idx += (int)data.size();
+            return data[idx];
+        }
+        void push_back (SWDequeEntry e) noexcept
+        {
+            data[tail] = e;
+            tail = (tail + 1) % (int)data.size();
+            ++count;
+        }
+        void pop_back () noexcept
+        {
+            tail = (tail - 1 + (int)data.size()) % (int)data.size();
+            --count;
+        }
+        void pop_front () noexcept
+        {
+            head = (head + 1) % (int)data.size();
+            --count;
+        }
+    };
+
+    std::vector<SWDeque> mMainDeques;      // one per channel — main-path peak detection
+    std::vector<SWDeque> mSCDeques;        // one per channel — sidechain-path peak detection
+    std::vector<int>     mMainWriteCount;  // monotone write counter per channel (main)
+    std::vector<int>     mSCWriteCount;    // monotone write counter per channel (sidechain)
+
     float mReleaseCoeff = 0.0f;   // per-sample exponential release coefficient
 
     float mCurrentGRdB = 0.0f;   // reported gain reduction in dB
