@@ -1,5 +1,4 @@
 #pragma once
-#include <array>
 #include <atomic>
 #include <cstring>
 #include <vector>
@@ -25,9 +24,7 @@ struct MeterData
     float integratedLUFS = 0.0f; ///< Integrated loudness since reset, in LUFS
     float loudnessRange  = 0.0f; ///< Loudness range (EBU R128), in LU
 
-    static constexpr int kMaxWaveformSamples = 64;
-    std::array<float, kMaxWaveformSamples> waveformBuffer{};  ///< Waveform/GR snapshot for WaveformDisplay
-    int waveformSize = 0;                                     ///< Valid samples in waveformBuffer
+    float waveformSample = 0.0f;  ///< GR sample for WaveformDisplay (one per audio block)
 };
 
 /**

@@ -334,9 +334,8 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
     md.truePeakL     = mTruePeakL.getPeak();
     md.truePeakR     = mTruePeakR.getPeak();
 
-    // Waveform: copy output level snapshot (one value per block for scrolling display)
-    md.waveformSize       = 1;
-    md.waveformBuffer[0]  = totalGR;  // GR trace for waveform display
+    // Waveform: one GR sample per block for the scrolling WaveformDisplay
+    md.waveformSample = totalGR;
     mMeterFIFO.push(md);
 }
 

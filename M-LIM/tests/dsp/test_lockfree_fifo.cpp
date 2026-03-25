@@ -19,13 +19,8 @@ TEST_CASE("test_meter_data_default_values", "[lockfree_fifo]")
     CHECK(d.gainReduction == 0.0f);
     CHECK(d.truePeakL     == 0.0f);
     CHECK(d.truePeakR     == 0.0f);
-    CHECK(d.waveformSize  == 0);
-
-    // All waveform bytes should be zero (not NaN)
-    bool anyNaN = false;
-    for (float v : d.waveformBuffer)
-        if (std::isnan(v)) anyNaN = true;
-    CHECK_FALSE(anyNaN);
+    CHECK(d.waveformSample == 0.0f);
+    CHECK_FALSE(std::isnan(d.waveformSample));
 }
 
 // ============================================================
@@ -44,10 +39,7 @@ TEST_CASE("test_push_pop_single_item", "[lockfree_fifo]")
     in.gainReduction = -3.0f;
     in.truePeakL     = 0.7f;
     in.truePeakR     = 0.8f;
-    in.waveformSize  = 3;
-    in.waveformBuffer[0] = 1.0f;
-    in.waveformBuffer[1] = -1.0f;
-    in.waveformBuffer[2] = 0.5f;
+    in.waveformSample = 1.0f;
 
     REQUIRE(fifo.push(in));
 
@@ -61,10 +53,7 @@ TEST_CASE("test_push_pop_single_item", "[lockfree_fifo]")
     CHECK(out.gainReduction == Catch::Approx(-3.0f));
     CHECK(out.truePeakL     == Catch::Approx(0.7f));
     CHECK(out.truePeakR     == Catch::Approx(0.8f));
-    CHECK(out.waveformSize  == 3);
-    CHECK(out.waveformBuffer[0] == Catch::Approx(1.0f));
-    CHECK(out.waveformBuffer[1] == Catch::Approx(-1.0f));
-    CHECK(out.waveformBuffer[2] == Catch::Approx(0.5f));
+    CHECK(out.waveformSample == Catch::Approx(1.0f));
 }
 
 // ============================================================
@@ -80,7 +69,7 @@ TEST_CASE("test_fifo_ordering", "[lockfree_fifo]")
     {
         MeterData d;
         d.inputLevelL = static_cast<float>(i);
-        d.waveformSize = i;
+        d.waveformSample = static_cast<float>(i) * 0.5f;
         REQUIRE(fifo.push(d));
     }
 
@@ -88,8 +77,8 @@ TEST_CASE("test_fifo_ordering", "[lockfree_fifo]")
     {
         MeterData d;
         REQUIRE(fifo.pop(d));
-        CHECK(d.inputLevelL == Catch::Approx(static_cast<float>(i)));
-        CHECK(d.waveformSize == i);
+        CHECK(d.inputLevelL   == Catch::Approx(static_cast<float>(i)));
+        CHECK(d.waveformSample == Catch::Approx(static_cast<float>(i) * 0.5f));
     }
 
     // Should be empty now
@@ -148,27 +137,22 @@ TEST_CASE("test_push_full_drops_or_fails", "[lockfree_fifo]")
 }
 
 // ============================================================
-// Waveform buffer survives push/pop roundtrip
+// Waveform sample survives push/pop roundtrip
 // ============================================================
 
-TEST_CASE("test_waveform_buffer_roundtrip", "[lockfree_fifo]")
+TEST_CASE("test_waveform_sample_roundtrip", "[lockfree_fifo]")
 {
     LockFreeFIFO<MeterData> fifo(4);
 
     MeterData in;
-    in.waveformSize = MeterData::kMaxWaveformSamples;
-    for (int i = 0; i < MeterData::kMaxWaveformSamples; ++i)
-        in.waveformBuffer[static_cast<std::size_t>(i)] = static_cast<float>(i) * 0.001f;
+    in.waveformSample = -6.5f;
 
     REQUIRE(fifo.push(in));
 
     MeterData out;
     REQUIRE(fifo.pop(out));
 
-    CHECK(out.waveformSize == MeterData::kMaxWaveformSamples);
-    for (int i = 0; i < MeterData::kMaxWaveformSamples; ++i)
-        CHECK(out.waveformBuffer[static_cast<std::size_t>(i)]
-              == Catch::Approx(static_cast<float>(i) * 0.001f));
+    CHECK(out.waveformSample == Catch::Approx(-6.5f));
 }
 
 // ============================================================
@@ -186,7 +170,7 @@ TEST_CASE("test_rapid_push_pop_cycle", "[lockfree_fifo]")
         MeterData in;
         in.inputLevelL   = static_cast<float>(i % 1000) * 0.001f;
         in.gainReduction = static_cast<float>(-(i % 100));
-        in.waveformSize  = i % 512;
+        in.waveformSample = static_cast<float>(i % 30) * -0.1f;
 
         // Push may fail if full (non-blocking); drain first if needed
         if (!fifo.push(in))
@@ -265,10 +249,7 @@ TEST_CASE("test_concurrent_data_integrity", "[lockfree_fifo]")
             MeterData d;
             d.inputLevelL      = static_cast<float>(i);
             d.gainReduction    = static_cast<float>(-(i % 10000));
-            d.waveformSize     = i % (MeterData::kMaxWaveformSamples + 1);
-            d.waveformBuffer[0] = static_cast<float>(i) * 0.1f;
-            d.waveformBuffer[1] = static_cast<float>(i) * 0.2f;
-            d.waveformBuffer[2] = static_cast<float>(i) * 0.3f;
+            d.waveformSample   = static_cast<float>(i) * 0.1f;
             while (!fifo.push(d)) {}
         }
     });
@@ -287,10 +268,7 @@ TEST_CASE("test_concurrent_data_integrity", "[lockfree_fifo]")
                 bool ok = std::isfinite(d.inputLevelL)
                        && std::isfinite(d.gainReduction)
                        && d.gainReduction == Catch::Approx(static_cast<float>(-(i % 10000))).margin(1e-3f)
-                       && d.waveformSize  == (i % (MeterData::kMaxWaveformSamples + 1))
-                       && d.waveformBuffer[0] == Catch::Approx(static_cast<float>(i) * 0.1f).margin(1e-3f)
-                       && d.waveformBuffer[1] == Catch::Approx(static_cast<float>(i) * 0.2f).margin(1e-3f)
-                       && d.waveformBuffer[2] == Catch::Approx(static_cast<float>(i) * 0.3f).margin(1e-3f);
+                       && d.waveformSample == Catch::Approx(static_cast<float>(i) * 0.1f).margin(1e-3f);
 
                 if (!ok)
                     ++corrupted;
