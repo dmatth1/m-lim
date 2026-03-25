@@ -7,10 +7,10 @@
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-static constexpr double kPi     = 3.14159265358979323846;
+static constexpr double kPi              = 3.14159265358979323846;
 static constexpr double kLufsCorrectiondB = -0.691; // BS.1770-4: 10*log10(Σ G_i * z_i) - 0.691
-static constexpr double kAbsGateLUFS      = -70.0;  // absolute gate threshold
-static constexpr double kRelGateOffset    = -10.0;  // relative gate = ungated mean - 10 LU
+static constexpr double kAbsGateLUFS     = -70.0;   // absolute gate threshold
+static constexpr double kRelGateOffset   = -10.0;   // relative gate = ungated mean - 10 LU
 
 // ---------------------------------------------------------------------------
 // prepare
@@ -28,12 +28,26 @@ void LoudnessMeter::prepare(double sampleRate, int numChannels)
     mMomentaryBuffer.clear();
     mShortTermBuffer.clear();
 
-    mMomentaryLUFS  = -std::numeric_limits<float>::infinity();
-    mShortTermLUFS  = -std::numeric_limits<float>::infinity();
-    mIntegratedLUFS = -std::numeric_limits<float>::infinity();
-    mLoudnessRange  = 0.0f;
+    mMomentaryLUFS.store(kNegInf);
+    mShortTermLUFS.store(kNegInf);
+    mIntegratedLUFS.store(kNegInf);
+    mLoudnessRange.store(0.0f);
 
-    resetIntegrated();
+    // Pre-allocate circular history buffer (no audio-thread allocation)
+    mHistoryBuf.resize(static_cast<size_t>(kMaxHistoryBlocks), 0.0);
+    mHistoryHead = 0;
+    mHistorySize = 0;
+
+    // Pre-allocate working buffers for updateIntegratedAndLRA
+    mWindowPowers.clear();
+    mWindowPowers.reserve(static_cast<size_t>(kMaxHistoryBlocks));
+    mPrefixSums.resize(static_cast<size_t>(kMaxHistoryBlocks + 1), 0.0);
+
+    // Reset LRA histogram
+    mLraHisto.fill(0);
+
+    mUpdateCounter = 0;
+
     setupKWeightingFilters();
 }
 
@@ -156,7 +170,7 @@ void LoudnessMeter::onBlockComplete(double blockMeanSquare)
         double sum = 0.0;
         for (double v : mMomentaryBuffer)
             sum += v;
-        mMomentaryLUFS = powerToLUFS(sum / kMomentaryBlocks);
+        mMomentaryLUFS.store(powerToLUFS(sum / kMomentaryBlocks));
     }
 
     // --- Update short-term LUFS ---
@@ -164,36 +178,53 @@ void LoudnessMeter::onBlockComplete(double blockMeanSquare)
         double sum = 0.0;
         for (double v : mShortTermBuffer)
             sum += v;
-        mShortTermLUFS = powerToLUFS(sum / static_cast<double>(mShortTermBuffer.size()));
+        mShortTermLUFS.store(powerToLUFS(sum / static_cast<double>(mShortTermBuffer.size())));
     }
 
-    // --- Store block for integrated / LRA ---
-    mGatedBlockHistory.push_back(blockMeanSquare);
-    updateIntegratedAndLRA();
+    // --- Append to circular history buffer (no allocation) ---
+    pushHistory(blockMeanSquare);
+
+    // --- Update integrated+LRA (throttled to every kUpdateFreq blocks ≈ 1 s) ---
+    ++mUpdateCounter;
+    if (mUpdateCounter >= kUpdateFreq)
+    {
+        mUpdateCounter = 0;
+        updateIntegratedAndLRA();
+    }
 }
 
 // ---------------------------------------------------------------------------
 // updateIntegratedAndLRA
+//
+// Uses pre-allocated buffers and O(n) prefix-sum technique to avoid
+// runtime allocations and the previous O(n²) window iteration.
+// LRA uses a histogram-based percentile approach instead of sorting.
 // ---------------------------------------------------------------------------
 void LoudnessMeter::updateIntegratedAndLRA()
 {
-    // Integrated LUFS uses 400 ms blocks (4 × 100 ms) with 75 % overlap.
-    // We treat each 100 ms slot as a potential start of a 400 ms window.
-    // Minimum: need at least 4 blocks to form the first window.
-    const int n = static_cast<int>(mGatedBlockHistory.size());
+    const int n = mHistorySize;
     if (n < kMomentaryBlocks)
         return;
 
-    // Build list of 400 ms window mean powers (hop = 1 block = 100 ms)
-    std::vector<double> windowPowers;
-    windowPowers.reserve(static_cast<size_t>(n - kMomentaryBlocks + 1));
+    // -----------------------------------------------------------------------
+    // Build prefix sums over the circular history (O(n)).
+    // mPrefixSums is pre-allocated to kMaxHistoryBlocks+1 in prepare().
+    // -----------------------------------------------------------------------
+    mPrefixSums[0] = 0.0;
+    for (int i = 0; i < n; ++i)
+        mPrefixSums[static_cast<size_t>(i + 1)] = mPrefixSums[static_cast<size_t>(i)] + historyAt(i);
 
-    for (int i = 0; i <= n - kMomentaryBlocks; ++i)
+    // -----------------------------------------------------------------------
+    // Integrated LUFS — 400 ms sliding windows (hop = 100 ms).
+    // mWindowPowers is pre-allocated; clear() + push_back() does not allocate.
+    // -----------------------------------------------------------------------
+    mWindowPowers.clear();
+    const int numWin400 = n - kMomentaryBlocks + 1;
+    for (int i = 0; i < numWin400; ++i)
     {
-        double sum = 0.0;
-        for (int k = i; k < i + kMomentaryBlocks; ++k)
-            sum += mGatedBlockHistory[static_cast<size_t>(k)];
-        windowPowers.push_back(sum / kMomentaryBlocks);
+        const double sum = mPrefixSums[static_cast<size_t>(i + kMomentaryBlocks)]
+                         - mPrefixSums[static_cast<size_t>(i)];
+        mWindowPowers.push_back(sum / kMomentaryBlocks);
     }
 
     // Absolute gate: -70 LUFS
@@ -202,7 +233,7 @@ void LoudnessMeter::updateIntegratedAndLRA()
     // First pass: mean of all windows above absolute gate
     double sumAbove = 0.0;
     int    cntAbove = 0;
-    for (double p : windowPowers)
+    for (double p : mWindowPowers)
     {
         if (p > absGateLinear)
         {
@@ -213,75 +244,99 @@ void LoudnessMeter::updateIntegratedAndLRA()
 
     if (cntAbove == 0)
     {
-        mIntegratedLUFS = -std::numeric_limits<float>::infinity();
+        mIntegratedLUFS.store(kNegInf);
+    }
+    else
+    {
+        const double meanAbsGated  = sumAbove / cntAbove;
+        const float  relGateLUFS   = powerToLUFS(meanAbsGated) + static_cast<float>(kRelGateOffset);
+        const double relGateLinear = lufsToLinear(relGateLUFS);
+
+        // Second pass: mean of all windows above relative gate
+        double sumRel = 0.0;
+        int    cntRel = 0;
+        for (double p : mWindowPowers)
+        {
+            if (p > absGateLinear && p > relGateLinear)
+            {
+                sumRel += p;
+                ++cntRel;
+            }
+        }
+
+        if (cntRel == 0)
+            mIntegratedLUFS.store(kNegInf);
+        else
+            mIntegratedLUFS.store(powerToLUFS(sumRel / cntRel));
+    }
+
+    // -----------------------------------------------------------------------
+    // LRA — short-term (3 s) windows, histogram-based percentile (no sorting).
+    // -----------------------------------------------------------------------
+    if (n < kShortTermBlocks)
+    {
+        mLoudnessRange.store(0.0f);
         return;
     }
 
-    const double meanAbsGated  = sumAbove / cntAbove;
-    const float  relGateLUFS   = powerToLUFS(meanAbsGated) + static_cast<float>(kRelGateOffset);
-    const double relGateLinear = lufsToLinear(relGateLUFS);
+    // Rebuild LRA histogram from current history (O(n)).
+    mLraHisto.fill(0);
+    int validCount = 0;
 
-    // Second pass: mean of all windows above relative gate
-    double sumRel = 0.0;
-    int    cntRel = 0;
-    for (double p : windowPowers)
+    const int numWin3s = n - kShortTermBlocks + 1;
+    for (int i = 0; i < numWin3s; ++i)
     {
-        if (p > absGateLinear && p > relGateLinear)
+        const double sum = mPrefixSums[static_cast<size_t>(i + kShortTermBlocks)]
+                         - mPrefixSums[static_cast<size_t>(i)];
+        const float l = powerToLUFS(sum / kShortTermBlocks);
+
+        // Gate: above absolute threshold (use a 1 LU margin for numerical safety)
+        if (l > static_cast<float>(kAbsGateLUFS) - 1.0f)
         {
-            sumRel += p;
-            ++cntRel;
+            int bin = static_cast<int>((l - kLraHistoMinLUFS) / kLraBinWidth);
+            bin = std::clamp(bin, 0, kLraHistoBins - 1);
+            ++mLraHisto[static_cast<size_t>(bin)];
+            ++validCount;
         }
     }
 
-    if (cntRel == 0)
+    if (validCount < 2)
     {
-        mIntegratedLUFS = -std::numeric_limits<float>::infinity();
+        mLoudnessRange.store(0.0f);
         return;
     }
 
-    mIntegratedLUFS = powerToLUFS(sumRel / cntRel);
+    // Find 10th and 95th percentiles from histogram (O(kLraHistoBins) = O(900)).
+    const int loTarget = static_cast<int>(0.10 * validCount);
+    const int hiTarget = static_cast<int>(0.95 * validCount);
 
-    // -----------------------------------------------------------------
-    // LRA: uses short-term values above the absolute gate
-    // Collect short-term LUFS for each overlapping 3 s window
-    // -----------------------------------------------------------------
-    if (n < kShortTermBlocks)
+    int   cumul   = 0;
+    float loLUFS  = kLraHistoMinLUFS;
+    float hiLUFS  = kLraHistoMinLUFS;
+    bool  foundLo = false;
+    bool  foundHi = false;
+
+    for (int b = 0; b < kLraHistoBins && !(foundLo && foundHi); ++b)
     {
-        mLoudnessRange = 0.0f;
-        return;
+        cumul += mLraHisto[static_cast<size_t>(b)];
+        const float binLUFS = kLraHistoMinLUFS + static_cast<float>(b) * kLraBinWidth;
+
+        if (!foundLo && cumul > loTarget)
+        {
+            loLUFS  = binLUFS;
+            foundLo = true;
+        }
+        if (!foundHi && cumul >= hiTarget)
+        {
+            hiLUFS  = binLUFS;
+            foundHi = true;
+        }
     }
 
-    std::vector<float> stLoudness;
-    stLoudness.reserve(static_cast<size_t>(n - kShortTermBlocks + 1));
-
-    for (int i = 0; i <= n - kShortTermBlocks; ++i)
-    {
-        double sum = 0.0;
-        for (int k = i; k < i + kShortTermBlocks; ++k)
-            sum += mGatedBlockHistory[static_cast<size_t>(k)];
-        float l = powerToLUFS(sum / kShortTermBlocks);
-        if (l > kAbsGateLUFS - 1.0f) // include anything above ~-71 LU
-            stLoudness.push_back(l);
-    }
-
-    if (stLoudness.size() < 2)
-    {
-        mLoudnessRange = 0.0f;
-        return;
-    }
-
-    std::sort(stLoudness.begin(), stLoudness.end());
-
-    // 10th percentile → low, 95th percentile → high
-    const size_t sz  = stLoudness.size();
-    const size_t lo  = static_cast<size_t>(std::floor(0.10 * sz));
-    const size_t hi  = static_cast<size_t>(std::min(
-                           static_cast<size_t>(std::ceil(0.95 * sz)), sz - 1));
-
-    if (hi > lo)
-        mLoudnessRange = stLoudness[hi] - stLoudness[lo];
+    if (foundLo && foundHi && hiLUFS > loLUFS)
+        mLoudnessRange.store(hiLUFS - loLUFS);
     else
-        mLoudnessRange = 0.0f;
+        mLoudnessRange.store(0.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -289,18 +344,21 @@ void LoudnessMeter::updateIntegratedAndLRA()
 // ---------------------------------------------------------------------------
 void LoudnessMeter::resetIntegrated()
 {
-    mGatedBlockHistory.clear();
-    mIntegratedLUFS = -std::numeric_limits<float>::infinity();
-    mLoudnessRange  = 0.0f;
+    mHistoryHead = 0;
+    mHistorySize = 0;
+    mUpdateCounter = 0;
+    mLraHisto.fill(0);
+    mIntegratedLUFS.store(kNegInf);
+    mLoudnessRange.store(0.0f);
 }
 
 // ---------------------------------------------------------------------------
-// Getters
+// Getters — safe to call from any thread (atomic loads).
 // ---------------------------------------------------------------------------
-float LoudnessMeter::getMomentaryLUFS()  const { return mMomentaryLUFS;  }
-float LoudnessMeter::getShortTermLUFS()  const { return mShortTermLUFS;  }
-float LoudnessMeter::getIntegratedLUFS() const { return mIntegratedLUFS; }
-float LoudnessMeter::getLoudnessRange()  const { return mLoudnessRange;  }
+float LoudnessMeter::getMomentaryLUFS()  const { return mMomentaryLUFS.load();  }
+float LoudnessMeter::getShortTermLUFS()  const { return mShortTermLUFS.load();  }
+float LoudnessMeter::getIntegratedLUFS() const { return mIntegratedLUFS.load(); }
+float LoudnessMeter::getLoudnessRange()  const { return mLoudnessRange.load();  }
 
 // ---------------------------------------------------------------------------
 // Static helpers

@@ -3,6 +3,8 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include <deque>
+#include <array>
+#include <atomic>
 #include <limits>
 
 /**
@@ -17,6 +19,12 @@
  *
  * Internal processing uses 100 ms analysis blocks. Momentary uses the last
  * 4 blocks (400 ms), short-term uses the last 30 blocks (3 s).
+ *
+ * Real-time safety:
+ *   - No heap allocations in processBlock() or its call chain.
+ *   - Result fields are std::atomic<float> — safe to read from UI thread.
+ *   - History is capped at kMaxHistoryBlocks (≈10 min) to bound memory & CPU.
+ *   - Integrated/LRA recomputed every kUpdateFreq blocks (~1 s) to reduce load.
  */
 class LoudnessMeter
 {
@@ -74,7 +82,7 @@ private:
     std::vector<Biquad> preFilters;   // Stage 1: high-shelf pre-filter
     std::vector<Biquad> rlbFilters;   // Stage 2: RLB high-pass
 
-    double mSampleRate = 44100.0;
+    double mSampleRate  = 44100.0;
     int    mNumChannels = 2;
 
     // -----------------------------------------------------------------------
@@ -84,9 +92,7 @@ private:
     int    mBlockAccum  = 0;   // sample counter within current block
     double mBlockPower  = 0.0; // accumulated sum-of-squares for current block (all channels)
 
-    // Ring buffers of block mean-square values
-    // Momentary = last 4 × 100 ms = 400 ms
-    // Short-term = last 30 × 100 ms = 3 s
+    // Ring buffers of block mean-square values (bounded: 4 and 30 entries)
     static constexpr int kMomentaryBlocks  = 4;
     static constexpr int kShortTermBlocks  = 30;
 
@@ -94,19 +100,45 @@ private:
     std::deque<double> mShortTermBuffer;  // up to 30 blocks
 
     // -----------------------------------------------------------------------
-    // Integrated loudness gating (BS.1770-4)
-    // Gating uses 400 ms windows with 75 % overlap (100 ms hop).
-    // We store mean-square values for each 100 ms block and combine 4 at a time.
+    // Bounded circular history buffer (replaces unbounded mGatedBlockHistory).
+    // Caps memory and per-update computation to ≈10 minutes of audio.
     // -----------------------------------------------------------------------
-    std::vector<double> mGatedBlockHistory;  // all 100 ms block powers since reset
+    static constexpr int kMaxHistoryBlocks = 6000; // 10 min at 100ms/block
+
+    std::vector<double> mHistoryBuf;        // pre-allocated ring buffer (size = kMaxHistoryBlocks)
+    int                 mHistoryHead = 0;   // index of oldest element
+    int                 mHistorySize = 0;   // valid element count (0..kMaxHistoryBlocks)
+
+    // Pre-allocated working buffers — filled in updateIntegratedAndLRA() without alloc.
+    std::vector<double> mWindowPowers;      // 400 ms window mean-squares
+    std::vector<double> mPrefixSums;        // prefix sums over history (size = kMaxHistoryBlocks+1)
 
     // -----------------------------------------------------------------------
-    // Results (updated every 100 ms block)
+    // LRA histogram: 900 bins covering [-70, +20) LUFS at 0.1 LU resolution.
+    // Replaces std::sort — finding percentiles is O(900) per update.
     // -----------------------------------------------------------------------
-    float mMomentaryLUFS  = -std::numeric_limits<float>::infinity();
-    float mShortTermLUFS  = -std::numeric_limits<float>::infinity();
-    float mIntegratedLUFS = -std::numeric_limits<float>::infinity();
-    float mLoudnessRange  = 0.0f;
+    static constexpr int   kLraHistoBins    = 900;
+    static constexpr float kLraHistoMinLUFS = -70.0f;
+    static constexpr float kLraBinWidth     = 0.1f;
+
+    std::array<int, kLraHistoBins> mLraHisto{};
+
+    // -----------------------------------------------------------------------
+    // Update throttle — integrated+LRA recomputed every kUpdateFreq blocks
+    // (≈1 s) rather than on every 100 ms block.
+    // -----------------------------------------------------------------------
+    static constexpr int kUpdateFreq    = 10;
+    int                  mUpdateCounter = 0;
+
+    // -----------------------------------------------------------------------
+    // Results — written on audio thread, read on UI thread via atomics.
+    // -----------------------------------------------------------------------
+    static constexpr float kNegInf = -std::numeric_limits<float>::infinity();
+
+    std::atomic<float> mMomentaryLUFS  {kNegInf};
+    std::atomic<float> mShortTermLUFS  {kNegInf};
+    std::atomic<float> mIntegratedLUFS {kNegInf};
+    std::atomic<float> mLoudnessRange  {0.0f};
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -114,6 +146,23 @@ private:
     void setupKWeightingFilters();
     void onBlockComplete(double blockMeanSquare);
     void updateIntegratedAndLRA();
+
+    /** Append a block value to the circular history buffer. Lock-free, no alloc. */
+    void pushHistory(double val) noexcept
+    {
+        const int writeIdx = (mHistoryHead + mHistorySize) % kMaxHistoryBlocks;
+        mHistoryBuf[static_cast<size_t>(writeIdx)] = val;
+        if (mHistorySize < kMaxHistoryBlocks)
+            ++mHistorySize;
+        else
+            mHistoryHead = (mHistoryHead + 1) % kMaxHistoryBlocks;
+    }
+
+    /** Access the i-th history element (0 = oldest). */
+    double historyAt(int i) const noexcept
+    {
+        return mHistoryBuf[static_cast<size_t>((mHistoryHead + i) % kMaxHistoryBlocks)];
+    }
 
     /** Convert mean-square power (linear) to LUFS.
      *  LUFS = -0.691 + 10 * log10(power). */

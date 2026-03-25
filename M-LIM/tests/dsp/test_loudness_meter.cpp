@@ -1,6 +1,7 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "dsp/LoudnessMeter.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -246,4 +247,83 @@ TEST_CASE("test_reset_integrated", "[LoudnessMeter]")
     // Now feed enough
     feedSine(meter, 1000.0, amp, kSampleRate, 5.0);
     CHECK(std::isfinite(meter.getIntegratedLUFS()));
+}
+
+// ---------------------------------------------------------------------------
+// test_long_session_no_alloc
+// Process >1000 100ms blocks and verify that per-block processing time
+// stays bounded (no O(n²) growth due to unbounded allocations or loops).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_long_session_no_alloc", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // Warm up: fill initial history (100 blocks = 10 s)
+    feedSine(meter, 1000.0, amp, kSampleRate, 10.0);
+    REQUIRE(std::isfinite(meter.getIntegratedLUFS()));
+
+    // Time 100 blocks early in session
+    auto t0 = std::chrono::steady_clock::now();
+    feedSine(meter, 1000.0, amp, kSampleRate, 10.0); // 100 more blocks
+    auto t1 = std::chrono::steady_clock::now();
+    const double msEarly = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    // Process 900 more blocks (total > 1000 blocks)
+    feedSine(meter, 1000.0, amp, kSampleRate, 90.0);
+
+    // Time 100 blocks late in session
+    auto t2 = std::chrono::steady_clock::now();
+    feedSine(meter, 1000.0, amp, kSampleRate, 10.0); // 100 blocks late
+    auto t3 = std::chrono::steady_clock::now();
+    const double msLate = std::chrono::duration<double, std::milli>(t3 - t2).count();
+
+    INFO("Early 10s processing: " << msEarly << " ms");
+    INFO("Late 10s processing:  " << msLate  << " ms");
+
+    // Late processing must not be more than 10× slower than early processing
+    // (acceptable growth from bounded O(n) work where n is capped at 6000 blocks)
+    CHECK(msLate < msEarly * 10.0 + 500.0); // generous bound; guards against O(n²)
+
+    // Results must still be valid
+    CHECK(std::isfinite(meter.getIntegratedLUFS()));
+    CHECK(std::isfinite(meter.getMomentaryLUFS()));
+    CHECK(std::isfinite(meter.getShortTermLUFS()));
+}
+
+// ---------------------------------------------------------------------------
+// test_integrated_lufs_long_session
+// Process enough blocks to exceed the circular history cap (>6000 blocks =
+// >10 min of audio) and verify the integrated LUFS stays valid and bounded.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_integrated_lufs_long_session", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -23.0 / 20.0));
+
+    // Process 620 seconds of audio (6200 blocks, exceeds kMaxHistoryBlocks=6000)
+    // Feed in 10s chunks to keep individual feedSine calls manageable
+    for (int chunk = 0; chunk < 62; ++chunk)
+        feedSine(meter, 1000.0, amp, kSampleRate, 10.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    const float shortTerm  = meter.getShortTermLUFS();
+    const float momentary  = meter.getMomentaryLUFS();
+
+    INFO("Integrated LUFS after long session: " << integrated);
+    INFO("Short-term LUFS after long session: " << shortTerm);
+    INFO("Momentary LUFS after long session:  " << momentary);
+
+    // Must still return a valid, reasonable value — not blow up or return -inf
+    CHECK(std::isfinite(integrated));
+    CHECK(std::isfinite(shortTerm));
+    CHECK(std::isfinite(momentary));
+
+    // Stereo -23 dBFS 1 kHz sine → integrated ≈ -23.69 LUFS (within 3 LU)
+    CHECK(integrated > -27.0f);
+    CHECK(integrated < -20.0f);
 }
