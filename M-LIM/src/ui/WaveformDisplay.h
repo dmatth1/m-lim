@@ -38,6 +38,10 @@ public:
     /** Change the scrolling mode. */
     void setDisplayMode (DisplayMode mode);
 
+    /** Called when the user changes the display mode via UI interaction.
+     *  Wire this in PluginEditor to write the new value back to APVTS. */
+    std::function<void(DisplayMode)> onDisplayModeChanged;
+
     /** Update the output ceiling reference line (dBFS, e.g. -0.1). */
     void setCeiling (float dB);
 

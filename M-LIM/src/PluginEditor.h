@@ -27,6 +27,9 @@ public:
     /** For testing: returns a reference to the loudness panel. */
     LoudnessPanel& getLoudnessPanel() noexcept { return loudnessPanel_; }
 
+    /** For testing: returns a reference to the waveform display. */
+    WaveformDisplay& getWaveformDisplay() noexcept { return waveformDisplay_; }
+
 private:
     MLIMAudioProcessor& audioProcessor;
 

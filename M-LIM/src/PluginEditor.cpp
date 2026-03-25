@@ -60,13 +60,19 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
 
     wireCallbacks();
 
-    // Register APVTS listener for loudnessTarget so state restores sync the panel
+    // Register APVTS listeners so state restores sync UI components
     audioProcessor.apvts.addParameterListener (ParamID::loudnessTarget, this);
+    audioProcessor.apvts.addParameterListener (ParamID::displayMode,    this);
 
     // Initial sync from APVTS
     if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (
             audioProcessor.apvts.getParameter (ParamID::loudnessTarget)))
         loudnessPanel_.setTargetChoice (param->getIndex());
+
+    if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (
+            audioProcessor.apvts.getParameter (ParamID::displayMode)))
+        waveformDisplay_.setDisplayMode (
+            static_cast<WaveformDisplay::DisplayMode> (param->getIndex()));
 
     topBar_.setPresetName (audioProcessor.presetManager.getCurrentPresetName());
 
@@ -80,6 +86,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
 MLIMAudioProcessorEditor::~MLIMAudioProcessorEditor()
 {
     audioProcessor.apvts.removeParameterListener (ParamID::loudnessTarget, this);
+    audioProcessor.apvts.removeParameterListener (ParamID::displayMode,    this);
     stopTimer();
     setLookAndFeel (nullptr);
 }
@@ -88,6 +95,9 @@ void MLIMAudioProcessorEditor::parameterChanged (const juce::String& paramID, fl
 {
     if (paramID == ParamID::loudnessTarget)
         loudnessPanel_.setTargetChoice (static_cast<int> (newValue));
+    else if (paramID == ParamID::displayMode)
+        waveformDisplay_.setDisplayMode (
+            static_cast<WaveformDisplay::DisplayMode> (static_cast<int> (newValue)));
 }
 
 void MLIMAudioProcessorEditor::wireCallbacks()
@@ -122,6 +132,12 @@ void MLIMAudioProcessorEditor::wireCallbacks()
     {
         audioProcessor.presetManager.loadNextPreset (audioProcessor.apvts);
         topBar_.setPresetName (audioProcessor.presetManager.getCurrentPresetName());
+    };
+
+    waveformDisplay_.onDisplayModeChanged = [this] (WaveformDisplay::DisplayMode mode)
+    {
+        if (auto* p = audioProcessor.apvts.getParameter (ParamID::displayMode))
+            p->setValueNotifyingHost (p->convertTo0to1 (static_cast<float> (mode)));
     };
 
     loudnessPanel_.onTargetChanged = [this] (int choiceIndex)

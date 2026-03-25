@@ -36,7 +36,11 @@ void WaveformDisplay::pushMeterData (const MeterData& data)
 
 void WaveformDisplay::setDisplayMode (DisplayMode mode)
 {
+    if (displayMode_ == mode)
+        return;
     displayMode_ = mode;
+    if (onDisplayModeChanged)
+        onDisplayModeChanged (mode);
     repaint();
 }
 

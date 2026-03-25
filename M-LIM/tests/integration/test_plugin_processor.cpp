@@ -655,3 +655,40 @@ TEST_CASE("test_tail_length_includes_oversampler", "[PluginProcessor]")
     REQUIRE(latencySamples >= 0);
     REQUIRE(tailSec >= expectedMinSec);
 }
+
+// ============================================================================
+// test_display_mode_syncs_to_waveform_on_state_restore
+// Save state with displayMode = 3 (Infinite), create a new processor+editor,
+// load that state, and verify WaveformDisplay reflects DisplayMode::Infinite.
+// ============================================================================
+TEST_CASE("test_display_mode_syncs_to_waveform_on_state_restore", "[PluginProcessor][Editor]")
+{
+    juce::MessageManager::getInstance();
+
+    // Processor A: set displayMode to 3 (Infinite) and save state
+    MLIMAudioProcessor procA;
+    procA.prepareToPlay (kSampleRate, kBlockSize);
+
+    auto* paramA = procA.apvts.getParameter (ParamID::displayMode);
+    REQUIRE (paramA != nullptr);
+    paramA->setValueNotifyingHost (paramA->convertTo0to1 (3.0f));
+
+    juce::MemoryBlock stateData;
+    procA.getStateInformation (stateData);
+    REQUIRE (stateData.getSize() > 0);
+
+    // Processor B: load saved state, then create editor
+    MLIMAudioProcessor procB;
+    procB.setStateInformation (stateData.getData(),
+                               static_cast<int> (stateData.getSize()));
+
+    // APVTS parameter must be restored to 3 (Infinite)
+    auto* rawB = procB.apvts.getRawParameterValue (ParamID::displayMode);
+    REQUIRE (rawB != nullptr);
+    REQUIRE (rawB->load() == Catch::Approx (3.0f).margin (0.01f));
+
+    // Editor constructor syncs WaveformDisplay from APVTS initial value
+    MLIMAudioProcessorEditor editor (procB);
+    REQUIRE (editor.getWaveformDisplay().getDisplayMode()
+             == WaveformDisplay::DisplayMode::Infinite);
+}
