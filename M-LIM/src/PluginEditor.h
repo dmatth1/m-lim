@@ -76,6 +76,8 @@ private:
     void updatePeakHold (float newL, float newR,
                          float& peakL, float& peakR,
                          int& framesL, int& framesR) noexcept;
+    void applyMeterData (const MeterData& data);
+    void agePeakHoldCounters() noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MLIMAudioProcessorEditor)
 };

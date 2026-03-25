@@ -185,44 +185,48 @@ void MLIMAudioProcessorEditor::resized()
 
 void MLIMAudioProcessorEditor::timerCallback()
 {
-    auto& fifo = audioProcessor.getMeterFIFO();
     MeterData data;
+    while (audioProcessor.getMeterFIFO().pop (data))
+        applyMeterData (data);
+    agePeakHoldCounters();
+}
 
-    while (fifo.pop (data))
-    {
-        waveformDisplay_.pushMeterData (data);
+void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
+{
+    waveformDisplay_.pushMeterData (data);
 
-        const float inL  = linToDB (data.inputLevelL);
-        const float inR  = linToDB (data.inputLevelR);
-        const float outL = linToDB (data.outputLevelL);
-        const float outR = linToDB (data.outputLevelR);
+    const float inL  = linToDB (data.inputLevelL);
+    const float inR  = linToDB (data.inputLevelR);
+    const float outL = linToDB (data.outputLevelL);
+    const float outR = linToDB (data.outputLevelR);
 
-        inputMeter_.setLevel  (inL, inR);
-        outputMeter_.setLevel (outL, outR);
+    inputMeter_.setLevel  (inL, inR);
+    outputMeter_.setLevel (outL, outR);
 
-        updatePeakHold (inL, inR, inputPeakL_, inputPeakR_,
-                        inputPeakHoldFramesL_, inputPeakHoldFramesR_);
-        updatePeakHold (outL, outR, outputPeakL_, outputPeakR_,
-                        outputPeakHoldFramesL_, outputPeakHoldFramesR_);
+    updatePeakHold (inL, inR, inputPeakL_, inputPeakR_,
+                    inputPeakHoldFramesL_, inputPeakHoldFramesR_);
+    updatePeakHold (outL, outR, outputPeakL_, outputPeakR_,
+                    outputPeakHoldFramesL_, outputPeakHoldFramesR_);
 
-        inputMeter_.setPeakHold  (inputPeakL_, inputPeakR_);
-        outputMeter_.setPeakHold (outputPeakL_, outputPeakR_);
+    inputMeter_.setPeakHold  (inputPeakL_, inputPeakR_);
+    outputMeter_.setPeakHold (outputPeakL_, outputPeakR_);
 
-        // gainReduction in MeterData is negative dB (0 = no GR, -3 = 3 dB reduction)
-        const float grPositive = -data.gainReduction;
-        grMeter_.setGainReduction (grPositive > 0.0f ? grPositive : 0.0f);
+    // gainReduction in MeterData is negative dB (0 = no GR, -3 = 3 dB reduction)
+    const float grPositive = -data.gainReduction;
+    grMeter_.setGainReduction (grPositive > 0.0f ? grPositive : 0.0f);
 
-        inputMeter_.setClip  (data.inputLevelL  >= 1.0f, data.inputLevelR  >= 1.0f);
-        outputMeter_.setClip (data.outputLevelL >= 1.0f, data.outputLevelR >= 1.0f);
+    inputMeter_.setClip  (data.inputLevelL  >= 1.0f, data.inputLevelR  >= 1.0f);
+    outputMeter_.setClip (data.outputLevelL >= 1.0f, data.outputLevelR >= 1.0f);
 
-        loudnessPanel_.setMomentary     (data.momentaryLUFS);
-        loudnessPanel_.setShortTerm     (data.shortTermLUFS);
-        loudnessPanel_.setIntegrated    (data.integratedLUFS);
-        loudnessPanel_.setLoudnessRange (data.loudnessRange);
-        loudnessPanel_.setTruePeak      (linToDB (juce::jmax (data.truePeakL, data.truePeakR)));
-    }
+    loudnessPanel_.setMomentary     (data.momentaryLUFS);
+    loudnessPanel_.setShortTerm     (data.shortTermLUFS);
+    loudnessPanel_.setIntegrated    (data.integratedLUFS);
+    loudnessPanel_.setLoudnessRange (data.loudnessRange);
+    loudnessPanel_.setTruePeak      (linToDB (juce::jmax (data.truePeakL, data.truePeakR)));
+}
 
-    // Age peak hold counters
+void MLIMAudioProcessorEditor::agePeakHoldCounters() noexcept
+{
     auto advancePeakHold = [](float& peak, int& frames) noexcept
     {
         if (frames > 0 && --frames == 0)
