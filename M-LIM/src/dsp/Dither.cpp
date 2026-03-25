@@ -23,9 +23,11 @@ void Dither::prepare(double sampleRate)
     }
     else
     {
-        // 44.1 kHz range: standard F-weighted second-order coefficients.
+        // 44.1 kHz range: stable second-order coefficients.
+        // c2 = -0.95 places poles at |z| = sqrt(0.95) ≈ 0.975 < 1 (strictly stable).
+        // Original c2 = -1.0 placed poles on the unit circle (marginally stable).
         mCoeff1 = 1.0f;
-        mCoeff2 = -1.0f;
+        mCoeff2 = -0.95f;
     }
 
     mError1 = 0.0f;

@@ -153,6 +153,74 @@ TEST_CASE("test_noise_shaping_at_48000", "[Dither]")
     REQUIRE(diffCount > 0);
 }
 
+TEST_CASE("test_noise_shaping_stable_44k", "[Dither]")
+{
+    // Weighted mode at 44.1 kHz must not diverge over a long run of silence.
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);
+
+    const int numSamples = 100000;
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const float twoLSB = 2.0f * step;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        // All output samples must be finite.
+        REQUIRE(std::isfinite(signal[i]));
+        // With stable feedback the quantisation error stays bounded.
+        // Output of silence through dither is bounded to a few LSBs.
+        REQUIRE(std::abs(signal[i]) <= twoLSB * 10.0f);
+    }
+}
+
+TEST_CASE("test_noise_shaping_stable_48k", "[Dither]")
+{
+    Dither d;
+    d.prepare(48000.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);
+
+    const int numSamples = 100000;
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const float twoLSB = 2.0f * step;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        REQUIRE(std::isfinite(signal[i]));
+        REQUIRE(std::abs(signal[i]) <= twoLSB * 10.0f);
+    }
+}
+
+TEST_CASE("test_noise_shaping_stable_96k", "[Dither]")
+{
+    // At >=88.2 kHz coefficients are zeroed; the loop is trivially stable.
+    Dither d;
+    d.prepare(96000.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);
+
+    const int numSamples = 100000;
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        REQUIRE(std::isfinite(signal[i]));
+        // Zero feedback: output bounded to ±1 LSB.
+        REQUIRE(std::abs(signal[i]) <= step + step * 0.01f);
+    }
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
