@@ -991,3 +991,123 @@ TEST_CASE("test_sidechain_silent_no_gr", "[TransientLimiter]")
     // The sidechain is silent, so GR should be minimal — main passes substantially through
     REQUIRE(blockPeak(main[0]) > 1.5f);  // expect minimal attenuation
 }
+
+// ---------------------------------------------------------------------------
+// test_below_knee_no_gr
+//   A signal well below the lower knee boundary must receive zero gain
+//   reduction. The Transparent algorithm has kneeWidth = 6 dB, so the lower
+//   knee boundary is at (0 - 3) = -3 dBFS ≈ 0.7079 linear. An input of 0.5
+//   linear ≈ -6 dBFS is well below the knee and must not be attenuated.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_below_knee_no_gr", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    // Transparent: kneeWidth = 6 dB, threshold defaults to 1.0 (0 dBFS)
+    // Lower knee = 0 dBFS - 3 dB = -3 dBFS ≈ 0.7079 linear
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setLookahead(0.0f);  // no lookahead; instant response
+
+    // 0.5 linear ≈ -6 dBFS — comfortably below the lower knee at -3 dBFS
+    const float inputAmplitude = 0.5f;
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, inputAmplitude));
+
+    // Warm up for several blocks so gain state reaches steady state
+    for (int block = 0; block < 5; ++block)
+    {
+        fillConstant(buf, inputAmplitude);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    // GR must be effectively 0 dB — less than 0.1 dB of reduction
+    const float grDb = limiter.getGainReduction();
+    REQUIRE(grDb >= -0.1f);  // no reduction below knee
+}
+
+// ---------------------------------------------------------------------------
+// test_in_knee_partial_gr
+//   A signal whose dBFS value lies inside the soft-knee region must receive
+//   partial gain reduction — not zero (the knee is active) and not the full
+//   hard-limit reduction (the knee is still transitioning).
+//
+//   With Transparent params (kneeWidth = 6 dB, threshold = 0 dBFS):
+//     Knee region: [-3 dBFS, +3 dBFS]
+//     Test input: threshold_dB - kneeWidth/4 = 0 - 1.5 = -1.5 dBFS
+//                 → linear ≈ 0.8414
+//     Expected GR formula: t = (-1.5 - (-3)) / 6 = 0.25
+//                          gainDb = (0 - 3) * 0.25^2 ≈ -0.1875 dB
+// ---------------------------------------------------------------------------
+TEST_CASE("test_in_knee_partial_gr", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setLookahead(0.0f);
+
+    // -1.5 dBFS = threshold_dB - kneeWidth/4 → one-quarter into the knee from below
+    const float inputAmplitude = std::pow(10.0f, -1.5f / 20.0f);  // ≈ 0.8414
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, inputAmplitude));
+
+    // Warm up to reach steady-state gain
+    for (int block = 0; block < 5; ++block)
+    {
+        fillConstant(buf, inputAmplitude);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    const float grDb = limiter.getGainReduction();
+
+    // Some reduction must be present (in-knee, non-zero GR)
+    REQUIRE(grDb < 0.0f);
+
+    // But not "full" reduction — the signal is below the upper knee (+3 dBFS),
+    // so the knee curve should produce only a small partial reduction (< 3 dB)
+    REQUIRE(grDb > -3.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_above_knee_full_gr
+//   A signal well above the upper knee boundary must receive full gain
+//   reduction — the output should be clamped to ≤ threshold + small margin.
+//   With Transparent params (kneeWidth = 6 dB): upper knee = +3 dBFS ≈ 1.4125.
+//   Input at 2.0 linear = +6 dBFS is well above the upper knee.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_above_knee_full_gr", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 0.0f;  // disable saturation for clean measurement
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setLookahead(0.0f);  // no lookahead; instant attack
+
+    // 2.0 linear = +6 dBFS — well above the upper knee at +3 dBFS
+    const float inputAmplitude = 2.0f;
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, inputAmplitude));
+
+    // Warm up for several blocks to reach steady-state limiting
+    for (int block = 0; block < 5; ++block)
+    {
+        fillConstant(buf, inputAmplitude);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    // Output must be clamped to threshold + small margin (full GR applied)
+    for (int ch = 0; ch < kNumChannels; ++ch)
+        REQUIRE(blockPeak(buf[ch]) <= 1.0f + 0.01f);
+
+    // GR must be reported (negative dB, clearly non-zero)
+    REQUIRE(limiter.getGainReduction() < -1.0f);
+}
