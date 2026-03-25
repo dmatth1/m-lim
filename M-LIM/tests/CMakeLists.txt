@@ -38,6 +38,16 @@ add_executable(MLIMTests
     # PluginProcessor and PluginEditor — needed for processor integration tests
     ../src/PluginProcessor.cpp
     ../src/PluginEditor.cpp
+    # UI components required by PluginEditor
+    ../src/ui/LookAndFeel.cpp
+    ../src/ui/AlgorithmSelector.cpp
+    ../src/ui/RotaryKnob.cpp
+    ../src/ui/LevelMeter.cpp
+    ../src/ui/ControlStrip.cpp
+    ../src/ui/WaveformDisplay.cpp
+    ../src/ui/LoudnessPanel.cpp
+    ../src/ui/GainReductionMeter.cpp
+    ../src/ui/TopBar.cpp
 )
 
 target_include_directories(MLIMTests

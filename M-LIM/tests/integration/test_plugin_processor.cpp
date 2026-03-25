@@ -7,6 +7,7 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 #include "Parameters.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -466,4 +467,38 @@ TEST_CASE("test_accepts_midi_false", "[PluginProcessor]")
 {
     MLIMAudioProcessor proc;
     REQUIRE (proc.acceptsMidi() == false);
+}
+
+// ============================================================================
+// test_editor_create_destroy_no_crash
+// Create and destroy MLIMAudioProcessorEditor multiple times.  Verifies that
+// the LookAndFeel lifecycle is correct: MLIMLookAndFeel is declared before
+// child components (so it outlives them), and the destructor calls
+// setLookAndFeel(nullptr) before children are destroyed — preventing UB from
+// accessing a deleted LookAndFeel object during component teardown.
+// ============================================================================
+TEST_CASE("test_editor_create_destroy_no_crash", "[PluginProcessor][Editor]")
+{
+    // MessageManager is required for Component construction and Timer operations
+    juce::MessageManager::getInstance();
+
+    for (int i = 0; i < 5; ++i)
+    {
+        MLIMAudioProcessor proc;
+        proc.prepareToPlay (kSampleRate, kBlockSize);
+
+        // Construct and immediately destroy the editor.  If the LookAndFeel is
+        // destroyed before child components the JUCE LookAndFeel system asserts
+        // or dereferences a dangling pointer — this loop would crash or fire an
+        // assertion failure in that case.
+        REQUIRE_NOTHROW (
+            [&]()
+            {
+                MLIMAudioProcessorEditor editor (proc);
+                // editor goes out of scope here — destructor calls
+                // setLookAndFeel(nullptr), then child components are destroyed,
+                // then lookAndFeel_ member is destroyed last (declared first).
+            }()
+        );
+    }
 }
