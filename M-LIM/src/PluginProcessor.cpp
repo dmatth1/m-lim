@@ -178,6 +178,8 @@ void MLIMAudioProcessor::handleAsyncUpdate()
     {
         const int numCh = std::max (getTotalNumInputChannels(), getTotalNumOutputChannels());
         limiterEngine.prepare (sr, blockSize, numCh);
+        loudnessMeter.prepare (sr, numCh);
+        pushAllParametersToEngine();
     }
 
     suspendProcessing (false);

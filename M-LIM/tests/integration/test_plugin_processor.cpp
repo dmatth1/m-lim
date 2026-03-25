@@ -266,6 +266,47 @@ TEST_CASE("test_tail_length_reflects_lookahead", "[PluginProcessor]")
 }
 
 // ============================================================================
+// test_oversampling_change_loudness_meter_reprepared
+// After an oversampling factor change via handleAsyncUpdate, the loudness meter
+// must still function correctly (no crash, finite LUFS values).
+// ============================================================================
+TEST_CASE("test_oversampling_change_loudness_meter_reprepared", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer (kNumChannels, kBlockSize);
+    juce::MidiBuffer midiBuffer;
+
+    // Process some audio at the default oversampling setting
+    for (int i = 0; i < 20; ++i)
+    {
+        fillSine (buffer, 0.5f);
+        proc.processBlock (buffer, midiBuffer);
+    }
+
+    // Change oversampling factor to 2x (factor index 1) — triggers parameterChanged
+    // which schedules handleAsyncUpdate via triggerAsyncUpdate()
+    if (auto* param = proc.apvts.getParameter (ParamID::oversamplingFactor))
+        param->setValueNotifyingHost (param->convertTo0to1 (1.0f));
+
+    // Simulate the host calling prepareToPlay after the deferred change
+    // (many hosts call prepareToPlay when graph topology changes)
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Process more blocks — loudness meter must not crash or produce NaN
+    for (int i = 0; i < 50; ++i)
+    {
+        fillSine (buffer, 0.5f);
+        proc.processBlock (buffer, midiBuffer);
+    }
+
+    // getLoudnessMeter() must return a finite (non-NaN, non-inf) value
+    const float momentary = proc.getLoudnessMeter().getMomentaryLUFS();
+    REQUIRE (std::isfinite (momentary));
+}
+
+// ============================================================================
 // test_latency_updates_with_lookahead
 // Changing the lookahead parameter must update getLatencySamples() to reflect
 // the new lookahead time. The host needs accurate latency for delay compensation.
