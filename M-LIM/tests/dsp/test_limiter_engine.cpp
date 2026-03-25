@@ -368,6 +368,188 @@ TEST_CASE("test_ceiling_below_zero_dbfs", "[LimiterEngine]")
 }
 
 // ============================================================================
+// test_dc_filter_removes_dc_when_enabled
+// Feed a DC-only signal (0.5f constant) through the engine. With DC filter
+// disabled the output mean should remain measurably non-zero; with it enabled
+// the output mean should converge to near-zero after the filter settles.
+// ============================================================================
+TEST_CASE("test_dc_filter_removes_dc_when_enabled", "[LimiterEngine]")
+{
+    constexpr float dcLevel  = 0.5f;
+    constexpr int   warmup   = 200;  // blocks to let HP settle
+    constexpr int   numBlocks = 10;  // blocks to measure
+
+    // --- Without DC filter ---
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setDCFilterEnabled(false);
+
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        for (int b = 0; b < warmup + numBlocks; ++b)
+        {
+            buf.clear();
+            for (int ch = 0; ch < 2; ++ch)
+                juce::FloatVectorOperations::fill(buf.getWritePointer(ch), dcLevel, kBlockSize);
+            engine.process(buf);
+        }
+
+        // Measure mean of last processed block (ch 0)
+        double sum = 0.0;
+        const float* d = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i) sum += d[i];
+        float mean = static_cast<float>(sum / kBlockSize);
+        INFO("DC mean without filter: " << mean);
+        // The limiter will reduce the DC level, but some DC should remain
+        REQUIRE(std::abs(mean) > 0.01f);
+    }
+
+    // --- With DC filter ---
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setDCFilterEnabled(true);
+
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        for (int b = 0; b < warmup + numBlocks; ++b)
+        {
+            buf.clear();
+            for (int ch = 0; ch < 2; ++ch)
+                juce::FloatVectorOperations::fill(buf.getWritePointer(ch), dcLevel, kBlockSize);
+            engine.process(buf);
+        }
+
+        // Measure mean of last processed block (ch 0)
+        double sum = 0.0;
+        const float* d = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i) sum += d[i];
+        float mean = static_cast<float>(sum / kBlockSize);
+        INFO("DC mean with filter after warmup: " << mean);
+        REQUIRE(std::abs(mean) < 0.05f);
+    }
+}
+
+// ============================================================================
+// test_dc_filter_both_channels
+// Verify that the DC filter is applied to both the left and right channels,
+// not just channel 0.
+// ============================================================================
+TEST_CASE("test_dc_filter_both_channels", "[LimiterEngine]")
+{
+    constexpr float dcLevel  = 0.5f;
+    constexpr int   warmup   = 200;
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+    engine.setDCFilterEnabled(true);
+
+    juce::AudioBuffer<float> buf(2, kBlockSize);
+    for (int b = 0; b < warmup + 5; ++b)
+    {
+        buf.clear();
+        for (int ch = 0; ch < 2; ++ch)
+            juce::FloatVectorOperations::fill(buf.getWritePointer(ch), dcLevel, kBlockSize);
+        engine.process(buf);
+    }
+
+    // Both channels should have near-zero mean
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        double sum = 0.0;
+        const float* d = buf.getReadPointer(ch);
+        for (int i = 0; i < kBlockSize; ++i) sum += d[i];
+        float mean = static_cast<float>(sum / kBlockSize);
+        INFO("Channel " << ch << " DC mean after filter: " << mean);
+        REQUIRE(std::abs(mean) < 0.05f);
+    }
+}
+
+// ============================================================================
+// test_dither_adds_noise_when_enabled
+// Feed silence through the engine. With dither disabled output must be zero.
+// With dither enabled at 16-bit, at least some output samples must be non-zero.
+// ============================================================================
+TEST_CASE("test_dither_adds_noise_when_enabled", "[LimiterEngine]")
+{
+    constexpr int kTotalSamples = 4096;
+
+    // --- Dither disabled — output must be exactly zero ---
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setDitherEnabled(false);
+
+        int nonZero = 0;
+        for (int b = 0; b < kTotalSamples / kBlockSize; ++b)
+        {
+            juce::AudioBuffer<float> buf(2, kBlockSize);
+            buf.clear();
+            engine.process(buf);
+
+            const float* d = buf.getReadPointer(0);
+            for (int i = 0; i < kBlockSize; ++i)
+                if (d[i] != 0.0f) ++nonZero;
+        }
+        INFO("Non-zero samples with dither OFF: " << nonZero);
+        REQUIRE(nonZero == 0);
+    }
+
+    // --- Dither enabled at 16-bit — output must contain non-zero noise ---
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setDitherEnabled(true);
+        engine.setDitherBitDepth(16);
+
+        int nonZero = 0;
+        for (int b = 0; b < kTotalSamples / kBlockSize; ++b)
+        {
+            juce::AudioBuffer<float> buf(2, kBlockSize);
+            buf.clear();
+            engine.process(buf);
+
+            const float* d = buf.getReadPointer(0);
+            for (int i = 0; i < kBlockSize; ++i)
+                if (d[i] != 0.0f) ++nonZero;
+        }
+        INFO("Non-zero samples with dither ON: " << nonZero);
+        REQUIRE(nonZero > 100);
+    }
+}
+
+// ============================================================================
+// test_dither_stays_below_ceiling
+// With dither enabled the output peak must still remain at or below the
+// configured ceiling, since dither noise amplitude is sub-quantisation step.
+// ============================================================================
+TEST_CASE("test_dither_stays_below_ceiling", "[LimiterEngine]")
+{
+    const float ceilingDb  = -1.0f;
+    const float ceilingLin = static_cast<float>(std::pow(10.0, ceilingDb / 20.0));
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(ceilingDb);
+    engine.setDitherEnabled(true);
+    engine.setDitherBitDepth(16);
+
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(2.0f, kBlockSize);
+        engine.process(buf);
+
+        float peak = maxAbsValue(buf);
+        INFO("Block " << block << " peak: " << peak << " ceiling: " << ceilingLin);
+        REQUIRE(peak <= ceilingLin + 0.01f);
+    }
+}
+
+// ============================================================================
 // test_oversampling_with_sidechain
 // Process a buffer through LimiterEngine with oversampling enabled and the
 // sidechain filter active. Before the fix, the sidechain buffer was only
