@@ -375,7 +375,7 @@ void WaveformDisplay::drawGainReduction (juce::Graphics& g,
     path.lineTo (area.getRight(), area.getY());
     path.closeSubPath();
 
-    g.setColour (MLIMColours::gainReduction.withAlpha (0.75f));
+    g.setColour (juce::Colour (0xD0060810));  // near-black with very slight cool tint, 82% opacity
     g.fillPath (path);
 }
 
