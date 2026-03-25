@@ -439,6 +439,21 @@ void LimiterEngine::setUnityGain(bool unity)
     mParamsDirty.store(true);  // ceiling changes when unity-gain mode changes
 }
 
+void LimiterEngine::setSidechainHPFreq(float hz)
+{
+    mSidechainFilter.setHighPassFreq(hz);
+}
+
+void LimiterEngine::setSidechainLPFreq(float hz)
+{
+    mSidechainFilter.setLowPassFreq(hz);
+}
+
+void LimiterEngine::setSidechainTilt(float dB)
+{
+    mSidechainFilter.setTilt(dB);
+}
+
 // ============================================================================
 // State queries
 // ============================================================================

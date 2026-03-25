@@ -76,6 +76,9 @@ public:
     void setBypass(bool bypass);
     void setDeltaMode(bool delta);
     void setUnityGain(bool unity);
+    void setSidechainHPFreq(float hz);   ///< Detection-path high-pass: 20-2000 Hz
+    void setSidechainLPFreq(float hz);   ///< Detection-path low-pass: 2000-20000 Hz
+    void setSidechainTilt(float dB);     ///< Detection-path tilt EQ: -6 to +6 dB
 
     // -----------------------------------------------------------------------
     // State queries — thread-safe reads (call from any thread)
