@@ -493,6 +493,85 @@ TEST_CASE("test_delta_sign_is_positive_for_loud", "[LimiterEngineModes]")
 }
 
 // ============================================================================
+// test_bypass_still_pushes_meter_data
+// In bypass mode, process() must push at least one MeterData to the FIFO even
+// after multiple blocks.  gainReduction must be 0.0 and inputLevelL > 0.
+// ============================================================================
+TEST_CASE("test_bypass_still_pushes_meter_data", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setBypass(true);
+
+    // -6 dBFS sine: amplitude ≈ 0.501 (20*log10(0.501) ≈ -6 dBFS)
+    const float amp = std::pow(10.0f, -6.0f / 20.0f);
+
+    // Process 5 blocks — each should push a MeterData entry
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(amp);
+        engine.process(buf);
+    }
+
+    auto& fifo = engine.getMeterFIFO();
+    MeterData md;
+    bool popped = false;
+    MeterData last;
+    while (fifo.pop(md))
+    {
+        popped = true;
+        last = md;
+    }
+
+    // (a) At least one MeterData was pushed
+    REQUIRE(popped);
+
+    // (b) Input is metered — inputLevelL must reflect the non-silent signal
+    INFO("inputLevelL: " << last.inputLevelL);
+    REQUIRE(last.inputLevelL > 0.0f);
+
+    // (c) No gain reduction in bypass mode
+    REQUIRE(last.gainReduction == Catch::Approx(0.0f).margin(1e-6f));
+}
+
+// ============================================================================
+// test_bypass_input_level_reflects_signal
+// In bypass mode, the inputLevelL in popped MeterData should approximate the
+// peak amplitude of the bypassed audio (within 10%).
+// ============================================================================
+TEST_CASE("test_bypass_input_level_reflects_signal", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setBypass(true);
+
+    // +6 dBFS signal: amplitude = 2.0 (above normal ceiling, but bypass passes it)
+    const float amp = 2.0f;
+
+    // Process 10 blocks and drain FIFO each time
+    MeterData last;
+    bool gotAny = false;
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(amp);
+        engine.process(buf);
+
+        MeterData md;
+        while (engine.getMeterFIFO().pop(md))
+        {
+            last = md;
+            gotAny = true;
+        }
+    }
+
+    REQUIRE(gotAny);
+
+    // inputLevelL should approximately equal the peak amplitude (~2.0), within 10%
+    INFO("inputLevelL: " << last.inputLevelL << "  expected: ~" << amp);
+    REQUIRE(last.inputLevelL == Catch::Approx(amp).epsilon(0.10f));
+}
+
+// ============================================================================
 // test_dither_toggle
 // Enabling and disabling dither during processing should not crash
 // and should produce finite output.
