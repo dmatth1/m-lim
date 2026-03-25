@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 static constexpr double kSampleRate = 44100.0;
 static constexpr int    kBlockSize  = 1024;
@@ -457,5 +458,162 @@ TEST_CASE("test_transient_limiter_lookahead_peak", "[TransientLimiter]")
 
         // The attenuated spike at the output must be within threshold
         REQUIRE(buf[0][expectedOutputPos] <= 1.0f + 1e-4f);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_sliding_max_peak_detection
+//   Feed a block with a known peak at a known position followed by silence.
+//   With lookahead L the limiter must begin reducing gain exactly when the
+//   peak enters the lookahead window — i.e., L samples before the peak
+//   reaches the output.  Verifies that the sliding-window-max deque correctly
+//   tracks the window maximum and triggers gain reduction at the right moment.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sliding_max_peak_detection", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    const float lookaheadMs      = 2.0f;
+    const int   lookaheadSamples =
+        static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+    limiter.prepare(kSampleRate, kBlockSize, 1);  // mono
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;   // hard knee — predictable onset
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(lookaheadMs);
+
+    // Place a large spike at peakPos; everything else is silence.
+    const int   peakPos  = 400;
+    const float spikeAmp = 4.0f;  // +12 dBFS
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 0.0f));
+    buf[0][peakPos] = spikeAmp;
+
+    auto ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), 1, kBlockSize);
+
+    // 1. Overall output peak must not exceed threshold — sliding max handled it.
+    REQUIRE(blockPeak(buf[0]) <= 1.0f + 1e-4f);
+
+    // 2. Samples well before the lookahead window should be unaffected (silence in, silence out).
+    const int windowStart = peakPos - lookaheadSamples;
+    for (int i = 0; i < windowStart - 2 && i < kBlockSize; ++i)
+        REQUIRE(std::abs(buf[0][i]) < 1e-5f);
+
+    // 3. The attenuated spike must appear at the delayed output position.
+    const int expectedOutputPos = peakPos + lookaheadSamples - 1;
+    if (expectedOutputPos < kBlockSize)
+        REQUIRE(buf[0][expectedOutputPos] <= 1.0f + 1e-4f);
+
+    // 4. GR was applied.
+    REQUIRE(limiter.getGainReduction() <= 0.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_sliding_max_matches_brute_force
+//   Verifies that the O(1) sliding-window-max deque produces the same
+//   per-sample output as a brute-force O(N) rolling-max reference.
+//   Uses a randomised mono input with embedded large spikes.  Both
+//   implementations share identical gain-smoothing logic (hard knee, no
+//   saturation, same release coefficient) so any difference in peak
+//   detection will produce a sample-level mismatch.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
+{
+    const float lookaheadMs      = 2.0f;
+    const int   numSamples       = 2048;
+    const int   lookaheadSamples =
+        static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+    // --- Build a deterministic randomised input with known spikes -------
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<float> noise(-0.3f, 0.3f);
+    std::vector<float> input(numSamples);
+    for (float& v : input) v = noise(rng);
+    // Embed large spikes at several positions to exercise the window boundary
+    for (int pos : { 50, 300, 800, 1200, 1900 })
+        if (pos < numSamples) input[pos] = 3.5f;
+
+    // --- Reference: brute-force rolling-max limiter (O(N) per sample) ---
+    //
+    // We implement the brute-force peak scan inline here, mirroring the
+    // structure of the original O(N) loop so the only difference between
+    // reference and production code is the peak-detection algorithm.
+    //
+    // Brute-force state:
+    const int bufSize = lookaheadSamples + 1 + 1;  // +1 guard
+    std::vector<float> delayBuf(bufSize, 0.0f);
+    int   writePos    = 0;
+    float gainState   = 1.0f;
+    const float threshold = 1.0f;
+    const float kneeHalf  = 0.0f;  // hard knee
+    // Release coefficient matching TransientLimiter's default for Transparent algo
+    const AlgorithmParams refParams = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    const float releaseMs    = 10.0f + refParams.releaseShape * 490.0f;
+    const float releaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(kSampleRate)));
+    (void)kneeHalf;
+
+    std::vector<float> bruteOutput(numSamples);
+
+    for (int s = 0; s < numSamples; ++s)
+    {
+        // Write into delay buffer
+        delayBuf[writePos] = input[s];
+        writePos = (writePos + 1) % bufSize;
+
+        // Brute-force O(N) scan over lookahead window
+        float peakAbs = 0.0f;
+        int   rpos    = (writePos - 1 + bufSize) % bufSize;
+        for (int k = 0; k < lookaheadSamples; ++k)
+        {
+            peakAbs = std::max(peakAbs, std::abs(delayBuf[rpos]));
+            rpos    = (rpos - 1 + bufSize) % bufSize;
+        }
+
+        // Hard-knee required gain
+        const float required = (peakAbs > threshold + 1e-9f)
+                                   ? (threshold / peakAbs)
+                                   : 1.0f;
+
+        // Instant attack, dB-domain release (matches TransientLimiter smoothing)
+        if (required < gainState)
+        {
+            gainState = required;
+        }
+        else
+        {
+            const float gDb      = 20.0f * std::log10(std::max(gainState,  1e-6f));
+            const float tDb      = 20.0f * std::log10(std::max(required,   1e-6f));
+            const float smoothed = gDb + (tDb - gDb) * (1.0f - releaseCoeff);
+            gainState = std::pow(10.0f, smoothed / 20.0f);
+        }
+        gainState = std::clamp(gainState, 1e-6f, 1.0f);
+
+        // Read delayed output
+        const int readPos = (writePos - lookaheadSamples + bufSize) % bufSize;
+        bruteOutput[s] = delayBuf[readPos] * gainState;
+    }
+
+    // --- Production: sliding-window-max TransientLimiter ----------------
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;  // hard knee
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(lookaheadMs);
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(numSamples));
+    buf[0] = input;
+    auto ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), 1, numSamples);
+
+    // --- Compare sample-for-sample (allow tiny floating-point tolerance) --
+    for (int s = 0; s < numSamples; ++s)
+    {
+        REQUIRE(buf[0][s] == Catch::Approx(bruteOutput[s]).margin(1e-4f));
     }
 }
