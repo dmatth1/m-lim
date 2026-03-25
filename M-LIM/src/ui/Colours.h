@@ -8,16 +8,21 @@ namespace MLIMColours
     const juce::Colour background           { 0xff1E1E1E };
     const juce::Colour displayBackground    { 0xff141414 };
     const juce::Colour panelBorder          { 0xff333333 };
+    const juce::Colour widgetBackground     { 0xff2A2A2A };  // combo boxes, tooltips, etc.
+    const juce::Colour peakLabelBackground  { 0xff1A1A1A };  // dark background behind peak labels
 
     // Waveform display gradient colours
     const juce::Colour displayGradientTop   { 0xff141828 };  // dark navy
     const juce::Colour displayGradientBottom{ 0xff1E2438 };  // medium dark blue
 
     // Waveform colours (with alpha)
-    const juce::Colour inputWaveform    { 0xA8607898 };  // medium blue-purple, ~66% alpha
-    const juce::Colour outputWaveform   { 0x804060A0 };  // slightly deeper blue, ~50% alpha
-    const juce::Colour outputEnvelope   { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
-    const juce::Colour gainReduction    { 0xffFF4444 };  // bright red
+    const juce::Colour inputWaveform        { 0xA8607898 };  // medium blue-purple, ~66% alpha
+    const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
+    const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
+    const juce::Colour gainReduction        { 0xffFF4444 };  // bright red
+    const juce::Colour waveformGridLine     { 0xff2E3040 };  // horizontal dB grid lines
+    const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
+    const juce::Colour waveformCeilingLine  { 0xAAFFFFFF };  // dashed ceiling line
 
     // Label colours
     const juce::Colour peakLabel        { 0xffFFD700 };  // gold/yellow
@@ -42,6 +47,14 @@ namespace MLIMColours
     // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
     const juce::Colour controlStripTop    { 0xff3A3D4A };  // medium blue-gray (top)
     const juce::Colour controlStripBottom { 0xff2A2D3A };  // darker blue-gray (bottom)
+
+    // Button colours
+    const juce::Colour buttonBackground  { 0xff242424 };  // default button/toggle background
+    const juce::Colour buttonOnBackground{ 0xff1A4A1A };  // toggle-on background (dark green)
+    const juce::Colour buttonOnText      { 0xff66DD66 };  // toggle-on text (bright green)
+
+    // Panel overlay
+    const juce::Colour panelOverlay      { 0x20FFFFFF };  // semi-transparent overlay for panels
 
     // Accent
     const juce::Colour accentBlue       { 0xff2196F3 };

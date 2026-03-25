@@ -90,7 +90,7 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     // ── Advanced toggle button ─────────────────────────────────────────────
     advancedButton_.setButtonText ("ADVANCED >>");
     advancedButton_.setClickingTogglesState (true);
-    advancedButton_.setColour (juce::TextButton::buttonColourId,   juce::Colour (0xff242424));
+    advancedButton_.setColour (juce::TextButton::buttonColourId,   MLIMColours::buttonBackground);
     advancedButton_.setColour (juce::TextButton::buttonOnColourId, MLIMColours::accentBlue.withAlpha (0.7f));
     advancedButton_.setColour (juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
     advancedButton_.setColour (juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
@@ -162,13 +162,13 @@ void ControlStrip::setupStatusBar()
     // ── True Peak Limiting toggle (directly APVTS-attached) ──
     truePeakLimitingButton_.setClickingTogglesState (true);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonColourId,
-                                       juce::Colour (0xff242424));
+                                       MLIMColours::buttonBackground);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonOnColourId,
-                                       juce::Colour (0xff1A4A1A)); // dark green when on
+                                       MLIMColours::buttonOnBackground);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOffId,
                                        MLIMColours::textSecondary);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOnId,
-                                       juce::Colour (0xff66DD66)); // bright green text when on
+                                       MLIMColours::buttonOnText);
 
     // ── Oversampling status label ──────────────────────────────────────────
     oversamplingStatusLabel_.setFont (juce::Font (10.0f));
@@ -189,7 +189,7 @@ void ControlStrip::setupStatusBar()
     styleStatusButton (pauseMeasurementButton_);
 
     measurementModeButton_.setColour (juce::TextButton::buttonColourId,
-                                      juce::Colour (0xff242424));
+                                      MLIMColours::buttonBackground);
     measurementModeButton_.setColour (juce::TextButton::textColourOffId,
                                       MLIMColours::textSecondary);
     measurementModeButton_.onClick = [this] { cycleMeasurementMode(); };
@@ -237,7 +237,7 @@ void ControlStrip::setupComboBoxes()
     // Style combo boxes
     auto styleBox = [] (juce::ComboBox& cb)
     {
-        cb.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff2A2A2A));
+        cb.setColour (juce::ComboBox::backgroundColourId, MLIMColours::widgetBackground);
         cb.setColour (juce::ComboBox::textColourId,       MLIMColours::textPrimary);
         cb.setColour (juce::ComboBox::outlineColourId,    MLIMColours::panelBorder);
         cb.setColour (juce::ComboBox::arrowColourId,      MLIMColours::textSecondary);
@@ -392,7 +392,7 @@ void ControlStrip::createAttachments()
 void ControlStrip::styleToggleButton (juce::TextButton& btn)
 {
     btn.setClickingTogglesState (true);
-    btn.setColour (juce::TextButton::buttonColourId,   juce::Colour (0xff242424));
+    btn.setColour (juce::TextButton::buttonColourId,   MLIMColours::buttonBackground);
     btn.setColour (juce::TextButton::buttonOnColourId, MLIMColours::accentBlue.withAlpha (0.85f));
     btn.setColour (juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
     btn.setColour (juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
@@ -400,7 +400,7 @@ void ControlStrip::styleToggleButton (juce::TextButton& btn)
 
 void ControlStrip::styleStatusButton (juce::TextButton& btn)
 {
-    btn.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff1E1E1E));
+    btn.setColour (juce::TextButton::buttonColourId,  MLIMColours::background);
     btn.setColour (juce::TextButton::textColourOffId, MLIMColours::textSecondary);
 }
 
@@ -442,7 +442,7 @@ void ControlStrip::paint (juce::Graphics& g)
         auto linkBounds = channelLinkTransientsKnob_.getBounds()
                               .getUnion (channelLinkReleaseKnob_.getBounds())
                               .expanded (4, 2);
-        g.setColour (juce::Colour (0x20FFFFFF));
+        g.setColour (MLIMColours::panelOverlay);
         g.fillRoundedRectangle (linkBounds.toFloat(), 4.0f);
         g.setColour (MLIMColours::panelBorder);
         g.drawRoundedRectangle (linkBounds.toFloat(), 4.0f, 1.0f);

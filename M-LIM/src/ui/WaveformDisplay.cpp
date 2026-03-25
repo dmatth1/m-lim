@@ -225,7 +225,7 @@ void WaveformDisplay::drawModeSelector (juce::Graphics& g) const
     // Subtle background pill on hover
     if (modeSelectorHovered_)
     {
-        g.setColour (juce::Colour (0x30FFFFFF));
+        g.setColour (MLIMColours::waveformHoverOverlay);
         g.fillRoundedRectangle (rect, 3.0f);
     }
 
@@ -247,7 +247,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     g.fillRect (area);
 
     // Horizontal dB grid lines
-    g.setColour (juce::Colour (0xff2E3040));
+    g.setColour (MLIMColours::waveformGridLine);
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
         const float db = MLIMColours::kMeterGridDB[gi];
@@ -269,7 +269,7 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
     y = juce::jlimit (area.getY(), area.getBottom(), y);
 
     // Dashed ceiling line: subtle white with moderate alpha
-    const juce::Colour lineColour { 0xAAFFFFFF };
+    const juce::Colour lineColour = MLIMColours::waveformCeilingLine;
     const float dashLen  = 6.0f;
     const float gapLen   = 4.0f;
     const float lineX0   = area.getX();
@@ -437,7 +437,7 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
             auto bgRect = juce::Rectangle<float> (x - labelW * 0.5f, y - 16.0f, labelW, 14.0f);
             g.setColour (MLIMColours::peakLabel.withAlpha (0.85f));
             g.fillRoundedRectangle (bgRect, 3.0f);
-            g.setColour (juce::Colour (0xff1A1A1A));
+            g.setColour (MLIMColours::peakLabelBackground);
             g.drawText (label, bgRect, juce::Justification::centred, false);
 
             lastLabelX = x;
@@ -448,7 +448,7 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
 void WaveformDisplay::drawScale (juce::Graphics& g,
                                   const juce::Rectangle<float>& area) const
 {
-    g.setColour (juce::Colour (0xff1E1E1E));
+    g.setColour (MLIMColours::background);
     g.fillRect (area);
 
     g.setColour (MLIMColours::panelBorder);

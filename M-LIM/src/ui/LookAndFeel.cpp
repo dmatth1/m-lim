@@ -43,7 +43,7 @@ MLIMLookAndFeel::MLIMLookAndFeel()
     setColour (juce::ToggleButton::tickDisabledColourId, MLIMColours::textSecondary);
 
     // Tooltip colours
-    setColour (juce::TooltipWindow::backgroundColourId, juce::Colour (0xff2A2A2A));
+    setColour (juce::TooltipWindow::backgroundColourId, MLIMColours::widgetBackground);
     setColour (juce::TooltipWindow::textColourId,       MLIMColours::textPrimary);
     setColour (juce::TooltipWindow::outlineColourId,    MLIMColours::panelBorder);
 }
@@ -163,7 +163,7 @@ void MLIMLookAndFeel::drawTooltip (juce::Graphics& g,
     const juce::Rectangle<int> bounds (0, 0, width, height);
 
     // Dark background
-    g.setColour (juce::Colour (0xff2A2A2A));
+    g.setColour (MLIMColours::widgetBackground);
     g.fillRoundedRectangle (bounds.toFloat(), 3.0f);
 
     // Subtle border
