@@ -32,6 +32,34 @@ void GainReductionMeter::setRange (float maxGRdB)
 
 void GainReductionMeter::resized() {}
 
+juce::Rectangle<float> GainReductionMeter::peakLabelArea() const
+{
+    auto bounds  = getLocalBounds().toFloat();
+    auto numArea = bounds.removeFromBottom (static_cast<float> (kNumericH));
+    // The peak readout occupies the lower half of numArea (matches drawNumeric)
+    auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
+    return cur.withY (cur.getBottom());
+}
+
+void GainReductionMeter::mouseDown (const juce::MouseEvent& e)
+{
+    if (peakLabelArea().contains (e.position))
+        resetPeakGR();
+}
+
+void GainReductionMeter::mouseMove (const juce::MouseEvent& e)
+{
+    if (peakLabelArea().contains (e.position))
+        setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    else
+        setMouseCursor (juce::MouseCursor::NormalCursor);
+}
+
+void GainReductionMeter::mouseExit (const juce::MouseEvent&)
+{
+    setMouseCursor (juce::MouseCursor::NormalCursor);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 float GainReductionMeter::grToFrac (float grDB) const noexcept

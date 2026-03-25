@@ -29,10 +29,15 @@ public:
     /** Set the full-scale range in dB (default 24 dB). */
     void setRange (float maxGRdB);
 
-    void paint   (juce::Graphics& g) override;
-    void resized () override;
+    void paint      (juce::Graphics& g) override;
+    void resized    () override;
+    void mouseDown  (const juce::MouseEvent& e) override;
+    void mouseMove  (const juce::MouseEvent& e) override;
+    void mouseExit  (const juce::MouseEvent& e) override;
 
 private:
+    /** Returns the rectangle used for the peak numeric readout. */
+    juce::Rectangle<float> peakLabelArea() const;
     float currentGR_ = 0.0f;   // positive dB, 0 = no reduction
     float peakGR_    = 0.0f;   // positive dB
     float maxGRdB_   = 24.0f;  // full-scale range
