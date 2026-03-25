@@ -505,6 +505,90 @@ TEST_CASE("test_silence_integrated_is_minus_infinity", "[LoudnessMeter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_short_term_initial_value_is_neg_inf
+// Immediately after prepare(), getShortTermLUFS() must return -infinity
+// (no valid measurement before any audio has been processed).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_short_term_initial_value_is_neg_inf", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    const float shortTerm = meter.getShortTermLUFS();
+    INFO("Short-term LUFS immediately after prepare: " << shortTerm);
+
+    CHECK(std::isinf(shortTerm));
+    CHECK(shortTerm < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_short_term_lufs_requires_full_window
+// Short-term LUFS must remain -infinity until exactly 30 × 100 ms blocks
+// (3 seconds) have been accumulated.  After the 30th block it must become
+// a finite value.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_short_term_lufs_requires_full_window", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // Feed 2900 ms (29 × 100 ms blocks) — one block short of 3 s
+    feedSine(meter, 1000.0, amp, fs, 2.9);
+
+    INFO("Short-term LUFS after 2900 ms: " << meter.getShortTermLUFS());
+    CHECK(std::isinf(meter.getShortTermLUFS()));
+    CHECK(meter.getShortTermLUFS() < 0.0f);
+
+    // Feed one more 100 ms block — now the window is full
+    feedSine(meter, 1000.0, amp, fs, 0.1);
+
+    INFO("Short-term LUFS after 3000 ms: " << meter.getShortTermLUFS());
+    CHECK(std::isfinite(meter.getShortTermLUFS()));
+}
+
+// ---------------------------------------------------------------------------
+// test_short_term_lufs_matches_momentary_after_one_block
+// After exactly 30 blocks of a steady-state tone, getShortTermLUFS() must
+// reflect the loudness averaged over the entire 3 s window — not just the
+// last 100 ms block.  We verify this by comparing a meter that received a
+// constant signal against one that received silence followed by one loud
+// block: the latter must NOT report the same short-term level as the former
+// (confirming the mean is over all 30 blocks, not just the last one).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_short_term_lufs_matches_momentary_after_one_block", "[LoudnessMeter]")
+{
+    constexpr double fs = 48000.0;
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // Meter A: 30 blocks of constant tone
+    LoudnessMeter meterA;
+    meterA.prepare(fs, 2);
+    feedSine(meterA, 1000.0, amp, fs, 3.0);
+    const float stA = meterA.getShortTermLUFS();
+
+    // Meter B: 29 blocks of silence + 1 block of loud tone
+    LoudnessMeter meterB;
+    meterB.prepare(fs, 2);
+    feedSilence(meterB, fs, 2.9);
+    feedSine(meterB, 1000.0, amp, fs, 0.1);
+    const float stB = meterB.getShortTermLUFS();
+
+    INFO("Short-term A (30 blocks of tone): " << stA);
+    INFO("Short-term B (29 silence + 1 tone): " << stB);
+
+    REQUIRE(std::isfinite(stA));
+    REQUIRE(std::isfinite(stB));
+
+    // Meter A should be much louder (full window of tone) than meter B
+    // (only 1/30th tone, 29/30ths silence → averaged power is ~1/30th).
+    // ~1/30th power ≈ -14.8 dB relative → stB should be well below stA.
+    CHECK(stA > stB + 10.0f);
+}
+
+// ---------------------------------------------------------------------------
 // test_momentary_lufs_ring_buffer
 // The ring-buffer implementation must produce the same momentary LUFS as the
 // reference deque-based computation.  We verify by comparing the ring buffer

@@ -164,8 +164,8 @@ void LoudnessMeter::onBlockComplete(double blockMeanSquare)
     if (mMomentaryRing.full())
         mMomentaryLUFS.store(powerToLUFS(mMomentaryRing.mean()));
 
-    // --- Update short-term LUFS ---
-    if (mShortTermRing.count > 0)
+    // --- Update short-term LUFS (requires full 3 s window) ---
+    if (mShortTermRing.full())
         mShortTermLUFS.store(powerToLUFS(mShortTermRing.mean()));
 
     // --- Append to circular history buffer (no allocation) ---
