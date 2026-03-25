@@ -41,6 +41,11 @@ MLIMLookAndFeel::MLIMLookAndFeel()
     setColour (juce::ToggleButton::textColourId,      MLIMColours::textPrimary);
     setColour (juce::ToggleButton::tickColourId,      MLIMColours::accentBlue);
     setColour (juce::ToggleButton::tickDisabledColourId, MLIMColours::textSecondary);
+
+    // Tooltip colours
+    setColour (juce::TooltipWindow::backgroundColourId, juce::Colour (0xff2A2A2A));
+    setColour (juce::TooltipWindow::textColourId,       MLIMColours::textPrimary);
+    setColour (juce::TooltipWindow::outlineColourId,    MLIMColours::panelBorder);
 }
 
 void MLIMLookAndFeel::drawRotarySlider (juce::Graphics& g,
@@ -207,4 +212,24 @@ void MLIMLookAndFeel::drawButtonBackground (juce::Graphics& g,
 
     g.setColour (MLIMColours::panelBorder);
     g.drawRoundedRectangle (bounds.reduced (0.5f), 4.0f, 1.0f);
+}
+
+void MLIMLookAndFeel::drawTooltip (juce::Graphics& g,
+                                    const juce::String& text,
+                                    int width, int height)
+{
+    const juce::Rectangle<int> bounds (0, 0, width, height);
+
+    // Dark background
+    g.setColour (juce::Colour (0xff2A2A2A));
+    g.fillRoundedRectangle (bounds.toFloat(), 3.0f);
+
+    // Subtle border
+    g.setColour (MLIMColours::panelBorder);
+    g.drawRoundedRectangle (bounds.toFloat().reduced (0.5f), 3.0f, 1.0f);
+
+    // Text
+    g.setColour (MLIMColours::textPrimary);
+    g.setFont (juce::Font (12.0f));
+    g.drawFittedText (text, bounds.reduced (4, 2), juce::Justification::centred, 1);
 }

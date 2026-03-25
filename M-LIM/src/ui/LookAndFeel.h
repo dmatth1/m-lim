@@ -36,4 +36,8 @@ public:
                                 const juce::Colour& backgroundColour,
                                 bool shouldDrawButtonAsHighlighted,
                                 bool shouldDrawButtonAsDown) override;
+
+    void drawTooltip (juce::Graphics& g,
+                      const juce::String& text,
+                      int width, int height) override;
 };
