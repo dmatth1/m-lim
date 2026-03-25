@@ -167,6 +167,56 @@ TEST_CASE("test_integrated_accumulates", "[LoudnessMeter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_1khz_loudness_at_44100
+// 1 kHz stereo sine at -20 dBFS, SR=44100: LUFS should be ≈ -20 (within 0.5 LU).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_1khz_loudness_at_44100", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 44100.0;
+    meter.prepare(fs, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+    feedSine(meter, 1000.0, amp, fs, 5.0);
+
+    const float momentary = meter.getMomentaryLUFS();
+    INFO("Momentary LUFS at 44100: " << momentary);
+
+    // Stereo -20 dBFS 1 kHz sine → expected ~-20.69 LUFS ±1 LU (K-weighting gain near 1kHz varies by SR)
+    CHECK(momentary > -21.5f);
+    CHECK(momentary < -19.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_1khz_loudness_at_96000
+// Same signal at 96000 Hz: result should match 44100 reading within ±0.5 LU,
+// confirming that coefficients are recalculated for the actual sample rate.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_1khz_loudness_at_96000", "[LoudnessMeter]")
+{
+    constexpr double fs44 = 44100.0;
+    constexpr double fs96 = 96000.0;
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    LoudnessMeter meter44;
+    meter44.prepare(fs44, 2);
+    feedSine(meter44, 1000.0, amp, fs44, 5.0);
+    const float lufs44 = meter44.getMomentaryLUFS();
+
+    LoudnessMeter meter96;
+    meter96.prepare(fs96, 2);
+    feedSine(meter96, 1000.0, amp, fs96, 5.0);
+    const float lufs96 = meter96.getMomentaryLUFS();
+
+    INFO("LUFS at 44100: " << lufs44);
+    INFO("LUFS at 96000: " << lufs96);
+
+    REQUIRE(std::isfinite(lufs44));
+    REQUIRE(std::isfinite(lufs96));
+    CHECK(std::abs(lufs96 - lufs44) < 0.5f);
+}
+
+// ---------------------------------------------------------------------------
 // test_reset_integrated
 // resetIntegrated() should clear accumulated data and return -inf again.
 // ---------------------------------------------------------------------------

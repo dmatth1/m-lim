@@ -52,6 +52,7 @@ target_link_libraries(MLIMTests
         juce::juce_audio_utils
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
+        asound
 )
 
 include(CTest)
