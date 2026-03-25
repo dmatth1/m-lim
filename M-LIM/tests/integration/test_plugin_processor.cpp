@@ -295,3 +295,134 @@ TEST_CASE("test_latency_updates_with_lookahead", "[PluginProcessor]")
     // Latency at 0 ms must be less than at 5 ms
     REQUIRE (latency0ms < latency5ms);
 }
+
+// ============================================================================
+// test_state_round_trip_all_params
+// Set all 21 parameters to non-default values, save state, create a new
+// processor, load state, and verify every parameter is restored correctly.
+// ============================================================================
+TEST_CASE("test_state_round_trip_all_params", "[PluginProcessor]")
+{
+    struct ParamTestValue { const char* id; float value; };
+
+    // One non-default value per parameter (real/denormalized units or index)
+    const std::vector<ParamTestValue> testValues = {
+        { "inputGain",              6.0f   },
+        { "outputCeiling",         -1.0f   },
+        { "algorithm",              3.0f   },   // index 3 = Aggressive
+        { "lookahead",              3.0f   },
+        { "attack",                10.0f   },
+        { "release",              200.0f   },
+        { "channelLinkTransients", 50.0f   },
+        { "channelLinkRelease",    50.0f   },
+        { "truePeakEnabled",        0.0f   },   // default true → false
+        { "oversamplingFactor",     1.0f   },   // index 1 = 2x
+        { "dcFilterEnabled",        1.0f   },
+        { "ditherEnabled",          1.0f   },
+        { "ditherBitDepth",         2.0f   },   // index 2 = 20-bit
+        { "ditherNoiseShaping",     1.0f   },   // index 1 = Optimized
+        { "bypass",                 1.0f   },
+        { "unityGainMode",          1.0f   },
+        { "sidechainHPFreq",      200.0f   },
+        { "sidechainLPFreq",    10000.0f   },
+        { "sidechainTilt",          3.0f   },
+        { "delta",                  1.0f   },
+        { "displayMode",            2.0f   },   // index 2 = SlowDown
+    };
+
+    MLIMAudioProcessor procA;
+    procA.prepareToPlay (kSampleRate, kBlockSize);
+
+    for (const auto& tv : testValues)
+    {
+        auto* param = procA.apvts.getParameter (tv.id);
+        REQUIRE (param != nullptr);
+        param->setValueNotifyingHost (param->convertTo0to1 (tv.value));
+    }
+
+    juce::MemoryBlock stateData;
+    procA.getStateInformation (stateData);
+    REQUIRE (stateData.getSize() > 0);
+
+    MLIMAudioProcessor procB;
+    procB.setStateInformation (stateData.getData(),
+                               static_cast<int> (stateData.getSize()));
+
+    for (const auto& tv : testValues)
+    {
+        auto* raw = procB.apvts.getRawParameterValue (tv.id);
+        REQUIRE (raw != nullptr);
+        REQUIRE (raw->load() == Catch::Approx (tv.value).margin (0.01f));
+    }
+}
+
+// ============================================================================
+// test_bus_layout_stereo_supported
+// isBusesLayoutSupported() must return true for matching stereo in/out and
+// false for mismatched channel sets.
+// ============================================================================
+TEST_CASE("test_bus_layout_stereo_supported", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    juce::AudioProcessor::BusesLayout stereoLayout;
+    stereoLayout.inputBuses.add  (juce::AudioChannelSet::stereo());
+    stereoLayout.outputBuses.add (juce::AudioChannelSet::stereo());
+    REQUIRE (proc.isBusesLayoutSupported (stereoLayout) == true);
+
+    // Mismatched: stereo in, mono out — must be rejected
+    juce::AudioProcessor::BusesLayout mismatchedLayout;
+    mismatchedLayout.inputBuses.add  (juce::AudioChannelSet::stereo());
+    mismatchedLayout.outputBuses.add (juce::AudioChannelSet::mono());
+    REQUIRE (proc.isBusesLayoutSupported (mismatchedLayout) == false);
+}
+
+// ============================================================================
+// test_tail_length_positive
+// After prepareToPlay(), getTailLengthSeconds() must be > 0 because the
+// default lookahead is 1 ms.
+// ============================================================================
+TEST_CASE("test_tail_length_positive", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Default lookahead is 1 ms → tail = 0.001 s > 0
+    REQUIRE (proc.getTailLengthSeconds() > 0.0);
+}
+
+// ============================================================================
+// test_set_state_empty_no_crash
+// Passing nullptr / zero size to setStateInformation() must not crash.
+// ============================================================================
+TEST_CASE("test_set_state_empty_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    REQUIRE_NOTHROW (proc.setStateInformation (nullptr, 0));
+}
+
+// ============================================================================
+// test_set_state_garbage_no_crash
+// Passing 64 bytes of arbitrary data to setStateInformation() must not crash.
+// ============================================================================
+TEST_CASE("test_set_state_garbage_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    std::vector<char> garbage (64);
+    for (int i = 0; i < 64; ++i)
+        garbage[i] = static_cast<char> (i * 7 + 3);
+
+    REQUIRE_NOTHROW (proc.setStateInformation (garbage.data(),
+                                               static_cast<int> (garbage.size())));
+}
+
+// ============================================================================
+// test_accepts_midi_false
+// A limiter plugin must not accept MIDI input.
+// ============================================================================
+TEST_CASE("test_accepts_midi_false", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    REQUIRE (proc.acceptsMidi() == false);
+}
