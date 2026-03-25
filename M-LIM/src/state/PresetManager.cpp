@@ -13,23 +13,24 @@ void PresetManager::setPresetDirectory(const juce::File& dir)
     presetDirectory.createDirectory();
 }
 
-void PresetManager::savePreset(const juce::String& name,
+bool PresetManager::savePreset(const juce::String& name,
                                juce::AudioProcessorValueTreeState& apvts)
 {
     auto state = apvts.copyState();
     auto xml = state.createXml();
-    if (xml != nullptr)
-    {
-        auto file = presetFileForName(name);
-        juce::FileOutputStream stream(file);
-        if (stream.openedOk())
-        {
-            stream.setPosition(0);
-            stream.truncate();
-            xml->writeTo(stream);
-        }
-        currentPresetName = name;
-    }
+    if (xml == nullptr)
+        return false;
+
+    auto file = presetFileForName(name);
+    juce::FileOutputStream stream(file);
+    if (!stream.openedOk())
+        return false;
+
+    stream.setPosition(0);
+    stream.truncate();
+    xml->writeTo(stream);
+    currentPresetName = name;
+    return true;
 }
 
 bool PresetManager::loadPreset(const juce::String& name,

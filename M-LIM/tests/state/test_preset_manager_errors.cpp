@@ -105,6 +105,28 @@ TEST_CASE("test_previous_at_start", "[PresetManagerErrors]")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_save_unwritable_path_returns_false", "[PresetManagerErrors]")
+{
+    ErrorTestProcessor proc;
+    PresetManager pm;
+
+    // Point the preset directory at a non-existent, non-creatable path.
+    // On Linux, /proc/nonexistent is guaranteed to fail on open.
+    pm.setPresetDirectory(juce::File("/proc/mlim_unwritable_test_dir"));
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+    *gainParam = -6.0f;
+
+    // savePreset must return false — the directory is not writable.
+    bool saved = pm.savePreset("ShouldFail", proc.apvts);
+    REQUIRE(saved == false);
+
+    // currentPresetName must NOT be updated to the failed name.
+    REQUIRE(pm.getCurrentPresetName() != "ShouldFail");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 TEST_CASE("test_load_preset_missing_parameters", "[PresetManagerErrors]")
 {
     TempDir tmp;

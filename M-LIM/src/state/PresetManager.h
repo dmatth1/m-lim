@@ -15,8 +15,9 @@ class PresetManager
 public:
     PresetManager();
 
-    /** Saves the current APVTS state as a named preset. Overwrites if exists. */
-    void savePreset(const juce::String& name, juce::AudioProcessorValueTreeState& apvts);
+    /** Saves the current APVTS state as a named preset. Overwrites if exists.
+     *  Returns true on success, false if the XML could not be written. */
+    bool savePreset(const juce::String& name, juce::AudioProcessorValueTreeState& apvts);
 
     /** Loads a named preset into the APVTS. Returns false if not found. */
     bool loadPreset(const juce::String& name, juce::AudioProcessorValueTreeState& apvts);
