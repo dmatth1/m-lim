@@ -61,6 +61,14 @@ void TransientLimiter::setLookahead(float ms)
 }
 
 // ---------------------------------------------------------------------------
+// setThreshold
+// ---------------------------------------------------------------------------
+void TransientLimiter::setThreshold(float linear)
+{
+    mThreshold = std::clamp(linear, 1e-6f, 1.0f);
+}
+
+// ---------------------------------------------------------------------------
 // setChannelLink
 // ---------------------------------------------------------------------------
 void TransientLimiter::setChannelLink(float pct)

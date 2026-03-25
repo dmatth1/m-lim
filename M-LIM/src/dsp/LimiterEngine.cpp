@@ -47,6 +47,17 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mLevelingLimiter.setAlgorithmParams(
         getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load())));
 
+    // Pass the output ceiling to both limiters so they limit smoothly to
+    // the correct level rather than relying on the hard-clip at step 7.
+    {
+        const float inputGain = mInputGainLinear.load();
+        const float ceiling = mUnityGain.load()
+            ? (1.0f / std::max(inputGain, kMinLinear))
+            : mOutputCeilingLinear.load();
+        mTransientLimiter.setThreshold(ceiling);
+        mLevelingLimiter.setThreshold(ceiling);
+    }
+
     // Sidechain filter at the original rate (before oversampling)
     mSidechainFilter.prepare(sampleRate, maxBlockSize);
 
@@ -101,6 +112,16 @@ void LimiterEngine::applyPendingParams()
     mLevelingLimiter.setRelease(mReleaseMs.load());
     mLevelingLimiter.setChannelLink(mChannelLinkRelease.load());
     mLevelingLimiter.setAlgorithmParams(params);
+
+    // Keep limiter thresholds in sync with the current output ceiling
+    {
+        const float inputGain = mInputGainLinear.load();
+        const float ceiling = mUnityGain.load()
+            ? (1.0f / std::max(inputGain, kMinLinear))
+            : mOutputCeilingLinear.load();
+        mTransientLimiter.setThreshold(ceiling);
+        mLevelingLimiter.setThreshold(ceiling);
+    }
 
     mDitherL.setBitDepth(mDitherBitDepth.load());
     mDitherR.setBitDepth(mDitherBitDepth.load());
@@ -313,11 +334,13 @@ void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
 void LimiterEngine::setInputGain(float dB)
 {
     mInputGainLinear.store(std::pow(10.0f, dB / 20.0f));
+    mParamsDirty.store(true);  // unity-gain ceiling depends on input gain
 }
 
 void LimiterEngine::setOutputCeiling(float dB)
 {
     mOutputCeilingLinear.store(std::pow(10.0f, dB / 20.0f));
+    mParamsDirty.store(true);  // limiter thresholds must track ceiling
 }
 
 void LimiterEngine::setLookahead(float ms)
@@ -396,6 +419,7 @@ void LimiterEngine::setDeltaMode(bool delta)
 void LimiterEngine::setUnityGain(bool unity)
 {
     mUnityGain.store(unity);
+    mParamsDirty.store(true);  // ceiling changes when unity-gain mode changes
 }
 
 // ============================================================================

@@ -32,6 +32,10 @@ public:
     void process(float** channelData, int numChannels, int numSamples,
                  const float* const* sidechainData = nullptr);
 
+    /** Set the limiter threshold in linear scale (e.g. 0.891 for -1 dBFS).
+     *  Defaults to 1.0 (0 dBFS). Should be called whenever the output ceiling changes. */
+    void setThreshold(float linear);
+
     /** Set attack time in milliseconds (0–100 ms). */
     void setAttack(float ms);
 

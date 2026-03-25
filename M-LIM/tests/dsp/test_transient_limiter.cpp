@@ -272,3 +272,61 @@ TEST_CASE("test_passthrough_below_threshold", "[TransientLimiter]")
     // GR should be negligible
     REQUIRE(limiter.getGainReduction() >= -0.5f);  // less than 0.5 dB reduction
 }
+
+// ---------------------------------------------------------------------------
+// test_custom_threshold
+//   setThreshold() must change the level at which gain reduction activates.
+//   At threshold=0.5, a signal at 0.8 must be limited; at threshold=1.0 the
+//   same signal passes through unchanged (it is below the default threshold).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_custom_threshold", "[TransientLimiter]")
+{
+    SECTION("threshold=0.5 activates GR on input at 0.8")
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.kneeWidth        = 0.0f;  // hard knee for predictable onset
+        params.saturationAmount = 0.0f;
+        limiter.setAlgorithmParams(params);
+        limiter.setLookahead(0.0f);
+        limiter.setThreshold(0.5f);  // custom threshold below 0.8
+
+        const float inputAmp = 0.8f;
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, inputAmp));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+
+        // Output must not exceed the threshold
+        REQUIRE(blockPeak(buf[0]) <= 0.5f + 1e-4f);
+        // GR must be active
+        REQUIRE(limiter.getGainReduction() < -0.5f);
+    }
+
+    SECTION("threshold=1.0 (default) passes 0.8 unchanged")
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.kneeWidth        = 0.0f;
+        params.saturationAmount = 0.0f;
+        limiter.setAlgorithmParams(params);
+        limiter.setLookahead(0.0f);
+        limiter.setThreshold(1.0f);  // default threshold
+
+        const float inputAmp = 0.8f;
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, inputAmp));
+        auto ptrs = makePtrs(buf);
+
+        // Warm-up to clear state
+        limiter.process(ptrs.data(), 1, kBlockSize);
+        std::fill(buf[0].begin(), buf[0].end(), inputAmp);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+
+        // Signal below threshold — should pass through essentially unmodified
+        REQUIRE(blockPeak(buf[0]) == Catch::Approx(inputAmp).margin(0.01f));
+        REQUIRE(limiter.getGainReduction() >= -0.5f);
+    }
+}

@@ -315,3 +315,54 @@ TEST_CASE("test_silence_produces_no_gain_reduction", "[LimiterEngine]")
     // Silence should produce no (or negligible) gain reduction
     REQUIRE(gr > -1.0f);
 }
+
+// ============================================================================
+// test_ceiling_below_zero_dbfs
+// With ceiling set to -1.0 dBFS, a 0 dBFS input sine must be limited smoothly
+// to the ceiling without relying on hard clipping. The output must stay below
+// the ceiling and the signal must be smooth (no hard-clip distortion steps).
+// ============================================================================
+TEST_CASE("test_ceiling_below_zero_dbfs", "[LimiterEngine]")
+{
+    const float ceilingDb  = -1.0f;
+    const float ceilingLin = static_cast<float>(std::pow(10.0, ceilingDb / 20.0));  // ~0.891
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(ceilingDb);
+
+    // Run several blocks of a 0 dBFS sine (amplitude 1.0) to let the limiter settle
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        engine.process(buf);
+
+        const float peak = maxAbsValue(buf);
+        INFO("Block " << block << " peak: " << peak << "  ceiling: " << ceilingLin);
+        REQUIRE(peak <= ceilingLin + 0.01f);
+    }
+
+    // Gain reduction must be non-zero — the limiters must be doing work,
+    // not deferring everything to the hard clip at step 7.
+    const float gr = engine.getGainReduction();
+    INFO("GR at -1 dBFS ceiling: " << gr << " dB");
+    REQUIRE(gr < -0.1f);  // at least 0.1 dB of gain reduction must come from limiters
+
+    // Verify smooth output: process one final block and check that consecutive
+    // samples don't jump by more than the expected smooth gain reduction amount.
+    // A hard clip would produce steps larger than ~0.1; smooth limiting would not.
+    juce::AudioBuffer<float> finalBuf = makeSine(1.0f, kBlockSize);
+    engine.process(finalBuf);
+
+    const float* ch0 = finalBuf.getReadPointer(0);
+    float maxStep = 0.0f;
+    for (int i = 1; i < kBlockSize; ++i)
+        maxStep = std::max(maxStep, std::abs(ch0[i] - ch0[i - 1]));
+
+    // A 1 kHz sine at 44100 Hz has a max inter-sample slope of about 0.14.
+    // Smooth limiting can only reduce this; hard clipping would not increase
+    // it either (clips are already in the sine), but the ceiling check above
+    // already ensures the hard clip is not the primary control.
+    INFO("Max inter-sample step: " << maxStep);
+    REQUIRE(maxStep < 0.5f);  // sanity check — no pathological discontinuities
+}

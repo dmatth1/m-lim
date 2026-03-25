@@ -35,6 +35,10 @@ public:
     /** Set lookahead time in milliseconds (0–5 ms). */
     void setLookahead(float ms);
 
+    /** Set the limiter threshold in linear scale (e.g. 0.891 for -1 dBFS).
+     *  Defaults to 1.0 (0 dBFS). Should be called whenever the output ceiling changes. */
+    void setThreshold(float linear);
+
     /** Set stereo channel linking (0 = fully independent, 1 = fully linked). */
     void setChannelLink(float pct);
 
