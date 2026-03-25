@@ -976,3 +976,94 @@ TEST_CASE("test_latency_44100_5ms_4x_oversampling", "[LimiterEngine]")
     INFO("Reported latency: " << reported << ", oversampler: " << oversamplerLatency);
     REQUIRE(reported == expectedLookahead + oversamplerLatency);
 }
+
+// ============================================================================
+// test_mono_no_clip
+// Prepare with numChannels=1, feed a loud mono sine (amplitude 5.0) for 20
+// blocks; output must be finite and peak <= ceiling + margin after block 5.
+// ============================================================================
+TEST_CASE("test_mono_no_clip", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);
+    engine.setOutputCeiling(0.0f);  // 0 dBFS ceiling = 1.0 linear
+
+    const float margin = 0.02f;  // 2% margin for lookahead ramp-up
+
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(5.0f, kBlockSize, 1);
+        engine.process(buf);
+
+        const float* data = buf.getReadPointer(0);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE(std::isfinite(data[i]));
+
+        if (block >= 5)
+        {
+            const float peak = maxAbsValue(buf);
+            INFO("Mono block " << block << " peak: " << peak);
+            REQUIRE(peak <= 1.0f + margin);
+        }
+    }
+}
+
+// ============================================================================
+// test_mono_silence_passes
+// Prepare with numChannels=1, feed 10 blocks of silence; output must be
+// all-zero (no spurious GR, DC offset, or NaN introduced).
+// ============================================================================
+TEST_CASE("test_mono_silence_passes", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);
+    engine.setOutputCeiling(0.0f);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf(1, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+
+        const float* data = buf.getReadPointer(0);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+        {
+            INFO("Mono silence block " << block << " sample " << i << ": " << data[i]);
+            REQUIRE(std::isfinite(data[i]));
+            REQUIRE(std::abs(data[i]) < 1e-6f);
+        }
+    }
+}
+
+// ============================================================================
+// test_mono_input_gain_applied
+// Set +6 dB input gain on a mono engine, feed -12 dBFS signal for 10 blocks;
+// GR must be active (< -0.5 dB) because +6 dB boost pushes signal above ceiling.
+// Also verifies getTruePeakL() is non-negative and no crash occurs.
+// ============================================================================
+TEST_CASE("test_mono_input_gain_applied", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);
+    engine.setOutputCeiling(0.0f);
+    engine.setInputGain(18.0f);  // +18 dB boost
+
+    // -12 dBFS signal: after +18 dB gain it becomes +6 dBFS, well above 0 dBFS ceiling
+    const float ampMinus12dBFS = static_cast<float>(std::pow(10.0, -12.0 / 20.0));
+
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(ampMinus12dBFS, kBlockSize, 1);
+        engine.process(buf);
+    }
+
+    const float gr = engine.getGainReduction();
+    INFO("Mono GR with +6 dB input gain on -12 dBFS: " << gr << " dB");
+    REQUIRE(std::isfinite(gr));
+    REQUIRE(gr < -0.5f);  // at least 0.5 dB of gain reduction
+
+    const float tpL = engine.getTruePeakL();
+    INFO("Mono true peak L: " << tpL);
+    REQUIRE(std::isfinite(tpL));
+    REQUIRE(tpL >= 0.0f);
+}
