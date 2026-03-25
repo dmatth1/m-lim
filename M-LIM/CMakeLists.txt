@@ -54,6 +54,8 @@ target_compile_definitions(MLIMLib
         JUCE_USE_CURL=0
 )
 
+set_target_properties(MLIMLib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_link_libraries(MLIMLib
     PUBLIC
         juce::juce_audio_processors
@@ -92,6 +94,7 @@ target_sources(MLIM
         src/ui/AlgorithmSelector.cpp
         src/ui/RotaryKnob.cpp
         src/ui/LevelMeter.cpp
+        src/ui/ControlStrip.cpp
 )
 
 target_compile_definitions(MLIM
