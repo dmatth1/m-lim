@@ -15,6 +15,7 @@ set(MLIM_TEST_CASES
     integration/test_dsp_components.cpp
     integration/test_parameter_state.cpp
     integration/test_plugin_processor.cpp
+    integration/test_processor_stress.cpp
     dsp/test_limiter_engine.cpp
     dsp/test_limiter_engine_modes.cpp
     dsp/test_lockfree_fifo.cpp
