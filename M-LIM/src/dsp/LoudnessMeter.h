@@ -149,8 +149,8 @@ private:
     int                 mHistorySize = 0;   // valid element count (0..kMaxHistoryBlocks)
 
     // Pre-allocated working buffers — filled in updateIntegratedAndLRA() without alloc.
-    std::vector<double> mWindowPowers;      // 400 ms window mean-squares
-    std::vector<double> mPrefixSums;        // prefix sums over history (size = kMaxHistoryBlocks+1)
+    mutable std::vector<double> mWindowPowers;  // 400 ms window mean-squares
+    mutable std::vector<double> mPrefixSums;    // prefix sums over history (size = kMaxHistoryBlocks+1)
 
     // -----------------------------------------------------------------------
     // LRA histogram: 900 bins covering [-70, +20) LUFS at 0.1 LU resolution.
@@ -160,7 +160,7 @@ private:
     static constexpr float kLraHistoMinLUFS = -70.0f;
     static constexpr float kLraBinWidth     = 0.1f;
 
-    std::array<int, kLraHistoBins> mLraHisto{};
+    mutable std::array<int, kLraHistoBins> mLraHisto{};
 
     // -----------------------------------------------------------------------
     // Update throttle — integrated+LRA recomputed every kUpdateFreq blocks
@@ -185,6 +185,9 @@ private:
     void setupKWeightingFilters();
     void onBlockComplete(double blockMeanSquare);
     void updateIntegratedAndLRA();
+
+    float computeIntegratedLUFS() const;
+    float computeLRA() const;
 
     /** Append a block value to the circular history buffer. Lock-free, no alloc. */
     void pushHistory(double val) noexcept

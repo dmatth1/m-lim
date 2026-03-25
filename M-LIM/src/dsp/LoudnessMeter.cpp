@@ -181,11 +181,7 @@ void LoudnessMeter::onBlockComplete(double blockMeanSquare)
 }
 
 // ---------------------------------------------------------------------------
-// updateIntegratedAndLRA
-//
-// Uses pre-allocated buffers and O(n) prefix-sum technique to avoid
-// runtime allocations and the previous O(n²) window iteration.
-// LRA uses a histogram-based percentile approach instead of sorting.
+// updateIntegratedAndLRA — thin coordinator: build prefix sums, then delegate.
 // ---------------------------------------------------------------------------
 void LoudnessMeter::updateIntegratedAndLRA()
 {
@@ -193,18 +189,26 @@ void LoudnessMeter::updateIntegratedAndLRA()
     if (n < kMomentaryBlocks)
         return;
 
-    // -----------------------------------------------------------------------
     // Build prefix sums over the circular history (O(n)).
     // mPrefixSums is pre-allocated to kMaxHistoryBlocks+1 in prepare().
-    // -----------------------------------------------------------------------
     mPrefixSums[0] = 0.0;
     for (int i = 0; i < n; ++i)
         mPrefixSums[static_cast<size_t>(i + 1)] = mPrefixSums[static_cast<size_t>(i)] + historyAt(i);
 
-    // -----------------------------------------------------------------------
-    // Integrated LUFS — 400 ms sliding windows (hop = 100 ms).
+    mIntegratedLUFS.store(computeIntegratedLUFS());
+    mLoudnessRange.store(computeLRA());
+}
+
+// ---------------------------------------------------------------------------
+// computeIntegratedLUFS — two-pass gated loudness algorithm (BS.1770-4).
+// Requires mPrefixSums to be populated by updateIntegratedAndLRA().
+// ---------------------------------------------------------------------------
+float LoudnessMeter::computeIntegratedLUFS() const
+{
+    const int n = mHistorySize;
+
+    // Build 400 ms sliding windows (hop = 100 ms).
     // mWindowPowers is pre-allocated; clear() + push_back() does not allocate.
-    // -----------------------------------------------------------------------
     mWindowPowers.clear();
     const int numWin400 = n - kMomentaryBlocks + 1;
     for (int i = 0; i < numWin400; ++i)
@@ -230,41 +234,40 @@ void LoudnessMeter::updateIntegratedAndLRA()
     }
 
     if (cntAbove == 0)
-    {
-        mIntegratedLUFS.store(kNegInf);
-    }
-    else
-    {
-        const double meanAbsGated  = sumAbove / cntAbove;
-        const float  relGateLUFS   = powerToLUFS(meanAbsGated) + static_cast<float>(kRelGateOffset);
-        const double relGateLinear = lufsToLinear(relGateLUFS);
+        return kNegInf;
 
-        // Second pass: mean of all windows above relative gate
-        double sumRel = 0.0;
-        int    cntRel = 0;
-        for (double p : mWindowPowers)
+    const double meanAbsGated  = sumAbove / cntAbove;
+    const float  relGateLUFS   = powerToLUFS(meanAbsGated) + static_cast<float>(kRelGateOffset);
+    const double relGateLinear = lufsToLinear(relGateLUFS);
+
+    // Second pass: mean of all windows above relative gate
+    double sumRel = 0.0;
+    int    cntRel = 0;
+    for (double p : mWindowPowers)
+    {
+        if (p > absGateLinear && p > relGateLinear)
         {
-            if (p > absGateLinear && p > relGateLinear)
-            {
-                sumRel += p;
-                ++cntRel;
-            }
+            sumRel += p;
+            ++cntRel;
         }
-
-        if (cntRel == 0)
-            mIntegratedLUFS.store(kNegInf);
-        else
-            mIntegratedLUFS.store(powerToLUFS(sumRel / cntRel));
     }
 
-    // -----------------------------------------------------------------------
-    // LRA — short-term (3 s) windows, histogram-based percentile (no sorting).
-    // -----------------------------------------------------------------------
+    if (cntRel == 0)
+        return kNegInf;
+
+    return powerToLUFS(sumRel / cntRel);
+}
+
+// ---------------------------------------------------------------------------
+// computeLRA — histogram-based loudness range (EBU R128 / BS.1770-4).
+// Requires mPrefixSums to be populated by updateIntegratedAndLRA().
+// ---------------------------------------------------------------------------
+float LoudnessMeter::computeLRA() const
+{
+    const int n = mHistorySize;
+
     if (n < kShortTermBlocks)
-    {
-        mLoudnessRange.store(0.0f);
-        return;
-    }
+        return 0.0f;
 
     // Rebuild LRA histogram from current history (O(n)).
     mLraHisto.fill(0);
@@ -288,10 +291,7 @@ void LoudnessMeter::updateIntegratedAndLRA()
     }
 
     if (validCount < 2)
-    {
-        mLoudnessRange.store(0.0f);
-        return;
-    }
+        return 0.0f;
 
     // Find 10th and 95th percentiles from histogram (O(kLraHistoBins) = O(900)).
     const int loTarget = static_cast<int>(0.10 * validCount);
@@ -321,9 +321,9 @@ void LoudnessMeter::updateIntegratedAndLRA()
     }
 
     if (foundLo && foundHi && hiLUFS > loLUFS)
-        mLoudnessRange.store(hiLUFS - loLUFS);
+        return hiLUFS - loLUFS;
     else
-        mLoudnessRange.store(0.0f);
+        return 0.0f;
 }
 
 // ---------------------------------------------------------------------------
