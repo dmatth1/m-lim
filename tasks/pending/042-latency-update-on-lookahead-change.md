@@ -1,4 +1,4 @@
-# Task 034: Update Latency Reporting When Lookahead Changes
+# Task 042: Update Latency Reporting When Lookahead Changes
 
 ## Description
 Total plugin latency = lookahead samples + oversampler latency samples. Task 017 mentions updating `setLatencySamples` when oversampling changes, but NOT when the lookahead parameter changes. Since lookahead ranges from 0-5ms (0-240 samples at 48kHz), changing it significantly affects reported latency. The host needs accurate latency for delay compensation. Ensure `setLatencySamples()` is called whenever either lookahead or oversampling factor changes.

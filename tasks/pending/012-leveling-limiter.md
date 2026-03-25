@@ -35,6 +35,7 @@ Read: `SPEC.md` — LevelingLimiterInterface
 - Channel linking: same approach as TransientLimiter
 - Gain applied in linear domain
 - Must be real-time safe
+- **Sidechain input**: per SPEC.md, process() takes an optional `const float* const* sidechainData` parameter. When non-null, use sidechainData for envelope following while applying gain reduction to the main channelData. When null, follow channelData directly.
 
 ## Dependencies
 Requires tasks 001, 004

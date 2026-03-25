@@ -1,4 +1,4 @@
-# Task 035: Output Ceiling Reference Line on Waveform Display
+# Task 046: Output Ceiling Reference Line on Waveform Display
 
 ## Description
 Pro-L 2 shows the output ceiling level as a horizontal reference line on the waveform display, making it visually clear where limiting starts. This is missing from the waveform display task (022). Add a ceiling indicator line that tracks the outputCeiling parameter.

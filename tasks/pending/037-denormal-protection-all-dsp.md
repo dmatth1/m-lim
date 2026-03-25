@@ -1,4 +1,4 @@
-# Task 032: Denormal Float Protection Across All DSP Modules
+# Task 037: Denormal Float Protection Across All DSP Modules
 
 ## Description
 All DSP modules using IIR filters or exponential envelope smoothing must include denormal float protection. On x86/x64, denormalized floats (values near zero like 1e-38) cause the CPU to fall back to microcode, resulting in 10-100x slower processing — catastrophic for real-time audio. This is a well-known audio DSP issue.

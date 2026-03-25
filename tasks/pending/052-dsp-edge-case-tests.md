@@ -1,4 +1,4 @@
-# Task 032: DSP Edge Case Tests Across All Components
+# Task 052: DSP Edge Case Tests Across All Components
 
 ## Description
 Add edge case tests that are missing from every DSP component task. Current tests only cover happy paths. Audio plugins must handle degenerate inputs gracefully — empty buffers, NaN/Inf samples, denormal floats, extreme sample rates, mono input to stereo processor, and single-sample buffers. These are real-world scenarios that cause crashes and glitches in production plugins.

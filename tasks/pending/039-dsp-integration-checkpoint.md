@@ -1,4 +1,4 @@
-# Task 032: DSP Component Integration Checkpoint
+# Task 039: DSP Component Integration Checkpoint
 
 ## Description
 Task 013 (LimiterEngine) consumes 7 interfaces (TransientLimiter, LevelingLimiter, Oversampler, TruePeakDetector, SidechainFilter, DCFilter, Dither). Per project conventions, when a task consumes 3+ interfaces it should have a preceding integration checkpoint to verify all components wire together before the orchestrator tries to use them.

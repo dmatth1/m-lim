@@ -1,4 +1,4 @@
-# Task 034: Integrate LoudnessMeter into Processor Chain
+# Task 040: Integrate LoudnessMeter into Processor Chain
 
 ## Description
 The LoudnessMeter (task 010) is implemented but never wired into the signal chain. Task 013 (LimiterEngine) doesn't list LoudnessMeterInterface in its Consumes, and task 017 (PluginProcessor) doesn't mention it either. The LoudnessPanel UI (task 023) expects loudness data but has no source.

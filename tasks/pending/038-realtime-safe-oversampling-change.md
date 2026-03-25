@@ -1,4 +1,4 @@
-# Task 033: Real-Time Safe Oversampling Factor Change
+# Task 038: Real-Time Safe Oversampling Factor Change
 
 ## Description
 Changing the oversampling factor requires destroying and recreating the `juce::dsp::Oversampling` object, which allocates memory. If `processBlock` reads the `oversamplingFactor` parameter and immediately calls `setOversamplingFactor()` on LimiterEngine, this allocation happens on the audio thread — violating real-time safety. Implement a deferred parameter change mechanism: detect the change on the audio thread, defer the actual reallocation to prepareToPlay or a message-thread callback, and update latency reporting afterward.

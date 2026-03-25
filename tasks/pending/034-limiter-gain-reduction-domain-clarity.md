@@ -1,4 +1,4 @@
-# Task 036: Limiter Gain Reduction — Domain and Knee Math Clarity
+# Task 034: Limiter Gain Reduction — Domain and Knee Math Clarity
 
 ## Description
 Tasks 011 and 012 mention "Gain is applied in linear domain (multiply, not add in dB)" which is correct, but don't clearly specify that the envelope follower / gain computer should work in the dB (log) domain. This is a critical distinction:

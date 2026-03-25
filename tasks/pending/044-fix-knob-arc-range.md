@@ -1,4 +1,4 @@
-# Task 034: Fix Rotary Knob Arc Range to Match Pro-L 2
+# Task 044: Fix Rotary Knob Arc Range to Match Pro-L 2
 
 ## Description
 Task 018 specifies a 210-degree arc for rotary knobs, but Pro-L 2 knobs use approximately 270-280 degrees of rotation (from roughly 8 o'clock to 4 o'clock). A 210-degree arc is noticeably too narrow and will look visually wrong compared to the reference.

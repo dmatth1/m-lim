@@ -1,4 +1,4 @@
-# Task 035: Dither Noise Shaping — Sample Rate Handling
+# Task 036: Dither Noise Shaping — Sample Rate Handling
 
 ## Description
 Task 006 specifies that the "Weighted" noise shaping mode (mode 2) uses "second-order shaped error feedback optimized for 44.1kHz" but does not address what happens at other sample rates (48kHz, 88.2kHz, 96kHz, 192kHz). Noise shaping coefficients designed for 44.1kHz will produce incorrect spectral shaping at other rates — the psychoacoustic weighting curve shifts, potentially pushing shaped noise into audible frequency ranges.

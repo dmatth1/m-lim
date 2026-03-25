@@ -1,4 +1,4 @@
-# Task 036: Loudness Meter ITU-R BS.1770-4 Accuracy Tests
+# Task 056: Loudness Meter ITU-R BS.1770-4 Accuracy Tests
 
 ## Description
 Task 010 specifies a 1kHz sine test with 1 LU tolerance — this is far too loose for ITU compliance (spec requires 0.1 LU). The loudness meter claims ITU-R BS.1770-4 compliance but lacks tests against the standard's reference signals. Add tests using known reference signals with tight tolerances to verify K-weighting filter accuracy and gated measurement correctness.

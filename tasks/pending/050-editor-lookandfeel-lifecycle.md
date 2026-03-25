@@ -1,4 +1,4 @@
-# Task 035: Fix Editor LookAndFeel Destruction Order
+# Task 050: Fix Editor LookAndFeel Destruction Order
 
 ## Description
 Task 027 specifies applying MLIMLookAndFeel in the editor constructor and resetting in the destructor. However, JUCE requires that the LookAndFeel object outlives all components that reference it. If the LookAndFeel is a member of the editor, it may be destroyed before child components (C++ destroys members in reverse declaration order). This causes undefined behavior or crashes. The destructor must explicitly clear the LookAndFeel from all child components before they are destroyed.

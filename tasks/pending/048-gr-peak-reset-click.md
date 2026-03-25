@@ -1,4 +1,4 @@
-# Task 036: Gain Reduction Peak Reset on Click
+# Task 048: Gain Reduction Peak Reset on Click
 
 ## Description
 Pro-L 2 allows clicking the GR peak readout to reset the peak hold value. This interaction is missing from task 021 (GainReductionMeter). Add click-to-reset behavior on the peak display.

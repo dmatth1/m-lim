@@ -1,4 +1,4 @@
-# Task 031: Fix Editor Layout Proportions for Pro-L 2 Parity
+# Task 043: Fix Editor Layout Proportions for Pro-L 2 Parity
 
 ## Description
 The editor assembly (task 027) specifies ~65% waveform / ~35% right panel, but Pro-L 2 uses approximately 70-75% for the waveform display with meters flanking it — input meter on the LEFT and output meter on the RIGHT of the waveform. The current plan puts all meters on the right side, which is incorrect. Fix the layout to match Pro-L 2's actual arrangement.

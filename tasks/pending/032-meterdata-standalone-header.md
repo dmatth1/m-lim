@@ -1,4 +1,4 @@
-# Task 036: Extract MeterData to Standalone Header
+# Task 032: Extract MeterData to Standalone Header
 
 ## Description
 SPEC.md originally placed MeterData in PluginProcessor.h, while Task 013 places it in LimiterEngine.h. Both create a coupling problem: UI components (WaveformDisplay, LevelMeter, etc.) would need to include a DSP or processor header just for a data struct. Extract MeterData and LockFreeFIFO into a standalone `src/dsp/MeterData.h` header that can be included by both DSP and UI code without pulling in heavy dependencies.

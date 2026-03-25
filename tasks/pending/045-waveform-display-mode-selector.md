@@ -1,4 +1,4 @@
-# Task 032: Waveform Display Mode Selector UI Control
+# Task 045: Waveform Display Mode Selector UI Control
 
 ## Description
 Pro-L 2 has a clickable display mode selector in the waveform display area that cycles between Fast/Slow/SlowDown/Infinite/Off modes. Task 022 defines the display modes but no UI control exists to switch between them. Add a small mode selector widget in the waveform display area.

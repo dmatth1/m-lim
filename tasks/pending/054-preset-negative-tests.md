@@ -1,4 +1,4 @@
-# Task 034: Preset Manager Negative and Error Case Tests
+# Task 054: Preset Manager Negative and Error Case Tests
 
 ## Description
 Task 015 only tests the happy path (save, load, navigate). A preset system must handle malformed XML, missing files, empty names, duplicate names, and corrupt data without crashing. These are common real-world failures when users manually edit preset files or when files get corrupted.

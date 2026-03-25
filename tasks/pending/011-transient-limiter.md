@@ -35,6 +35,7 @@ Read: `SPEC.md` — TransientLimiterInterface
 - Soft knee: smooth transition from no-reduction to full-reduction based on AlgorithmParams.kneeWidth
 - Saturation: optional soft clipping per AlgorithmParams.saturationAmount (tanh waveshaping)
 - Must be real-time safe: no allocations in process()
+- **Sidechain input**: per SPEC.md, process() takes an optional `const float* const* sidechainData` parameter. When non-null, use sidechainData for peak detection while applying gain reduction to the main channelData. When null, detect on channelData directly.
 
 ## Dependencies
 Requires tasks 001, 004

@@ -1,4 +1,4 @@
-# Task 034: Loudness Meter — Sample-Rate-Dependent K-Weighting Coefficients
+# Task 035: Loudness Meter — Sample-Rate-Dependent K-Weighting Coefficients
 
 ## Description
 Task 010 describes the K-weighting filter chain but does not specify that the ITU-R BS.1770-4 filter coefficients are defined for 48kHz and must be recalculated for other sample rates. Audio plugins commonly run at 44.1kHz, 88.2kHz, 96kHz, or 192kHz. Using the 48kHz coefficients at other sample rates will produce incorrect LUFS readings, violating the ±0.1 LU accuracy requirement.

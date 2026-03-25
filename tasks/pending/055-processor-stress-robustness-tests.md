@@ -1,4 +1,4 @@
-# Task 035: Plugin Processor Stress and Robustness Tests
+# Task 055: Plugin Processor Stress and Robustness Tests
 
 ## Description
 Task 017 tests basic processor operation (1000 blocks, ceiling, state). Missing: rapid parameter automation, buffer size changes mid-session, prepare/release/prepare cycles, and processing with all features enabled simultaneously. These scenarios are routine in DAW usage and are common sources of crashes.

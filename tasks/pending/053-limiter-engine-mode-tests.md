@@ -1,4 +1,4 @@
-# Task 033: LimiterEngine Bypass/Delta/Unity Gain Mode Tests
+# Task 053: LimiterEngine Bypass/Delta/Unity Gain Mode Tests
 
 ## Description
 Task 013 defines bypass, delta, and unity gain modes in the LimiterEngine interface but specifies zero tests for them. These modes affect the entire signal path and are user-facing features. Add dedicated tests for each mode.

@@ -1,4 +1,4 @@
-# Task 037: Tooltip and Value Popup Styling
+# Task 049: Tooltip and Value Popup Styling
 
 ## Description
 Pro-L 2 shows styled value tooltips when hovering over or dragging knobs and sliders. The current LookAndFeel task (003) doesn't specify tooltip styling. Add dark-themed tooltip rendering matching the plugin's visual style.

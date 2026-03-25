@@ -1,4 +1,4 @@
-# Task 033: Input Gain and Output Ceiling as Vertical Sliders
+# Task 047: Input Gain and Output Ceiling as Vertical Sliders
 
 ## Description
 Pro-L 2 uses prominent tall vertical sliders (not rotary knobs) for Input Gain and Output Ceiling at the edges of the control strip. Task 025 mentions these controls but doesn't specify they should be vertical sliders matching Pro-L 2's visual style. Implement them as custom vertical sliders with dB readout.
