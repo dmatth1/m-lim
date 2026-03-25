@@ -246,3 +246,103 @@ TEST_CASE("test_adaptive_release", "[LevelingLimiter]")
     // i.e., grWithAdaptive > grWithoutAdaptive (less negative = more recovered)
     REQUIRE(grWithAdaptive > grWithoutAdaptive);
 }
+
+// ---------------------------------------------------------------------------
+// test_custom_threshold_minus_1dBFS
+//   setThreshold(0.891) must hold output ≤ 0.891 + tiny margin.
+//   LevelingLimiter uses a slow envelope, so 30+ warm-up blocks are needed.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_custom_threshold_minus_1dBFS", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);   // instant attack
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(0.891f);  // -1 dBFS
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    for (int block = 0; block < 40; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+        if (block > 30)  // allow slow envelope to fully engage
+            REQUIRE(blockPeak(buf[0]) <= 0.891f + 2e-3f);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_custom_threshold_minus_6dBFS
+//   setThreshold(0.501) at -6 dBFS must clamp a +6 dBFS input to ≤ 0.501.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_custom_threshold_minus_6dBFS", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(0.501f);  // -6 dBFS
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    for (int block = 0; block < 40; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+        if (block > 30)
+            REQUIRE(blockPeak(buf[0]) <= 0.501f + 2e-3f);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_threshold_change_mid_session
+//   After changing threshold from 1.0 to 0.5 mid-session, subsequent output
+//   must not exceed 0.5 + margin once the slow envelope settles.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_threshold_change_mid_session", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);  // start at default
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    // Phase 1: process with threshold=1.0
+    for (int block = 0; block < 20; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+    }
+
+    // Change threshold mid-session
+    limiter.setThreshold(0.5f);
+
+    // Phase 2: process with threshold=0.5 — new threshold must be enforced
+    for (int block = 0; block < 40; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+        if (block > 30)  // allow slow envelope to settle to new threshold
+            REQUIRE(blockPeak(buf[0]) <= 0.5f + 2e-3f);
+    }
+}

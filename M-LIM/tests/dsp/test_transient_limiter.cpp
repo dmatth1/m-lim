@@ -827,3 +827,96 @@ TEST_CASE("test_lookahead_delay_exact", "[TransientLimiter]")
         REQUIRE(reportedLatency == expectedDelay);
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_custom_threshold_minus_1dBFS
+//   setThreshold(0.891) must hold output ≤ 0.891 + tiny margin.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_custom_threshold_minus_1dBFS", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, 512, 2);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+    limiter.setLookahead(1.0f);
+    limiter.setThreshold(0.891f);  // -1 dBFS
+
+    std::vector<std::vector<float>> buf(2, std::vector<float>(512, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 2, 512);
+        if (block > 2)  // skip warm-up
+        {
+            REQUIRE(blockPeak(buf[0]) <= 0.891f + 1e-4f);
+            REQUIRE(blockPeak(buf[1]) <= 0.891f + 1e-4f);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_custom_threshold_minus_6dBFS
+//   setThreshold(0.501) at -6 dBFS must clamp a +6 dBFS input to ≤ 0.501.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_custom_threshold_minus_6dBFS", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, 512, 2);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+    limiter.setLookahead(1.0f);
+    limiter.setThreshold(0.501f);  // -6 dBFS
+
+    std::vector<std::vector<float>> buf(2, std::vector<float>(512, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 2, 512);
+        if (block > 2)  // skip warm-up
+        {
+            REQUIRE(blockPeak(buf[0]) <= 0.501f + 1e-4f);
+            REQUIRE(blockPeak(buf[1]) <= 0.501f + 1e-4f);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_threshold_change_mid_session
+//   After changing threshold from 1.0 to 0.5 mid-session, subsequent output
+//   must not exceed 0.5 + tiny margin.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_threshold_change_mid_session", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, 512, 2);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+    limiter.setLookahead(1.0f);
+    limiter.setThreshold(1.0f);  // start at default
+
+    std::vector<std::vector<float>> buf(2, std::vector<float>(512, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    // Phase 1: process with threshold=1.0
+    for (int block = 0; block < 5; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 2, 512);
+    }
+
+    // Change threshold mid-session
+    limiter.setThreshold(0.5f);
+
+    // Phase 2: process with threshold=0.5 — new threshold must be enforced
+    for (int block = 0; block < 10; ++block)
+    {
+        fillConstant(buf, 2.0f);
+        limiter.process(ptrs.data(), 2, 512);
+        if (block > 2)  // skip warm-up after change
+        {
+            REQUIRE(blockPeak(buf[0]) <= 0.5f + 1e-4f);
+            REQUIRE(blockPeak(buf[1]) <= 0.5f + 1e-4f);
+        }
+    }
+}
