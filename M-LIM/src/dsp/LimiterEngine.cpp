@@ -155,163 +155,155 @@ float LimiterEngine::peakLevel(const juce::AudioBuffer<float>& buf,
 }
 
 // ============================================================================
-// process — main DSP chain
+// process — main DSP chain (orchestrates numbered step methods below)
 // ============================================================================
 void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
 {
     juce::ScopedNoDenormals noDenormals;
-
     applyPendingParams();
-
     const int numSamples  = buffer.getNumSamples();
     const int numChannels = std::min(buffer.getNumChannels(), mNumChannels);
-
     if (numSamples == 0 || numChannels == 0)
         return;
-
-    // ------------------------------------------------------------------
-    // Snapshot input levels for metering
-    // ------------------------------------------------------------------
-    float inLevelL = peakLevel(buffer, 0, numSamples);
-    float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
-
-    // ------------------------------------------------------------------
-    // Bypass mode: pass through unchanged, still update meters
-    // ------------------------------------------------------------------
+    const float inLevelL = peakLevel(buffer, 0, numSamples);
+    const float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
     if (mBypass.load())
     {
-        mGRdB.store(0.0f);
-        float outL = peakLevel(buffer, 0, numSamples);
-        float outR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outL;
-        mTruePkL.store(outL);
-        mTruePkR.store(outR);
-
-        MeterData md;
-        md.inputLevelL   = inLevelL;
-        md.inputLevelR   = inLevelR;
-        md.outputLevelL  = outL;
-        md.outputLevelR  = outR;
-        md.gainReduction = 0.0f;
-        md.truePeakL     = outL;
-        md.truePeakR     = outR;
-        md.waveformSample = 0.0f;
-        mMeterFIFO.push(md);
+        pushBypassMeterData(buffer, inLevelL, inLevelR, numChannels, numSamples);
         return;
     }
+    const float inputGain = stepApplyInputGain(buffer, numChannels, numSamples);
+    stepRunSidechainFilter(buffer, numChannels, numSamples);
+    juce::dsp::AudioBlock<float> upBlock, upSideBlock;
+    stepUpsample(buffer, upBlock, upSideBlock);
+    stepRunLimiters(upBlock);
+    mOversampler.downsample(buffer);
+    stepApplyCeiling(buffer, numChannels, numSamples, inputGain);
+    stepDCFilter(buffer, numChannels, numSamples);
+    stepDither(buffer, numChannels, numSamples);
+    stepDeltaMode(buffer, numChannels, numSamples);
+    const float totalGR = juce::jmax(mTransientLimiter.getGainReduction() + mLevelingLimiter.getGainReduction(), -60.0f);
+    snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);
+}
 
-    // ------------------------------------------------------------------
-    // Step 1: Apply input gain
-    // ------------------------------------------------------------------
+// ============================================================================
+// process() step methods
+// ============================================================================
+
+void LimiterEngine::pushBypassMeterData(const juce::AudioBuffer<float>& buffer,
+                                         float inLevelL, float inLevelR,
+                                         int numChannels, int numSamples)
+{
+    mGRdB.store(0.0f);
+    const float outL = peakLevel(buffer, 0, numSamples);
+    const float outR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outL;
+    mTruePkL.store(outL);
+    mTruePkR.store(outR);
+    MeterData md;
+    md.inputLevelL    = inLevelL;
+    md.inputLevelR    = inLevelR;
+    md.outputLevelL   = outL;
+    md.outputLevelR   = outR;
+    md.gainReduction  = 0.0f;
+    md.truePeakL      = outL;
+    md.truePeakR      = outR;
+    md.waveformSample = 0.0f;
+    mMeterFIFO.push(md);
+}
+
+float LimiterEngine::stepApplyInputGain(juce::AudioBuffer<float>& buffer,
+                                         int numChannels, int numSamples)
+{
     const float inputGain = mInputGainLinear.load();
     buffer.applyGain(inputGain);
-
-    // Optionally store pre-limit buffer for delta mode (pre-allocated — no heap alloc)
+    // Snapshot pre-limit audio for delta mode (pre-allocated — no heap alloc)
     if (mDeltaMode.load())
     {
         for (int ch = 0; ch < numChannels; ++ch)
             mPreLimitBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
     }
+    return inputGain;
+}
 
-    // ------------------------------------------------------------------
-    // Step 2: Build sidechain copy and run sidechain filter on it
-    //         (copy into pre-allocated buffer — no heap alloc)
-    // ------------------------------------------------------------------
+void LimiterEngine::stepRunSidechainFilter(juce::AudioBuffer<float>& buffer,
+                                            int numChannels, int numSamples)
+{
+    // Copy main audio into pre-allocated sidechain buffer, then filter
     for (int ch = 0; ch < numChannels; ++ch)
         mSidechainBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
     mSidechainFilter.process(mSidechainBuffer);
+}
 
-    // ------------------------------------------------------------------
-    // Step 3: Oversample up — both main audio and sidechain so the buffers
-    // are the same length when passed to the oversampled limiters.
-    // Upsampling sideBuf separately via mSidechainOversampler avoids the
-    // OOB read that would occur if the original (numSamples-long) sidePtrs
-    // were passed to limiters expecting upSamples elements.
-    // ------------------------------------------------------------------
-    juce::dsp::AudioBlock<float> upBlock     = mOversampler.upsample(buffer);
-    juce::dsp::AudioBlock<float> upSideBlock = mSidechainOversampler.upsample(mSidechainBuffer);
-
-    const int upSamples  = static_cast<int>(upBlock.getNumSamples());
+void LimiterEngine::stepUpsample(juce::AudioBuffer<float>& buffer,
+                                  juce::dsp::AudioBlock<float>& upBlock,
+                                  juce::dsp::AudioBlock<float>& upSideBlock)
+{
+    // Upsample both main and sidechain so limiters receive equal-length buffers.
+    // Upsampling sidechain separately via mSidechainOversampler avoids OOB reads.
+    upBlock     = mOversampler.upsample(buffer);
+    upSideBlock = mSidechainOversampler.upsample(mSidechainBuffer);
     const int upChannels = static_cast<int>(upBlock.getNumChannels());
-
-    // Populate pre-allocated pointer arrays (no heap alloc)
     for (int ch = 0; ch < upChannels; ++ch)
     {
-        mUpPtrs[ch]  = upBlock.getChannelPointer(ch);
+        mUpPtrs[ch]   = upBlock.getChannelPointer(ch);
         mSidePtrs[ch] = upSideBlock.getChannelPointer(ch);
     }
+}
 
-    // ------------------------------------------------------------------
-    // Step 4: TransientLimiter (Stage 1)
-    // ------------------------------------------------------------------
-    mTransientLimiter.process(mUpPtrs.data(), upChannels, upSamples,
-                               mSidePtrs.data());
+void LimiterEngine::stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock)
+{
+    const int upSamples  = static_cast<int>(upBlock.getNumSamples());
+    const int upChannels = static_cast<int>(upBlock.getNumChannels());
+    mTransientLimiter.process(mUpPtrs.data(), upChannels, upSamples, mSidePtrs.data());
+    mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples, mSidePtrs.data());
+}
 
-    // ------------------------------------------------------------------
-    // Step 5: LevelingLimiter (Stage 2)
-    // ------------------------------------------------------------------
-    mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples,
-                              mSidePtrs.data());
-
-    // ------------------------------------------------------------------
-    // Step 6: Oversample down
-    // ------------------------------------------------------------------
-    mOversampler.downsample(buffer);
-
-    // ------------------------------------------------------------------
-    // Step 7: Apply output ceiling (hard clip)
-    // ------------------------------------------------------------------
+void LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
+                                      int numChannels, int numSamples, float inputGain)
+{
     const float ceiling = mUnityGain.load()
         ? (1.0f / std::max(inputGain, kDspUtilMinGain))
         : mOutputCeilingLinear.load();
-
     for (int ch = 0; ch < numChannels; ++ch)
     {
         float* data = buffer.getWritePointer(ch);
         for (int s = 0; s < numSamples; ++s)
             data[s] = std::max(-ceiling, std::min(ceiling, data[s]));
     }
+}
 
-    // ------------------------------------------------------------------
-    // Step 8: DC filter (optional)
-    // ------------------------------------------------------------------
-    if (mDCFilterEnabled.load())
+void LimiterEngine::stepDCFilter(juce::AudioBuffer<float>& buffer,
+                                  int numChannels, int numSamples)
+{
+    if (!mDCFilterEnabled.load())
+        return;
+    mDCFilterL.process(buffer.getWritePointer(0), numSamples);
+    if (numChannels > 1)
+        mDCFilterR.process(buffer.getWritePointer(1), numSamples);
+}
+
+void LimiterEngine::stepDither(juce::AudioBuffer<float>& buffer,
+                                int numChannels, int numSamples)
+{
+    if (!mDitherEnabled.load())
+        return;
+    mDitherL.process(buffer.getWritePointer(0), numSamples);
+    if (numChannels > 1)
+        mDitherR.process(buffer.getWritePointer(1), numSamples);
+}
+
+void LimiterEngine::stepDeltaMode(juce::AudioBuffer<float>& buffer,
+                                   int numChannels, int numSamples)
+{
+    if (!mDeltaMode.load())
+        return;
+    for (int ch = 0; ch < numChannels; ++ch)
     {
-        mDCFilterL.process(buffer.getWritePointer(0), numSamples);
-        if (numChannels > 1)
-            mDCFilterR.process(buffer.getWritePointer(1), numSamples);
+        const float* pre  = mPreLimitBuffer.getReadPointer(ch);
+        float*       post = buffer.getWritePointer(ch);
+        for (int s = 0; s < numSamples; ++s)
+            post[s] = pre[s] - post[s];
     }
-
-    // ------------------------------------------------------------------
-    // Step 9: Dither (optional)
-    // ------------------------------------------------------------------
-    if (mDitherEnabled.load())
-    {
-        mDitherL.process(buffer.getWritePointer(0), numSamples);
-        if (numChannels > 1)
-            mDitherR.process(buffer.getWritePointer(1), numSamples);
-    }
-
-    // ------------------------------------------------------------------
-    // Step 10: Delta mode — output what the limiter removed
-    // ------------------------------------------------------------------
-    if (mDeltaMode.load())
-    {
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
-            const float* pre  = mPreLimitBuffer.getReadPointer(ch);
-            float*       post = buffer.getWritePointer(ch);
-            for (int s = 0; s < numSamples; ++s)
-                post[s] = pre[s] - post[s];
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Step 11: Meter — measure output and true peak
-    // ------------------------------------------------------------------
-    const float grStage1 = mTransientLimiter.getGainReduction();
-    const float grStage2 = mLevelingLimiter.getGainReduction();
-    const float totalGR = juce::jmax(grStage1 + grStage2, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
-    snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);
 }
 
 void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,

@@ -11,6 +11,7 @@
 #include "Dither.h"
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
 #include <atomic>
 #include <vector>
 
@@ -185,4 +186,35 @@ private:
 
     static float peakLevel(const juce::AudioBuffer<float>& buf,
                             int channel, int numSamples) noexcept;
+
+    // -----------------------------------------------------------------------
+    // process() step methods — each implements one numbered DSP stage
+    // -----------------------------------------------------------------------
+    void pushBypassMeterData(const juce::AudioBuffer<float>& buffer,
+                             float inLevelL, float inLevelR,
+                             int numChannels, int numSamples);
+
+    float stepApplyInputGain(juce::AudioBuffer<float>& buffer,
+                             int numChannels, int numSamples);
+
+    void stepRunSidechainFilter(juce::AudioBuffer<float>& buffer,
+                                int numChannels, int numSamples);
+
+    void stepUpsample(juce::AudioBuffer<float>& buffer,
+                      juce::dsp::AudioBlock<float>& upBlock,
+                      juce::dsp::AudioBlock<float>& upSideBlock);
+
+    void stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock);
+
+    void stepApplyCeiling(juce::AudioBuffer<float>& buffer,
+                          int numChannels, int numSamples, float inputGain);
+
+    void stepDCFilter(juce::AudioBuffer<float>& buffer,
+                      int numChannels, int numSamples);
+
+    void stepDither(juce::AudioBuffer<float>& buffer,
+                    int numChannels, int numSamples);
+
+    void stepDeltaMode(juce::AudioBuffer<float>& buffer,
+                       int numChannels, int numSamples);
 };
