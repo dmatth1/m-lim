@@ -1,4 +1,5 @@
 #include "Parameters.h"
+#include "dsp/LimiterAlgorithm.h"
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 {
@@ -27,7 +28,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     params.push_back(std::make_unique<AudioParameterChoice>(
         ParameterID { ParamID::algorithm, 1 },
         "Algorithm",
-        StringArray { "Transparent", "Punchy", "Dynamic", "Aggressive", "Allround", "Bus", "Safe", "Modern" },
+        StringArray (kAlgorithmNames, kNumAlgorithms),
         0
     ));
 

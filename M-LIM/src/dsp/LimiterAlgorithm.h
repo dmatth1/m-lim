@@ -1,5 +1,11 @@
 #pragma once
 
+static constexpr int kNumAlgorithms = 8;
+static constexpr const char* kAlgorithmNames[kNumAlgorithms] = {
+    "Transparent", "Punchy", "Dynamic", "Aggressive",
+    "Allround", "Bus", "Safe", "Modern"
+};
+
 enum class LimiterAlgorithm
 {
     Transparent = 0,

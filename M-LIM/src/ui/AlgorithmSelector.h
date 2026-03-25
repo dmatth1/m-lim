@@ -32,8 +32,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    static constexpr int NUM_ALGORITHMS = 8;
-    static const char* const ALGORITHM_NAMES[NUM_ALGORITHMS];
 
 private:
     juce::ComboBox comboBox;

@@ -1,21 +1,11 @@
 #include "AlgorithmSelector.h"
 #include "Colours.h"
-
-const char* const AlgorithmSelector::ALGORITHM_NAMES[AlgorithmSelector::NUM_ALGORITHMS] = {
-    "Transparent",
-    "Punchy",
-    "Dynamic",
-    "Aggressive",
-    "Allround",
-    "Bus",
-    "Safe",
-    "Modern"
-};
+#include "../dsp/LimiterAlgorithm.h"
 
 AlgorithmSelector::AlgorithmSelector()
 {
-    for (int i = 0; i < NUM_ALGORITHMS; ++i)
-        comboBox.addItem(ALGORITHM_NAMES[i], i + 1);  // ComboBox IDs are 1-based
+    for (int i = 0; i < kNumAlgorithms; ++i)
+        comboBox.addItem(kAlgorithmNames[i], i + 1);  // ComboBox IDs are 1-based
 
     comboBox.setSelectedId(1, juce::dontSendNotification);
 
@@ -38,7 +28,7 @@ AlgorithmSelector::AlgorithmSelector()
 
 void AlgorithmSelector::setAlgorithm(int index)
 {
-    if (index >= 0 && index < NUM_ALGORITHMS)
+    if (index >= 0 && index < kNumAlgorithms)
         comboBox.setSelectedId(index + 1, juce::sendNotificationSync);
 }
 
