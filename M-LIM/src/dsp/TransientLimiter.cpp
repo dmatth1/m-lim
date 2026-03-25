@@ -193,37 +193,42 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
     for (int s = 0; s < numSamples; ++s)
     {
-        // --- 1. Write input (and sidechain) into delay buffers + update sliding max ---
+        // --- 1. Update sliding-max deques with the current input sample.
+        //        Delay buffer writes happen AFTER the read in Step 5 so that
+        //        the read position is taken before the write pointer advances,
+        //        giving an exact lookahead-sample delay (not lookahead-1). ---
         for (int ch = 0; ch < chCount; ++ch)
         {
             if (!bypassDelay)
             {
-                // Main path: write sample and update monotone deque
+                // Main path: update monotone deque only (no buffer write yet)
                 const float mainAbs = std::abs(channelData[ch][s]);
-                mDelayBuffers[ch][mWritePos[ch]] = channelData[ch][s];
-                mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
 
                 SWDeque& md = mMainDeques[ch];
                 int&     mc = mMainWriteCount[ch];
                 while (!md.empty() && md.back().value <= mainAbs)
                     md.pop_back();
                 md.push_back({mainAbs, mc});
-                while (!md.empty() && md.front().pos <= mc - lookahead)
+                // With read-before-write the delay is exactly N samples.
+                // The detection window must include position mc-lookahead so
+                // that a peak detected now is still "visible" when its delayed
+                // copy reaches the output exactly lookahead steps later.
+                // Use strict less-than (<) instead of <= so the window spans
+                // [mc - lookahead, mc] (N+1 entries).
+                while (!md.empty() && md.front().pos < mc - lookahead)
                     md.pop_front();
                 ++mc;
 
                 if (sidechainData != nullptr)
                 {
                     const float scAbs = std::abs(sidechainData[ch][s]);
-                    mSidechainDelayBuffers[ch][mSidechainWritePos[ch]] = sidechainData[ch][s];
-                    mSidechainWritePos[ch] = (mSidechainWritePos[ch] + 1) % bufSize;
 
                     SWDeque& sd = mSCDeques[ch];
                     int&     sc = mSCWriteCount[ch];
                     while (!sd.empty() && sd.back().value <= scAbs)
                         sd.pop_back();
                     sd.push_back({scAbs, sc});
-                    while (!sd.empty() && sd.front().pos <= sc - lookahead)
+                    while (!sd.empty() && sd.front().pos < sc - lookahead)
                         sd.pop_front();
                     ++sc;
                 }
@@ -301,9 +306,16 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         // release proportionally to the rate of change.
         // (This is handled by the instant-attack policy above.)
 
-        // --- 5. Read delayed sample and apply gain + saturation ----------------
+        // --- 5. Read delayed sample, apply gain + saturation, then write input ---
+        //        Read-before-write ordering: mWritePos[ch] has not been
+        //        incremented yet, so the sample written exactly lookahead
+        //        steps ago is at position (mWritePos - lookahead), giving a
+        //        true delay of exactly lookaheadSamples (not lookahead-1).
         for (int ch = 0; ch < chCount; ++ch)
         {
+            // Save the original input before it is overwritten with the output.
+            const float inputSample = channelData[ch][s];
+
             float delayed;
             if (bypassDelay)
             {
@@ -311,16 +323,27 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
             }
             else
             {
-                // Read position: lookahead samples behind writePos
-                // writePos was already incremented above, so the oldest
-                // buffered sample (lookahead samples ago) is at:
-                const int readPos = (mWritePos[ch] - lookahead + bufSize) % bufSize;
+                // Read BEFORE advancing writePos so offset is exact.
+                const int readPos = (mWritePos[ch] + bufSize - lookahead) % bufSize;
                 delayed = mDelayBuffers[ch][readPos];
             }
 
             float out = delayed * mGainState[ch];
             out = softSaturate(out, mParams.saturationAmount);
             channelData[ch][s] = out;
+
+            // Write the original input into the delay buffer after the read.
+            if (!bypassDelay)
+            {
+                mDelayBuffers[ch][mWritePos[ch]] = inputSample;
+                mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
+
+                if (sidechainData != nullptr)
+                {
+                    mSidechainDelayBuffers[ch][mSidechainWritePos[ch]] = sidechainData[ch][s];
+                    mSidechainWritePos[ch] = (mSidechainWritePos[ch] + 1) % bufSize;
+                }
+            }
 
             if (mGainState[ch] < minGain)
                 minGain = mGainState[ch];

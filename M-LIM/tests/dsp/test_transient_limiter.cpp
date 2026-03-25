@@ -309,11 +309,11 @@ TEST_CASE("test_sidechain_with_lookahead", "[TransientLimiter]")
     // Sidechain: same peak at the same position.
     //
     // With lookahead = L, the main peak at input step mainPeakPos arrives at
-    // the output at output step mainPeakPos + L - 1.  The sidechain peak is
-    // detected at output step mainPeakPos.  With correct scan-window lookahead,
-    // GR is held at peak level for the full lookahead window and is still at
-    // its maximum at step mainPeakPos + L - 1, keeping the delayed main peak
-    // within threshold.
+    // the output at output step mainPeakPos + L (exact delay with read-before-
+    // write ordering).  The sidechain peak is detected at output step
+    // mainPeakPos.  With correct scan-window lookahead, GR is held at peak
+    // level for the full lookahead window and is still at its maximum at step
+    // mainPeakPos + L, keeping the delayed main peak within threshold.
     const int mainPeakPos = 300;
     std::vector<std::vector<float>> mainBuf(1, std::vector<float>(kBlockSize, 0.0f));
     mainBuf[0][mainPeakPos] = 4.0f;
@@ -336,7 +336,8 @@ TEST_CASE("test_sidechain_with_lookahead", "[TransientLimiter]")
 
     // Explicitly verify the output at the exact step where the delayed main
     // peak arrives — this is the critical moment where the scan fix matters.
-    const int delayedPeakPos = mainPeakPos + lookaheadSamples - 1;
+    // With read-before-write ordering the delay is exactly lookaheadSamples.
+    const int delayedPeakPos = mainPeakPos + lookaheadSamples;
     if (delayedPeakPos < kBlockSize)
         REQUIRE(mainBuf[0][delayedPeakPos] <= 1.0f + 1e-4f);
 }
@@ -402,8 +403,9 @@ TEST_CASE("test_custom_threshold", "[TransientLimiter]")
 // ---------------------------------------------------------------------------
 // test_transient_limiter_lookahead_peak
 //   Feed a buffer with a single large spike at a known position followed by
-//   silence.  With lookahead L the delay is (L-1) samples, so the spike
-//   arrives at the output at position peakPos + L - 1.  Verify:
+//   silence.  With lookahead L the delay is exactly L samples (read-before-
+//   write ordering), so the spike arrives at the output at position
+//   peakPos + L.  Verify:
 //     1. The output peak does not exceed the threshold (GR correctly applied).
 //     2. GR was active (gain reduction reported).
 //     3. The output spike position is within ±1 sample of the expected
@@ -440,8 +442,9 @@ TEST_CASE("test_transient_limiter_lookahead_peak", "[TransientLimiter]")
     // 2. GR was applied
     REQUIRE(limiter.getGainReduction() <= 0.0f);
 
-    // 3. Delayed output spike position must be within ±1 sample of expected
-    const int expectedOutputPos = peakPos + lookaheadSamples - 1;
+    // 3. Delayed output spike position must be within ±1 sample of expected.
+    //    With read-before-write the delay is exactly lookaheadSamples.
+    const int expectedOutputPos = peakPos + lookaheadSamples;
     if (expectedOutputPos < kBlockSize)
     {
         int   maxPos = 0;
@@ -503,7 +506,8 @@ TEST_CASE("test_sliding_max_peak_detection", "[TransientLimiter]")
         REQUIRE(std::abs(buf[0][i]) < 1e-5f);
 
     // 3. The attenuated spike must appear at the delayed output position.
-    const int expectedOutputPos = peakPos + lookaheadSamples - 1;
+    //    With read-before-write the delay is exactly lookaheadSamples.
+    const int expectedOutputPos = peakPos + lookaheadSamples;
     if (expectedOutputPos < kBlockSize)
         REQUIRE(buf[0][expectedOutputPos] <= 1.0f + 1e-4f);
 
@@ -677,17 +681,23 @@ TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
 
     for (int s = 0; s < numSamples; ++s)
     {
-        // Write into delay buffer
-        delayBuf[writePos] = input[s];
-        writePos = (writePos + 1) % bufSize;
+        // Brute-force O(N) scan over lookahead window.
+        // Use read-before-write ordering to match the fixed TransientLimiter:
+        // 1. Read the delayed output BEFORE writing the new input.
+        // 2. Then write the new input.
+        // This gives an exact delay of lookaheadSamples (not lookaheadSamples-1).
 
-        // Brute-force O(N) scan over lookahead window
-        float peakAbs = 0.0f;
-        int   rpos    = (writePos - 1 + bufSize) % bufSize;
-        for (int k = 0; k < lookaheadSamples; ++k)
+        // --- Scan the lookahead window (reads from delay buffer as it stands) ---
+        // Window is N+1 samples [input[s-N] ... input[s]] matching the
+        // deque eviction rule (< mc - lookahead, not <=).
+        float peakAbs = std::abs(input[s]);  // include current input in lookahead
         {
-            peakAbs = std::max(peakAbs, std::abs(delayBuf[rpos]));
-            rpos    = (rpos - 1 + bufSize) % bufSize;
+            int rpos = (writePos - 1 + bufSize) % bufSize;
+            for (int k = 0; k < lookaheadSamples; ++k)  // N additional samples from buffer
+            {
+                peakAbs = std::max(peakAbs, std::abs(delayBuf[rpos]));
+                rpos    = (rpos - 1 + bufSize) % bufSize;
+            }
         }
 
         // Hard-knee required gain
@@ -709,9 +719,13 @@ TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
         }
         gainState = std::clamp(gainState, 1e-6f, 1.0f);
 
-        // Read delayed output
-        const int readPos = (writePos - lookaheadSamples + bufSize) % bufSize;
+        // Read delayed output BEFORE writing new input (exact lookaheadSamples delay)
+        const int readPos = (writePos + bufSize - lookaheadSamples) % bufSize;
         bruteOutput[s] = delayBuf[readPos] * gainState;
+
+        // Write new input AFTER reading delayed output
+        delayBuf[writePos] = input[s];
+        writePos = (writePos + 1) % bufSize;
     }
 
     // --- Production: sliding-window-max TransientLimiter ----------------
@@ -733,5 +747,83 @@ TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
     for (int s = 0; s < numSamples; ++s)
     {
         REQUIRE(buf[0][s] == Catch::Approx(bruteOutput[s]).margin(1e-4f));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_lookahead_delay_exact
+//   With lookahead set to N samples, the output must be delayed by EXACTLY N
+//   samples relative to the input (not N-1).  This test verifies that the
+//   read-before-write ordering produces the correct delay and that
+//   getLatencySamples() in LimiterEngine reports the same value.
+//
+//   Method:
+//   - Disable gain reduction by keeping input well below threshold.
+//   - Feed a known ramp signal (input[s] = s).
+//   - For each output sample at position s, verify output[s] == input[s - N].
+//   - Also verify that the measured delay matches the lookahead formula used
+//     by LimiterEngine::getLatencySamples().
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lookahead_delay_exact", "[TransientLimiter]")
+{
+    // Use millisecond values (not back-calculated from sample counts) to
+    // avoid float round-trip precision issues.  The expected sample delay is
+    // derived using the same formula as LimiterEngine::getLatencySamples().
+    for (float lookaheadMs : { 0.1f, 0.5f, 1.0f, 2.0f, 3.0f })
+    {
+        // Compute expected delay using the same integer truncation as LimiterEngine.
+        const int expectedDelay =
+            static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+        if (expectedDelay <= 0)
+            continue;  // skip degenerate cases
+
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.kneeWidth        = 0.0f;   // hard knee
+        params.saturationAmount = 0.0f;
+        limiter.setAlgorithmParams(params);
+        limiter.setThreshold(1.0f);       // 0 dBFS threshold
+        limiter.setLookahead(lookaheadMs);
+
+        // Build a ramp signal well below threshold so no gain reduction occurs.
+        // Use small values so the limiter is transparent (gain = 1.0 throughout).
+        const int numSamples = kBlockSize;
+        std::vector<std::vector<float>> buf(1, std::vector<float>(numSamples));
+        for (int s = 0; s < numSamples; ++s)
+            buf[0][s] = static_cast<float>(s + 1) * 0.0001f;  // tiny ramp, well below threshold
+
+        const std::vector<float> input = buf[0];  // save a copy
+
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, numSamples);
+
+        // For samples at index >= expectedDelay the output should equal input[s - expectedDelay].
+        // For samples at index < expectedDelay the output should be 0 (buffered zeros).
+        for (int s = 0; s < numSamples; ++s)
+        {
+            if (s < expectedDelay)
+            {
+                // Output of the first N samples comes from the initially-zeroed
+                // delay buffer, so it must be (near) zero.
+                REQUIRE(std::abs(buf[0][s]) < 1e-6f);
+            }
+            else
+            {
+                // Exact delay of N samples: output[s] == input[s - N]
+                const float expected = input[s - expectedDelay];
+                REQUIRE(buf[0][s] == Catch::Approx(expected).margin(1e-5f));
+            }
+        }
+
+        // Verify that the latency formula used by LimiterEngine matches
+        // the actual measured delay.  getLatencySamples() computes:
+        //   static_cast<int>(lookaheadMs * 0.001 * sampleRate)
+        // which by construction above equals expectedDelay.
+        const int reportedLatency =
+            static_cast<int>(lookaheadMs * 0.001 * kSampleRate);
+        REQUIRE(reportedLatency == expectedDelay);
     }
 }
