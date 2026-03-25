@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Parameters.h"
+#include "dsp/MeterData.h"
 
 class MLIMAudioProcessor : public juce::AudioProcessor
 {
