@@ -121,3 +121,59 @@ TEST_CASE("test_noise_shaping_modes", "[Dither]")
     REQUIRE(diff02 > 0);
     REQUIRE(diff12 > 0);
 }
+
+TEST_CASE("test_noise_shaping_at_48000", "[Dither]")
+{
+    // Weighted mode (mode 2) uses different coefficients at 44.1kHz vs 48kHz.
+    // Running the same signal through both should yield different outputs.
+
+    const int numSamples = 1024;
+    std::vector<float> src(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        src[i] = 0.3f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / 44100.0f);
+
+    auto run = [&](double sr) -> std::vector<float> {
+        Dither d;
+        d.prepare(sr);
+        d.setBitDepth(16);
+        d.setNoiseShaping(2); // Weighted
+        std::vector<float> buf(src);
+        d.process(buf.data(), numSamples);
+        return buf;
+    };
+
+    auto out441 = run(44100.0);
+    auto out480 = run(48000.0);
+
+    // Different coefficients at the two rates must produce different output.
+    int diffCount = 0;
+    for (int i = 0; i < numSamples; ++i)
+        if (out441[i] != out480[i]) ++diffCount;
+
+    REQUIRE(diffCount > 0);
+}
+
+TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
+{
+    // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
+    // With silence as input and no error feedback, each quantised sample is shifted
+    // only by TPDF dither, so output is bounded to ±1 LSB (one quantisation step).
+    // If error feedback were active (as at 44.1kHz), accumulated errors could push
+    // output beyond ±1 LSB.
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+
+    Dither d;
+    d.prepare(88200.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2); // Weighted — should have zero coefficients at this rate
+
+    const int numSamples = 4096;
+    std::vector<float> signal(numSamples, 0.0f); // silence
+    d.process(signal.data(), numSamples);
+
+    // With zero feedback, no error can accumulate; output stays within ±1 LSB.
+    const float epsilon = step * 0.01f;
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(std::abs(signal[i]) <= step + epsilon);
+}

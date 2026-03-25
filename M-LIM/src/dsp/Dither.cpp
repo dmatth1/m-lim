@@ -5,17 +5,26 @@ void Dither::prepare(double sampleRate)
 {
     mSampleRate = sampleRate;
 
-    // Weighted mode (mode 2) coefficients differ by sample rate.
-    // At higher rates the same psychoacoustic shape requires different coefficients.
+    // Weighted mode (mode 2) uses F-weighted second-order error feedback.
+    // Coefficients are tuned per sample rate; at >=88.2kHz the shaped noise
+    // would be ultrasonic, so coefficients are zeroed (falls back to Basic behavior).
     if (sampleRate >= 88200.0)
     {
-        mCoeff1 = 1.2f;
-        mCoeff2 = -0.3f;
+        // Shaped noise frequencies exceed Nyquist/2 — disable second-order feedback.
+        mCoeff1 = 0.0f;
+        mCoeff2 = 0.0f;
     }
-    else   // 44.1 kHz / 48 kHz range
+    else if (sampleRate >= 47000.0)
     {
-        mCoeff1 = 1.4f;
-        mCoeff2 = -0.5f;
+        // 48 kHz range: slightly adjusted F-weighted coefficients.
+        mCoeff1 = 0.95f;
+        mCoeff2 = -0.95f;
+    }
+    else
+    {
+        // 44.1 kHz range: standard F-weighted second-order coefficients.
+        mCoeff1 = 1.0f;
+        mCoeff2 = -1.0f;
     }
 
     mError1 = 0.0f;
