@@ -86,6 +86,7 @@ target_sources(MLIM
         src/PluginEditor.cpp
         src/Parameters.cpp
         src/ui/LookAndFeel.cpp
+        src/ui/AlgorithmSelector.cpp
 )
 
 target_compile_definitions(MLIM
