@@ -95,6 +95,7 @@ target_sources(MLIM
         src/ui/RotaryKnob.cpp
         src/ui/LevelMeter.cpp
         src/ui/ControlStrip.cpp
+        src/ui/WaveformDisplay.cpp
 )
 
 target_compile_definitions(MLIM
