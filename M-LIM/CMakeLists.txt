@@ -88,6 +88,7 @@ target_sources(MLIM
         src/Parameters.cpp
         src/ui/LookAndFeel.cpp
         src/ui/AlgorithmSelector.cpp
+        src/ui/RotaryKnob.cpp
 )
 
 target_compile_definitions(MLIM
