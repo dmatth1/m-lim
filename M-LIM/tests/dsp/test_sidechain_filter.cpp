@@ -378,6 +378,88 @@ TEST_CASE("test_parameter_change_during_process", "[SidechainFilter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_combined_hp_lp_passband
+// HP at 80 Hz and LP at 8000 Hz active simultaneously:
+//   (a) 50 Hz → attenuated > 6 dB  (below HP cutoff)
+//   (b) 1 kHz → passes with < 1 dB attenuation (in the pass-band)
+//   (c) 15 kHz → attenuated > 6 dB  (above LP cutoff)
+// ---------------------------------------------------------------------------
+TEST_CASE("test_combined_hp_lp_passband", "[SidechainFilter]")
+{
+    const int totalSamples = kSettleSamples + kMeasureSamples;
+
+    // Helper: build a 2-channel buffer filled with the same sine on both channels.
+    auto makeStereoSine = [&](double freq, double amplitude) -> juce::AudioBuffer<float>
+    {
+        juce::AudioBuffer<float> buf(2, totalSamples);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int i = 0; i < totalSamples; ++i)
+                data[i] = static_cast<float>(amplitude * std::sin(kTwoPi * freq * i / kSampleRate));
+        }
+        return buf;
+    };
+
+    // Helper: compute RMS of the settled portion from channel 0.
+    auto settledRms = [&](const juce::AudioBuffer<float>& buf) -> double
+    {
+        const float* data = buf.getReadPointer(0, kSettleSamples);
+        double sum = 0.0;
+        for (int i = 0; i < kMeasureSamples; ++i)
+            sum += static_cast<double>(data[i]) * data[i];
+        return std::sqrt(sum / kMeasureSamples);
+    };
+
+    const double rmsIn = 1.0 / std::sqrt(2.0); // RMS of unit-amplitude sine
+
+    // (a) 50 Hz — below HP cutoff at 80 Hz → should be attenuated > 6 dB
+    {
+        SidechainFilter filter;
+        filter.prepare(kSampleRate, totalSamples);
+        filter.setHighPassFreq(80.0f);
+        filter.setLowPassFreq(8000.0f);
+
+        auto buf = makeStereoSine(50.0, 1.0);
+        filter.process(buf);
+
+        const double rmsOut       = settledRms(buf);
+        const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+        REQUIRE(attenuationDb < -6.0);
+    }
+
+    // (b) 1 kHz — within pass-band → should pass with < 1 dB attenuation
+    {
+        SidechainFilter filter;
+        filter.prepare(kSampleRate, totalSamples);
+        filter.setHighPassFreq(80.0f);
+        filter.setLowPassFreq(8000.0f);
+
+        auto buf = makeStereoSine(1000.0, 1.0);
+        filter.process(buf);
+
+        const double rmsOut       = settledRms(buf);
+        const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+        REQUIRE(attenuationDb > -1.0);
+    }
+
+    // (c) 15 kHz — above LP cutoff at 8 kHz → should be attenuated > 6 dB
+    {
+        SidechainFilter filter;
+        filter.prepare(kSampleRate, totalSamples);
+        filter.setHighPassFreq(80.0f);
+        filter.setLowPassFreq(8000.0f);
+
+        auto buf = makeStereoSine(15000.0, 1.0);
+        filter.process(buf);
+
+        const double rmsOut       = settledRms(buf);
+        const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+        REQUIRE(attenuationDb < -6.0);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_inplace_coefficients_correctness
 // Verifies that after the RT-safe coefficient update path (in-place writes to
 // pre-allocated Coefficients objects), the filter output is consistent with
