@@ -92,6 +92,7 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mSidePtrs.resize(numChannels);
 
     mParamsDirty.store(false);
+    mDeferredOversamplingChange.store(false);
 }
 
 // ============================================================================
@@ -105,10 +106,13 @@ void LimiterEngine::applyPendingParams()
     const int newFactor = mOversamplingFactor.load();
     if (newFactor != mCurrentOversamplingFactor)
     {
-        // Oversampling factor changed — full reprepare needed
-        mCurrentOversamplingFactor = newFactor;
-        prepare(mSampleRate, mMaxBlockSize, mNumChannels);
-        return;  // prepare() clears dirty flag
+        // Oversampling factor changed — cannot allocate on the audio thread.
+        // Set the deferred flag; the PluginProcessor's AsyncUpdater will schedule
+        // a full prepare() on the message thread.  Until then, keep processing
+        // with the current (old) oversampling factor.
+        mDeferredOversamplingChange.store(true);
+        mParamsDirty.store(false);  // suppress repeated triggers this block
+        return;
     }
 
     // Update parameters that don't require full reprepare

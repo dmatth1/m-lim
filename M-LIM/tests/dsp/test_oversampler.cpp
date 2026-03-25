@@ -83,6 +83,46 @@ TEST_CASE("test_passthrough_when_off", "[Oversampler]")
 }
 
 // ---------------------------------------------------------------------------
+// test_deferred_factor_change
+// Calling requestFactor() during processing doesn't crash; rebuild happens
+// only when commitRebuild() is called from a non-RT context.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_deferred_factor_change", "[Oversampler]")
+{
+    Oversampler os;
+    const int numChannels = 2;
+    os.prepare(kSampleRate, kBlockSize, numChannels);
+    os.setFactor(1); // 2x oversampling
+
+    // Simulate "requesting" a factor change without immediate rebuild
+    os.requestFactor(2); // ask for 4x oversampling
+
+    // needsRebuild() must return true since the factor hasn't been applied yet
+    REQUIRE(os.needsRebuild() == true);
+    REQUIRE(os.getFactor() == 1); // still 2x until commitRebuild
+
+    // Simulate a few "audio thread" processing cycles — no crash
+    juce::AudioBuffer<float> buffer(numChannels, kBlockSize);
+    buffer.clear();
+    for (int i = 0; i < 5; ++i)
+    {
+        os.upsample(buffer);
+        os.downsample(buffer);
+    }
+
+    // Now commit the rebuild from "non-RT" context
+    os.commitRebuild();
+
+    REQUIRE(os.needsRebuild() == false);
+    REQUIRE(os.getFactor() == 2); // now 4x
+
+    // Verify the rebuilt oversampler actually upsamples by 4x
+    auto upBlock = os.upsample(buffer);
+    REQUIRE(static_cast<int>(upBlock.getNumSamples()) == kBlockSize * 4);
+    os.downsample(buffer);
+}
+
+// ---------------------------------------------------------------------------
 // test_latency_reporting
 // ---------------------------------------------------------------------------
 TEST_CASE("test_latency_reporting", "[Oversampler]")

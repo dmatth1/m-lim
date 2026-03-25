@@ -15,6 +15,28 @@ void Oversampler::setFactor(int factor)
     if (factor == mFactor)
         return;
     mFactor = factor;
+    mPendingFactor.store(factor);  // keep in sync
+    if (mPrepared)
+        recreate();
+}
+
+void Oversampler::requestFactor(int pendingFactor)
+{
+    jassert(pendingFactor >= 0 && pendingFactor <= 5);
+    mPendingFactor.store(pendingFactor);
+}
+
+bool Oversampler::needsRebuild() const
+{
+    return mPendingFactor.load() != mFactor;
+}
+
+void Oversampler::commitRebuild()
+{
+    const int factor = mPendingFactor.load();
+    if (factor == mFactor)
+        return;
+    mFactor = factor;
     if (mPrepared)
         recreate();
 }

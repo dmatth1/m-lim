@@ -169,6 +169,36 @@ void MLIMAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 }
 
 // ---------------------------------------------------------------------------
+// AsyncUpdater — apply deferred oversampling changes on the message thread
+// ---------------------------------------------------------------------------
+
+void MLIMAudioProcessor::handleAsyncUpdate()
+{
+    if (!mOversamplingChangePending.exchange (false))
+        return;
+
+    const int factor = mPendingOversamplingFactor.load();
+
+    // Suspend audio processing while we reallocate (message thread, safe to alloc)
+    suspendProcessing (true);
+
+    limiterEngine.setOversamplingFactor (factor);
+    mAppliedOversamplingFactor = factor;
+
+    // Re-prepare the engine with the current audio session settings
+    const double sr        = getSampleRate();
+    const int    blockSize = getBlockSize();
+    if (sr > 0.0 && blockSize > 0)
+    {
+        const int numCh = std::max (getTotalNumInputChannels(), getTotalNumOutputChannels());
+        limiterEngine.prepare (sr, blockSize, numCh);
+    }
+
+    suspendProcessing (false);
+    updateLatency();
+}
+
+// ---------------------------------------------------------------------------
 // APVTS Listener — called on message thread when parameters change
 // ---------------------------------------------------------------------------
 
@@ -178,10 +208,9 @@ void MLIMAudioProcessor::parameterChanged (const juce::String& paramID, float ne
     {
         mPendingOversamplingFactor.store (static_cast<int> (newValue));
         mOversamplingChangePending.store (true);
-        // Trigger prepareToPlay so the change is applied safely
-        // (the host will call it when the graph is reconfigured, or we can
-        // force it via suspendProcessing — for now we just flag it and let
-        // the next prepareToPlay pick it up)
+        // Schedule rebuild on the message thread via AsyncUpdater.
+        // handleAsyncUpdate() will suspendProcessing, rebuild, and update latency.
+        triggerAsyncUpdate();
     }
     else if (paramID == ParamID::lookahead)
     {

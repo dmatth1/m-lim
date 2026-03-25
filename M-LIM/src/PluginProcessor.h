@@ -10,7 +10,8 @@
 #include "state/UndoManager.h"
 
 class MLIMAudioProcessor : public juce::AudioProcessor,
-                           private juce::AudioProcessorValueTreeState::Listener
+                           private juce::AudioProcessorValueTreeState::Listener,
+                           private juce::AsyncUpdater
 {
 public:
     MLIMAudioProcessor();
@@ -94,6 +95,11 @@ private:
     // APVTS::Listener — called on message thread when params change
     // -----------------------------------------------------------------------
     void parameterChanged (const juce::String& paramID, float newValue) override;
+
+    // -----------------------------------------------------------------------
+    // AsyncUpdater — applies deferred oversampling changes on the message thread
+    // -----------------------------------------------------------------------
+    void handleAsyncUpdate() override;
 
     // -----------------------------------------------------------------------
     // Helpers

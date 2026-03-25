@@ -89,6 +89,11 @@ public:
     float getTruePeakR() const;
     int   getLatencySamples() const;  ///< Total latency for host compensation
 
+    /** Returns true if an oversampling factor change was detected on the audio thread
+     *  but the actual reallocation is pending (must be done off the audio thread).
+     *  Call applyDeferredOversamplingChange() from a non-RT thread to complete it. */
+    bool hasDeferredOversamplingChange() const { return mDeferredOversamplingChange.load(); }
+
     // -----------------------------------------------------------------------
     // Metering FIFO — push from audio thread, pop from UI thread
     // -----------------------------------------------------------------------
@@ -126,6 +131,10 @@ private:
 
     // Parameters that require re-preparing DSP components — set on audio thread via flags
     std::atomic<bool>  mParamsDirty { false };
+    // deferredOversamplingChange — set on audio thread when oversampling factor differs
+    // from current. Signals the PluginProcessor to schedule a rebuild via AsyncUpdater
+    // so no memory allocation occurs on the audio thread.
+    std::atomic<bool>  mDeferredOversamplingChange { false };
     std::atomic<float> mLookaheadMs { 1.0f };
     std::atomic<float> mAttackMs    { 10.0f };
     std::atomic<float> mReleaseMs   { 100.0f };

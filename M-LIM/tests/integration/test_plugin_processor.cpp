@@ -178,6 +178,60 @@ TEST_CASE("test_loudness_metering_active", "[PluginProcessor]")
 }
 
 // ============================================================================
+// test_oversampling_change_no_audio_glitch
+// Changing the oversamplingFactor parameter while processing must not crash
+// or trigger assertions. The deferred AsyncUpdater mechanism handles the
+// actual reallocation off the audio thread.
+// ============================================================================
+TEST_CASE("test_oversampling_change_no_audio_glitch", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer (kNumChannels, kBlockSize);
+    juce::MidiBuffer midiBuffer;
+
+    // Process some blocks at the default oversampling factor (0 = off)
+    for (int i = 0; i < 10; ++i)
+    {
+        fillSine (buffer, 0.5f);
+        proc.processBlock (buffer, midiBuffer);
+    }
+
+    // Change oversampling factor to 2x (factor index 1) via the parameter
+    if (auto* param = proc.apvts.getParameter (ParamID::oversamplingFactor))
+        param->setValueNotifyingHost (param->convertTo0to1 (1.0f));
+
+    // Process more blocks — should not crash or assert (rebuild is deferred)
+    for (int i = 0; i < 10; ++i)
+    {
+        fillSine (buffer, 0.5f);
+        proc.processBlock (buffer, midiBuffer);
+    }
+
+    // Simulate host calling prepareToPlay after the factor change
+    // (this is how many hosts apply deferred changes)
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Process more blocks with new oversampling active
+    for (int i = 0; i < 20; ++i)
+    {
+        fillSine (buffer, 0.5f);
+        proc.processBlock (buffer, midiBuffer);
+
+        // Output must remain finite (no NaN/inf from the oversampler)
+        bool allFinite = true;
+        for (int ch = 0; ch < buffer.getNumChannels() && allFinite; ++ch)
+        {
+            const float* data = buffer.getReadPointer (ch);
+            for (int s = 0; s < buffer.getNumSamples(); ++s)
+                if (!std::isfinite (data[s])) { allFinite = false; break; }
+        }
+        REQUIRE (allFinite);
+    }
+}
+
+// ============================================================================
 // test_latency_reported
 // When lookahead > 0, getLatencyInSamples() must be > 0.
 // ============================================================================
