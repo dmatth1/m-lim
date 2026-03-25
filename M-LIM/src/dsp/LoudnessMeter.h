@@ -144,13 +144,13 @@ private:
     // -----------------------------------------------------------------------
     static constexpr int kMaxHistoryBlocks = 6000; // 10 min at 100ms/block
 
-    std::vector<double> mHistoryBuf;        // pre-allocated ring buffer (size = kMaxHistoryBlocks)
-    int                 mHistoryHead = 0;   // index of oldest element
-    int                 mHistorySize = 0;   // valid element count (0..kMaxHistoryBlocks)
+    std::vector<double>    mHistoryBuf;           // pre-allocated ring buffer (size = kMaxHistoryBlocks)
+    std::atomic<int>       mHistoryHead {0};      // index of oldest element
+    std::atomic<int>       mHistorySize {0};       // valid element count (0..kMaxHistoryBlocks)
 
     // Pre-allocated working buffers — filled in updateIntegratedAndLRA() without alloc.
-    mutable std::vector<double> mWindowPowers;  // 400 ms window mean-squares
-    mutable std::vector<double> mPrefixSums;    // prefix sums over history (size = kMaxHistoryBlocks+1)
+    std::vector<double> mWindowPowers;  // 400 ms window mean-squares
+    std::vector<double> mPrefixSums;    // prefix sums over history (size = kMaxHistoryBlocks+1)
 
     // -----------------------------------------------------------------------
     // LRA histogram: 900 bins covering [-70, +20) LUFS at 0.1 LU resolution.
@@ -160,7 +160,7 @@ private:
     static constexpr float kLraHistoMinLUFS = -70.0f;
     static constexpr float kLraBinWidth     = 0.1f;
 
-    mutable std::array<int, kLraHistoBins> mLraHisto{};
+    std::array<int, kLraHistoBins> mLraHisto{};
 
     // -----------------------------------------------------------------------
     // Update throttle — integrated+LRA recomputed every kUpdateFreq blocks
@@ -186,24 +186,27 @@ private:
     void onBlockComplete(double blockMeanSquare);
     void updateIntegratedAndLRA();
 
-    float computeIntegratedLUFS() const;
-    float computeLRA() const;
+    float computeIntegratedLUFS();
+    float computeLRA();
 
     /** Append a block value to the circular history buffer. Lock-free, no alloc. */
     void pushHistory(double val) noexcept
     {
-        const int writeIdx = (mHistoryHead + mHistorySize) % kMaxHistoryBlocks;
+        const int head = mHistoryHead.load(std::memory_order_relaxed);
+        const int size = mHistorySize.load(std::memory_order_relaxed);
+        const int writeIdx = (head + size) % kMaxHistoryBlocks;
         mHistoryBuf[static_cast<size_t>(writeIdx)] = val;
-        if (mHistorySize < kMaxHistoryBlocks)
-            ++mHistorySize;
+        if (size < kMaxHistoryBlocks)
+            mHistorySize.store(size + 1, std::memory_order_relaxed);
         else
-            mHistoryHead = (mHistoryHead + 1) % kMaxHistoryBlocks;
+            mHistoryHead.store((head + 1) % kMaxHistoryBlocks, std::memory_order_relaxed);
     }
 
     /** Access the i-th history element (0 = oldest). */
     double historyAt(int i) const noexcept
     {
-        return mHistoryBuf[static_cast<size_t>((mHistoryHead + i) % kMaxHistoryBlocks)];
+        return mHistoryBuf[static_cast<size_t>(
+            (mHistoryHead.load(std::memory_order_relaxed) + i) % kMaxHistoryBlocks)];
     }
 
     /** Convert mean-square power (linear) to LUFS.

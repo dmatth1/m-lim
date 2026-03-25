@@ -37,8 +37,8 @@ void LoudnessMeter::prepare(double sampleRate, int numChannels)
 
     // Pre-allocate circular history buffer (no audio-thread allocation)
     mHistoryBuf.resize(static_cast<size_t>(kMaxHistoryBlocks), 0.0);
-    mHistoryHead = 0;
-    mHistorySize = 0;
+    mHistoryHead.store(0, std::memory_order_relaxed);
+    mHistorySize.store(0, std::memory_order_relaxed);
 
     // Pre-allocate working buffers for updateIntegratedAndLRA
     mWindowPowers.clear();
@@ -187,7 +187,7 @@ void LoudnessMeter::onBlockComplete(double blockMeanSquare)
 // ---------------------------------------------------------------------------
 void LoudnessMeter::updateIntegratedAndLRA()
 {
-    const int n = mHistorySize;
+    const int n = mHistorySize.load(std::memory_order_relaxed);
     if (n < kMomentaryBlocks)
         return;
 
@@ -205,9 +205,9 @@ void LoudnessMeter::updateIntegratedAndLRA()
 // computeIntegratedLUFS — two-pass gated loudness algorithm (BS.1770-4).
 // Requires mPrefixSums to be populated by updateIntegratedAndLRA().
 // ---------------------------------------------------------------------------
-float LoudnessMeter::computeIntegratedLUFS() const
+float LoudnessMeter::computeIntegratedLUFS()
 {
-    const int n = mHistorySize;
+    const int n = mHistorySize.load(std::memory_order_relaxed);
 
     // Build 400 ms sliding windows (hop = 100 ms).
     // mWindowPowers is pre-allocated; clear() + push_back() does not allocate.
@@ -264,9 +264,9 @@ float LoudnessMeter::computeIntegratedLUFS() const
 // computeLRA — histogram-based loudness range (EBU R128 / BS.1770-4).
 // Requires mPrefixSums to be populated by updateIntegratedAndLRA().
 // ---------------------------------------------------------------------------
-float LoudnessMeter::computeLRA() const
+float LoudnessMeter::computeLRA()
 {
-    const int n = mHistorySize;
+    const int n = mHistorySize.load(std::memory_order_relaxed);
 
     if (n < kShortTermBlocks)
         return 0.0f;
@@ -333,8 +333,8 @@ float LoudnessMeter::computeLRA() const
 // ---------------------------------------------------------------------------
 void LoudnessMeter::resetIntegrated()
 {
-    mHistoryHead = 0;
-    mHistorySize = 0;
+    mHistoryHead.store(0, std::memory_order_relaxed);
+    mHistorySize.store(0, std::memory_order_relaxed);
     mUpdateCounter = 0;
     mLraHisto.fill(0);
     mIntegratedLUFS.store(kNegInf);
