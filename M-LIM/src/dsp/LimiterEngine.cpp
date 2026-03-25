@@ -1,10 +1,9 @@
 #include "LimiterEngine.h"
+#include "DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 #include <cmath>
 #include <algorithm>
-
-static constexpr float kMinLinear = 1e-6f;  // -120 dB floor
 
 // ============================================================================
 // Constructor
@@ -57,7 +56,7 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     {
         const float inputGain = mInputGainLinear.load();
         const float ceiling = mUnityGain.load()
-            ? (1.0f / std::max(inputGain, kMinLinear))
+            ? (1.0f / std::max(inputGain, kDspUtilMinGain))
             : mOutputCeilingLinear.load();
         mTransientLimiter.setThreshold(ceiling);
         mLevelingLimiter.setThreshold(ceiling);
@@ -129,7 +128,7 @@ void LimiterEngine::applyPendingParams()
     {
         const float inputGain = mInputGainLinear.load();
         const float ceiling = mUnityGain.load()
-            ? (1.0f / std::max(inputGain, kMinLinear))
+            ? (1.0f / std::max(inputGain, kDspUtilMinGain))
             : mOutputCeilingLinear.load();
         mTransientLimiter.setThreshold(ceiling);
         mLevelingLimiter.setThreshold(ceiling);
@@ -250,7 +249,7 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // Step 7: Apply output ceiling (hard clip)
     // ------------------------------------------------------------------
     const float ceiling = mUnityGain.load()
-        ? (1.0f / std::max(inputGain, kMinLinear))
+        ? (1.0f / std::max(inputGain, kDspUtilMinGain))
         : mOutputCeilingLinear.load();
 
     for (int ch = 0; ch < numChannels; ++ch)
@@ -297,9 +296,9 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // ------------------------------------------------------------------
     // Step 11: Meter — measure output and true peak
     // ------------------------------------------------------------------
-    const float grL = mTransientLimiter.getGainReduction();
-    const float grS = mLevelingLimiter.getGainReduction();
-    const float totalGR = juce::jmax(grL + grS, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
+    const float grStage1 = mTransientLimiter.getGainReduction();
+    const float grStage2 = mLevelingLimiter.getGainReduction();
+    const float totalGR = juce::jmax(grStage1 + grStage2, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
     snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);
 }
 
