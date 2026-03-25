@@ -6,7 +6,6 @@
 #include <numeric>
 
 static constexpr float kMaxLookaheadMs = 5.0f;
-static constexpr float kMinGain        = 1e-6f;   // -120 dB floor
 static constexpr float kEpsilon        = 1e-9f;
 
 // ---------------------------------------------------------------------------
@@ -124,8 +123,8 @@ float TransientLimiter::computeRequiredGain(float peakAbs) const
     }
 
     // Convert to dB for soft-knee calculation
-    const float peakDb  = 20.0f * std::log10(peakAbs);
-    const float threshDb = 20.0f * std::log10(mThreshold);
+    const float peakDb  = gainToDecibels(peakAbs);
+    const float threshDb = gainToDecibels(mThreshold);
     const float lowerDb  = threshDb - kneeHalf;
     const float upperDb  = threshDb + kneeHalf;
 
@@ -277,7 +276,7 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
                 g = decibelsToGain(smoothedDb);
             }
 
-            g = std::clamp(g, kMinGain, 1.0f);
+            g = std::clamp(g, kDspUtilMinGain, 1.0f);
         }
 
         // Optionally apply adaptive release: when gain is dropping fast, shorten
@@ -330,6 +329,6 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
     // Update reported GR (convert minimum gain this block to dB)
     mCurrentGRdB = (minGain < 1.0f)
-                       ? 20.0f * std::log10(std::max(minGain, kMinGain))
+                       ? gainToDecibels(std::max(minGain, kDspUtilMinGain))
                        : 0.0f;
 }
