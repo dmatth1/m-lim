@@ -63,7 +63,6 @@ private:
     juce::TextButton advancedButton_;
 
     // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
-    juce::TextButton truePeakButton_    { "TP" };
     juce::ComboBox   oversamplingBox_;
     juce::TextButton ditherButton_      { "DITHER" };
     juce::ComboBox   ditherBitDepthBox_;

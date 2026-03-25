@@ -106,7 +106,6 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     };
 
     // ── APVTS-bound controls (hidden — kept only for parameter attachments) ─
-    addChildComponent (truePeakButton_);
     addChildComponent (oversamplingBox_);
     addChildComponent (ditherButton_);
     addChildComponent (ditherBitDepthBox_);
@@ -148,7 +147,6 @@ ControlStrip::~ControlStrip()
 
 void ControlStrip::setupButtons()
 {
-    styleToggleButton (truePeakButton_);
     styleToggleButton (ditherButton_);
     styleToggleButton (dcFilterButton_);
     styleToggleButton (bypassButton_);
@@ -161,7 +159,7 @@ void ControlStrip::setupStatusBar()
     // ── MIDI Learn button ──────────────────────────────────────────────────
     styleStatusButton (midiLearnButton_);
 
-    // ── True Peak Limiting toggle (mirrors truePeakButton_ APVTS binding) ──
+    // ── True Peak Limiting toggle (directly APVTS-attached) ──
     truePeakLimitingButton_.setClickingTogglesState (true);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonColourId,
                                        juce::Colour (0xff242424));
@@ -171,18 +169,6 @@ void ControlStrip::setupStatusBar()
                                        MLIMColours::textSecondary);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOnId,
                                        juce::Colour (0xff66DD66)); // bright green text when on
-
-    // Sync truePeakLimitingButton_ with truePeakButton_ (both represent the same parameter)
-    truePeakLimitingButton_.onClick = [this]
-    {
-        truePeakButton_.setToggleState (truePeakLimitingButton_.getToggleState(),
-                                        juce::sendNotification);
-    };
-    truePeakButton_.onClick = [this]
-    {
-        truePeakLimitingButton_.setToggleState (truePeakButton_.getToggleState(),
-                                                juce::dontSendNotification);
-    };
 
     // ── Oversampling status label ──────────────────────────────────────────
     oversamplingStatusLabel_.setFont (juce::Font (10.0f));
@@ -374,7 +360,7 @@ void ControlStrip::createAttachments()
         apvts_, ParamID::outputCeiling, outputCeilingSlider_);
 
     truePeakAttach_   = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        apvts_, ParamID::truePeakEnabled, truePeakButton_);
+        apvts_, ParamID::truePeakEnabled, truePeakLimitingButton_);
 
     oversamplingAttach_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         apvts_, ParamID::oversamplingFactor, oversamplingBox_);
