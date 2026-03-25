@@ -34,6 +34,9 @@ public:
     /** Change the scrolling mode. */
     void setDisplayMode (DisplayMode mode);
 
+    /** Update the output ceiling reference line (dBFS, e.g. -0.1). */
+    void setCeiling (float dB);
+
     // Component / Timer overrides
     void paint  (juce::Graphics& g) override;
     void resized() override;
@@ -55,6 +58,7 @@ private:
     int frameCount_ = 0;           // how many frames have been written (up to kHistorySize)
 
     DisplayMode displayMode_ = DisplayMode::Fast;
+    float ceilingDB_ = -0.1f;   // output ceiling reference line (dBFS)
 
     // ── Helpers ───────────────────────────────────────────────────────────
     /** Map a linear 0-1 level to a Y coordinate (0 = bottom, 1 = top of display). */
@@ -67,6 +71,8 @@ private:
     void forEachFrame (std::function<void(int col, const Frame&, int totalCols)> cb) const;
 
     void drawBackground    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
+    void drawCeilingLine   (juce::Graphics& g, const juce::Rectangle<float>& area,
+                            const juce::Rectangle<float>& scaleArea) const;
     void drawOutputFill    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawInputFill     (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawGainReduction (juce::Graphics& g, const juce::Rectangle<float>& area) const;

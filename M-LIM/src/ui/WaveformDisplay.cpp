@@ -39,6 +39,11 @@ void WaveformDisplay::setDisplayMode (DisplayMode mode)
     displayMode_ = mode;
 }
 
+void WaveformDisplay::setCeiling (float dB)
+{
+    ceilingDB_ = juce::jlimit (-30.0f, 0.0f, dB);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 void WaveformDisplay::timerCallback()
 {
@@ -101,6 +106,7 @@ void WaveformDisplay::paint (juce::Graphics& g)
     auto displayArea = bounds;
 
     drawBackground    (g, displayArea);
+    drawCeilingLine   (g, displayArea, scaleArea);
     drawOutputFill    (g, displayArea);
     drawInputFill     (g, displayArea);
     drawGainReduction (g, displayArea);
@@ -132,6 +138,45 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         if (y >= area.getY() && y <= area.getBottom())
             g.drawHorizontalLine (juce::roundToInt (y), area.getX(), area.getRight());
     }
+}
+
+void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
+                                        const juce::Rectangle<float>& area,
+                                        const juce::Rectangle<float>& scaleArea) const
+{
+    // Map ceiling dBFS to Y: 0 dBFS = top, -kMaxGRdB = bottom (same coordinate system as grid)
+    float frac = (-ceilingDB_) / kMaxGRdB;
+    float y    = area.getY() + frac * area.getHeight();
+    y = juce::jlimit (area.getY(), area.getBottom(), y);
+
+    // Dashed ceiling line: subtle white with moderate alpha
+    const juce::Colour lineColour { 0xAAFFFFFF };
+    const float dashLen  = 6.0f;
+    const float gapLen   = 4.0f;
+    const float lineX0   = area.getX();
+    const float lineX1   = area.getRight();
+
+    g.setColour (lineColour);
+    float x = lineX0;
+    bool drawing = true;
+    while (x < lineX1)
+    {
+        float segEnd = std::min (x + (drawing ? dashLen : gapLen), lineX1);
+        if (drawing)
+            g.drawLine (x, y, segEnd, y, 1.0f);
+        x = segEnd;
+        drawing = !drawing;
+    }
+
+    // Small ceiling label on the right edge of scale area
+    juce::String label = juce::String (ceilingDB_, 1) + "dB";
+    auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 2.0f,
+                                              y - 6.0f,
+                                              scaleArea.getWidth() - 4.0f,
+                                              12.0f);
+    g.setFont (juce::Font (9.0f));
+    g.setColour (lineColour);
+    g.drawText (label, labelRect, juce::Justification::centredLeft, false);
 }
 
 void WaveformDisplay::drawOutputFill (juce::Graphics& g,
