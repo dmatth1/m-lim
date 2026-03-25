@@ -44,12 +44,13 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    juce::AudioProcessorValueTreeState apvts;
-
-    // State management — public for UI access
+    // State management — must be constructed before apvts (construction order = declaration order)
+    UndoManager   undoManager;
     ABState       abState;
     PresetManager presetManager;
-    UndoManager   undoManager;
+
+    // Depends on undoManager being alive (apvts ctor takes &undoManager.getJuceUndoManager())
+    juce::AudioProcessorValueTreeState apvts;
 
     // Meter FIFO — audio thread pushes MeterData (with LUFS), UI thread pops
     LockFreeFIFO<MeterData>& getMeterFIFO() { return mProcessorMeterFIFO; }
