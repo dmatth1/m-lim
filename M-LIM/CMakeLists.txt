@@ -23,6 +23,9 @@ endif()
 
 # Plugin formats
 set(PLUGIN_FORMATS VST3)
+if(APPLE)
+    list(APPEND PLUGIN_FORMATS AU)
+endif()
 if(CLAP_SUPPORT)
     list(APPEND PLUGIN_FORMATS CLAP)
 endif()
