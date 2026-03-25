@@ -105,13 +105,14 @@ void WaveformDisplay::paint (juce::Graphics& g)
     auto scaleArea = bounds.removeFromRight (kScaleWidth);
     auto displayArea = bounds;
 
-    drawBackground    (g, displayArea);
-    drawCeilingLine   (g, displayArea, scaleArea);
-    drawOutputFill    (g, displayArea);
-    drawInputFill     (g, displayArea);
-    drawGainReduction (g, displayArea);
-    drawPeakMarkers   (g, displayArea);
-    drawScale         (g, scaleArea);
+    drawBackground     (g, displayArea);
+    drawCeilingLine    (g, displayArea, scaleArea);
+    drawOutputFill     (g, displayArea);
+    drawInputFill      (g, displayArea);
+    drawGainReduction  (g, displayArea);
+    drawOutputEnvelope (g, displayArea);
+    drawPeakMarkers    (g, displayArea);
+    drawScale          (g, scaleArea);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -263,6 +264,29 @@ void WaveformDisplay::drawGainReduction (juce::Graphics& g,
 
     g.setColour (MLIMColours::gainReduction.withAlpha (0.75f));
     g.fillPath (path);
+}
+
+void WaveformDisplay::drawOutputEnvelope (juce::Graphics& g,
+                                           const juce::Rectangle<float>& area) const
+{
+    if (frameCount_ == 0) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+
+    juce::Path path;
+    bool first = true;
+
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float y = levelToY (f.outputLevel, area);
+        if (first) { path.startNewSubPath (x, y); first = false; }
+        else        path.lineTo (x, y);
+        (void) total;
+    });
+
+    g.setColour (MLIMColours::outputEnvelope);
+    g.strokePath (path, juce::PathStrokeType (1.5f));
 }
 
 void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,

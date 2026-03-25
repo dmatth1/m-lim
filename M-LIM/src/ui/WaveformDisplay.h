@@ -9,11 +9,12 @@
  *
  * Layers (back to front):
  *  1. Dark background + horizontal dB grid lines
- *  2. Output level filled area (dark blue, semi-transparent)
- *  3. Input level filled area (light cyan, semi-transparent)
+ *  2. Output level filled area (dark navy, semi-transparent)
+ *  3. Input level filled area (very dark navy, semi-transparent)
  *  4. Gain reduction bars from top (bright red)
- *  5. Peak markers: gold labels at GR peaks
- *  6. Vertical dB scale on right edge
+ *  5. Output envelope line (amber/tan single-pixel line at output waveform edge)
+ *  6. Peak markers: gold labels at GR peaks
+ *  7. Vertical dB scale on right edge
  *
  * Call pushMeterData() from the UI timer (~60 fps) after draining the FIFO.
  * The component repaints itself via its own juce::Timer at 60 fps.
@@ -75,9 +76,10 @@ private:
                             const juce::Rectangle<float>& scaleArea) const;
     void drawOutputFill    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawInputFill     (juce::Graphics& g, const juce::Rectangle<float>& area) const;
-    void drawGainReduction (juce::Graphics& g, const juce::Rectangle<float>& area) const;
-    void drawPeakMarkers   (juce::Graphics& g, const juce::Rectangle<float>& area) const;
-    void drawScale         (juce::Graphics& g, const juce::Rectangle<float>& area) const;
+    void drawGainReduction  (juce::Graphics& g, const juce::Rectangle<float>& area) const;
+    void drawOutputEnvelope (juce::Graphics& g, const juce::Rectangle<float>& area) const;
+    void drawPeakMarkers    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
+    void drawScale          (juce::Graphics& g, const juce::Rectangle<float>& area) const;
 
     static constexpr float kScaleWidth = 30.0f;   // pixels reserved for dB scale
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
