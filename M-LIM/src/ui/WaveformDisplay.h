@@ -38,12 +38,24 @@ public:
     /** Update the output ceiling reference line (dBFS, e.g. -0.1). */
     void setCeiling (float dB);
 
+    /** Get the current display mode. */
+    DisplayMode getDisplayMode() const noexcept { return displayMode_; }
+
     // Component / Timer overrides
-    void paint  (juce::Graphics& g) override;
-    void resized() override;
+    void paint       (juce::Graphics& g) override;
+    void resized     () override;
     void timerCallback() override;
+    void mouseDown   (const juce::MouseEvent& e) override;
+    void mouseEnter  (const juce::MouseEvent& e) override;
+    void mouseExit   (const juce::MouseEvent& e) override;
+    void mouseMove   (const juce::MouseEvent& e) override;
 
 private:
+    /** Returns the display name for a given mode. */
+    static juce::String modeToString (DisplayMode mode);
+
+    /** Returns the hit rectangle for the mode selector label. */
+    juce::Rectangle<float> modeSelectorBounds() const noexcept;
     // ── History ring buffer ───────────────────────────────────────────────
     static constexpr int kHistorySize = 1024;   // columns of history kept
 
@@ -60,6 +72,7 @@ private:
 
     DisplayMode displayMode_ = DisplayMode::Fast;
     float ceilingDB_ = -0.1f;   // output ceiling reference line (dBFS)
+    bool modeSelectorHovered_ = false;
 
     // ── Helpers ───────────────────────────────────────────────────────────
     /** Map a linear 0-1 level to a Y coordinate (0 = bottom, 1 = top of display). */
@@ -71,6 +84,7 @@ private:
     /** Iterate the history in display order and invoke a callback for each frame. */
     void forEachFrame (std::function<void(int col, const Frame&, int totalCols)> cb) const;
 
+    void drawModeSelector  (juce::Graphics& g) const;
     void drawBackground    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawCeilingLine   (juce::Graphics& g, const juce::Rectangle<float>& area,
                             const juce::Rectangle<float>& scaleArea) const;

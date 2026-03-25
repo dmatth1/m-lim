@@ -37,6 +37,96 @@ void WaveformDisplay::pushMeterData (const MeterData& data)
 void WaveformDisplay::setDisplayMode (DisplayMode mode)
 {
     displayMode_ = mode;
+    repaint();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mode selector helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+juce::String WaveformDisplay::modeToString (DisplayMode mode)
+{
+    switch (mode)
+    {
+        case DisplayMode::Fast:     return "FAST";
+        case DisplayMode::Slow:     return "SLOW";
+        case DisplayMode::SlowDown: return "SLOWDOWN";
+        case DisplayMode::Infinite: return "INFINITE";
+        case DisplayMode::Off:      return "OFF";
+        default:                    return "FAST";
+    }
+}
+
+juce::Rectangle<float> WaveformDisplay::modeSelectorBounds() const noexcept
+{
+    // Top-left corner of the waveform area, small label region
+    return juce::Rectangle<float> (4.0f, 4.0f, 70.0f, 14.0f);
+}
+
+void WaveformDisplay::mouseDown (const juce::MouseEvent& e)
+{
+    if (! modeSelectorBounds().contains (e.position))
+        return;
+
+    if (e.mods.isRightButtonDown())
+    {
+        juce::PopupMenu menu;
+        menu.addItem (1, "Fast",     true, displayMode_ == DisplayMode::Fast);
+        menu.addItem (2, "Slow",     true, displayMode_ == DisplayMode::Slow);
+        menu.addItem (3, "SlowDown", true, displayMode_ == DisplayMode::SlowDown);
+        menu.addItem (4, "Infinite", true, displayMode_ == DisplayMode::Infinite);
+        menu.addItem (5, "Off",      true, displayMode_ == DisplayMode::Off);
+
+        menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this),
+            [this] (int result)
+            {
+                switch (result)
+                {
+                    case 1: setDisplayMode (DisplayMode::Fast);     break;
+                    case 2: setDisplayMode (DisplayMode::Slow);     break;
+                    case 3: setDisplayMode (DisplayMode::SlowDown); break;
+                    case 4: setDisplayMode (DisplayMode::Infinite); break;
+                    case 5: setDisplayMode (DisplayMode::Off);      break;
+                    default: break;
+                }
+            });
+    }
+    else
+    {
+        // Left-click: cycle through modes
+        auto next = static_cast<int> (displayMode_) + 1;
+        if (next > static_cast<int> (DisplayMode::Off))
+            next = 0;
+        setDisplayMode (static_cast<DisplayMode> (next));
+    }
+}
+
+void WaveformDisplay::mouseEnter (const juce::MouseEvent& e)
+{
+    if (modeSelectorBounds().contains (e.position))
+    {
+        modeSelectorHovered_ = true;
+        repaint();
+    }
+}
+
+void WaveformDisplay::mouseExit (const juce::MouseEvent& /*e*/)
+{
+    if (modeSelectorHovered_)
+    {
+        modeSelectorHovered_ = false;
+        repaint();
+    }
+}
+
+void WaveformDisplay::mouseMove (const juce::MouseEvent& e)
+{
+    bool over = modeSelectorBounds().contains (e.position);
+    if (over != modeSelectorHovered_)
+    {
+        modeSelectorHovered_ = over;
+        repaint();
+    }
 }
 
 void WaveformDisplay::setCeiling (float dB)
@@ -97,6 +187,7 @@ void WaveformDisplay::paint (juce::Graphics& g)
     if (displayMode_ == DisplayMode::Off)
     {
         g.fillAll (MLIMColours::displayBackground);
+        drawModeSelector (g);
         return;
     }
 
@@ -113,9 +204,31 @@ void WaveformDisplay::paint (juce::Graphics& g)
     drawOutputEnvelope (g, displayArea);
     drawPeakMarkers    (g, displayArea);
     drawScale          (g, scaleArea);
+    drawModeSelector   (g);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+void WaveformDisplay::drawModeSelector (juce::Graphics& g) const
+{
+    auto rect = modeSelectorBounds();
+    juce::String label = modeToString (displayMode_);
+
+    juce::Colour textCol = modeSelectorHovered_
+        ? MLIMColours::textPrimary.withAlpha (0.9f)
+        : MLIMColours::textSecondary.withAlpha (0.7f);
+
+    // Subtle background pill on hover
+    if (modeSelectorHovered_)
+    {
+        g.setColour (juce::Colour (0x30FFFFFF));
+        g.fillRoundedRectangle (rect, 3.0f);
+    }
+
+    g.setFont (juce::Font (9.0f));
+    g.setColour (textCol);
+    g.drawText (label, rect, juce::Justification::centredLeft, false);
+}
 
 void WaveformDisplay::drawBackground (juce::Graphics& g,
                                        const juce::Rectangle<float>& area) const
