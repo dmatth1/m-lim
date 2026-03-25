@@ -76,7 +76,7 @@ private:
 
     // Per-channel state
     std::vector<float> mGainState;  // smoothed gain in linear scale (1.0 = no reduction)
-    std::vector<float> mEnvState;   // long-term smoothed gain in dB for adaptive release
+    std::vector<float> mEnvState;   // long-term smoothed gain in linear scale for adaptive release (1.0 = no reduction)
 
     float mCurrentGRdB = 0.0f;  // reported gain reduction in dB
 };

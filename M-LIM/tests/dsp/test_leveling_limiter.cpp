@@ -323,8 +323,9 @@ TEST_CASE("test_release_is_exponential_in_dB", "[LevelingLimiter]")
 // ---------------------------------------------------------------------------
 // test_release_time_constant_correct
 //   With 100 ms release at 44100 Hz the time constant τ = 4410 samples.
-//   After exactly τ samples of silence following full engagement, the
-//   remaining GR must be 1/e of the starting GR (within ±5% tolerance).
+//   In linear-domain smoothing, after exactly τ samples of silence the
+//   linear gain moves (1-1/e) ≈ 63.2% of the way from g0 toward unity.
+//   We verify grAfterTau matches this linear-domain expectation (±5%).
 // ---------------------------------------------------------------------------
 TEST_CASE("test_release_time_constant_correct", "[LevelingLimiter]")
 {
@@ -339,7 +340,7 @@ TEST_CASE("test_release_time_constant_correct", "[LevelingLimiter]")
     limiter.setChannelLink(0.0f);
 
     // Drive to approximately -12 dB GR and record starting GR
-    const float loudSignal = 4.0f;  // +12 dBFS
+    const float loudSignal = 4.0f;  // +12 dBFS → required gain = 0.25
     std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, loudSignal));
     auto ptrs = makePtrs(buf);
     for (int i = 0; i < 50; ++i)
@@ -361,10 +362,13 @@ TEST_CASE("test_release_time_constant_correct", "[LevelingLimiter]")
 
     const float grAfterTau = limiter.getGainReduction();
 
-    // After one τ, remaining GR should be grStart * (1/e) ≈ grStart * 0.3679
-    // grStart is negative (e.g. -12 dB), grAfterTau should be closer to 0
-    const float expected = grStart / static_cast<float>(M_E);  // grStart * 0.3679
-    const float tolerance = std::abs(expected) * 0.05f;         // ±5%
+    // Linear-domain smoothing: after τ samples, the linear gain moves
+    // (1-1/e) ≈ 63.2% of the way from g0 = 1/loudSignal to unity (1.0).
+    // g[τ] = g0 + (1.0 - g0) * (1 - 1/e)
+    const float g0 = 1.0f / loudSignal;  // 0.25
+    const float gAfterTau = g0 + (1.0f - g0) * (1.0f - 1.0f / static_cast<float>(M_E));
+    const float expected = 20.0f * std::log10(gAfterTau);  // ≈ -2.81 dB
+    const float tolerance = std::abs(expected) * 0.05f;    // ±5%
     REQUIRE(grAfterTau >= expected - tolerance);
     REQUIRE(grAfterTau <= expected + tolerance);
 }
@@ -372,8 +376,9 @@ TEST_CASE("test_release_time_constant_correct", "[LevelingLimiter]")
 // ---------------------------------------------------------------------------
 // test_attack_time_constant_correct
 //   With 10 ms attack at 44100 Hz the time constant τ = 441 samples.
-//   After exactly τ samples of a loud signal, 63.2% of the required
-//   gain reduction must be applied (within ±5% tolerance).
+//   In linear-domain smoothing, after exactly τ samples the linear gain
+//   moves (1-1/e) ≈ 63.2% of the way from unity toward the target gain.
+//   We verify grAfterTau matches this linear-domain expectation (±5%).
 // ---------------------------------------------------------------------------
 TEST_CASE("test_attack_time_constant_correct", "[LevelingLimiter]")
 {
@@ -387,11 +392,8 @@ TEST_CASE("test_attack_time_constant_correct", "[LevelingLimiter]")
     limiter.setRelease(5000.0f);
     limiter.setChannelLink(0.0f);
 
-    // Use a constant +12 dBFS signal — target gain = -12 dB
-    // Starting from unity (0 dB GR), after τ = 441 samples,
-    // 63.2% of 12 dB = 7.58 dB of reduction should be applied.
-    const float loudSignal = 4.0f;  // +12 dBFS
-    const float targetGRdB = -12.0f;  // required GR in dB
+    // Use a constant +12 dBFS signal — required gain = 1/4 = 0.25 (linear)
+    const float loudSignal = 4.0f;  // +12 dBFS → target linear gain = 0.25
 
     std::vector<std::vector<float>> buf(1, std::vector<float>(1, loudSignal));
     auto ptrs = makePtrs(buf);
@@ -405,9 +407,13 @@ TEST_CASE("test_attack_time_constant_correct", "[LevelingLimiter]")
 
     const float grAfterTau = limiter.getGainReduction();
 
-    // After τ, 63.2% of -12 dB should be applied → GR ≈ -7.58 dB
-    const float expectedGR = targetGRdB * (1.0f - 1.0f / static_cast<float>(M_E));
-    const float tolerance  = std::abs(expectedGR) * 0.05f;  // ±5%
+    // Linear-domain smoothing: after τ samples, the linear gain moves
+    // (1-1/e) ≈ 63.2% of the way from unity (1.0) to target (1/loudSignal).
+    // g[τ] = 1.0 + (target - 1.0) * (1 - 1/e)
+    const float target = 1.0f / loudSignal;  // 0.25
+    const float gAfterTau = 1.0f + (target - 1.0f) * (1.0f - 1.0f / static_cast<float>(M_E));
+    const float expectedGR = 20.0f * std::log10(gAfterTau);  // ≈ -5.59 dB
+    const float tolerance  = std::abs(expectedGR) * 0.05f;   // ±5%
     REQUIRE(grAfterTau <= expectedGR + tolerance);
     REQUIRE(grAfterTau >= expectedGR - tolerance);
 }
@@ -691,4 +697,141 @@ TEST_CASE("test_threshold_change_mid_session", "[LevelingLimiter]")
         if (block > 30)  // allow slow envelope to settle to new threshold
             REQUIRE(blockPeak(buf[0]) <= 0.5f + 2e-3f);
     }
+}
+
+// ---------------------------------------------------------------------------
+// test_linear_domain_attack_convergence
+//   Verifies that gain reduction during a constant-level tone converges to
+//   the correct threshold in linear domain. After 1000 samples of a +6 dBFS
+//   tone (amplitude 2.0) with attack=10ms at 44100 Hz, the resulting gain
+//   must be within 0.5 dBTP of the dB-domain implementation's steady state.
+//   (Both converge to the same target; the question is speed of approach.)
+// ---------------------------------------------------------------------------
+TEST_CASE("test_linear_domain_attack_convergence", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(10.0f);    // 10 ms attack
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    // Feed constant amplitude = 2.0 (+6 dBFS); required gain = 0.5 (-6 dB)
+    const float amplitude = 2.0f;
+    const float requiredGain = 1.0f / amplitude;  // 0.5
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(1, amplitude));
+    auto ptrs = makePtrs(buf);
+
+    for (int s = 0; s < 1000; ++s)
+    {
+        buf[0][0] = amplitude;
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    // After 1000 samples (>> τ = 441 for 10ms at 44100 Hz), gain must be
+    // very close to the correct target. Steady state should be requiredGain.
+    // Allow 0.5 dBTP tolerance vs. ideal steady-state.
+    const float steadyStateGRdB = 20.0f * std::log10(requiredGain);  // -6.02 dB
+    REQUIRE(limiter.getGainReduction() <= steadyStateGRdB + 0.5f);
+    REQUIRE(limiter.getGainReduction() >= steadyStateGRdB - 0.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_linear_domain_release_speed
+//   After driving gain to -20 dBGR (amplitude ≈ 10.0 → gain ≈ 0.1),
+//   feeding silence must recover gain to < -0.1 dBGR within 3×releaseMs.
+//   Verifies that linear-domain release speed is preserved.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_linear_domain_release_speed", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);    // instant attack
+    limiter.setRelease(100.0f); // 100 ms release
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    // Drive to approximately -20 dB GR with amplitude = 10.0
+    const float amplitude = 10.0f;  // 10× above threshold → gain ≈ 0.1 = -20 dB
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize));
+    auto ptrs = makePtrs(buf);
+
+    for (int i = 0; i < 30; ++i)
+    {
+        std::fill(buf[0].begin(), buf[0].end(), amplitude);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+    }
+    REQUIRE(limiter.getGainReduction() < -10.0f);  // significant GR engaged
+
+    // Release with silence for 3 × releaseMs = 300 ms = 13230 samples
+    const int releaseSamples = static_cast<int>(3.0f * 100.0f * 0.001f * kSampleRate);
+    for (int s = 0; s < releaseSamples; ++s)
+    {
+        buf[0][0] = 0.0f;
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    // After 3×τ, gain must have recovered to < -0.1 dBGR
+    REQUIRE(limiter.getGainReduction() > -0.1f);
+}
+
+// ---------------------------------------------------------------------------
+// test_adaptive_env_state_linear_convergence
+//   With adaptiveRelease=true and a constant loud signal, mEnvState (now in
+//   linear domain) must converge toward the required gain (1/amplitude).
+//   After 500 ms × kAdaptiveSmoothMs warm-up, the adaptive release must
+//   produce measurably faster recovery than non-adaptive.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_adaptive_env_state_linear_convergence", "[LevelingLimiter]")
+{
+    // Verify that adaptive release with sustained GR causes faster recovery
+    // than non-adaptive — confirms that mEnvState in linear domain correctly
+    // drives the adaptive speedup logic.
+    const float amplitude    = 4.0f;   // +12 dBFS → sustained GR ≈ -12 dB
+    const int sustainBlocks  = 300;    // ~3 s of sustained gain reduction (> 500 ms smoother)
+    const int recoverSamples = static_cast<int>(200.0f * 0.001f * kSampleRate);  // 200 ms
+
+    auto measure = [&](bool adaptive) -> float
+    {
+        LevelingLimiter lim;
+        lim.prepare(kSampleRate, kBlockSize, 1);
+        lim.setAttack(0.0f);
+        lim.setRelease(500.0f);
+        lim.setChannelLink(0.0f);
+        lim.setThreshold(1.0f);
+
+        AlgorithmParams p = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        p.adaptiveRelease = adaptive;
+        lim.setAlgorithmParams(p);
+
+        std::vector<std::vector<float>> b(1, std::vector<float>(kBlockSize));
+        auto ptrs = makePtrs(b);
+
+        for (int i = 0; i < sustainBlocks; ++i)
+        {
+            std::fill(b[0].begin(), b[0].end(), amplitude);
+            lim.process(ptrs.data(), 1, kBlockSize);
+        }
+        for (int s = 0; s < recoverSamples; ++s)
+        {
+            b[0][0] = 0.0f;
+            lim.process(ptrs.data(), 1, 1);
+        }
+        return lim.getGainReduction();
+    };
+
+    const float grAdaptive    = measure(true);
+    const float grNonAdaptive = measure(false);
+
+    // After sustained GR (> 500 ms smoother warm-up), adaptive must recover more
+    REQUIRE(grAdaptive > grNonAdaptive);
 }

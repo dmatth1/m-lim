@@ -18,7 +18,7 @@ void LevelingLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numCh
     mNumChannels = numChannels;
 
     mGainState.assign(numChannels, 1.0f);  // linear domain: 1.0 = no reduction
-    mEnvState.assign(numChannels, 0.0f);   // dB domain: 0 dB = no sustained GR
+    mEnvState.assign(numChannels, 1.0f);   // linear domain: 1.0 = no sustained GR
 
     updateCoefficients();
 
@@ -121,6 +121,31 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
     // Stack-allocated per-channel required gain (supports up to 8 channels)
     float perChRequiredGain[8];
 
+    // Pre-compute effective release coefficients per channel (once per block).
+    // Adaptive speedup uses mEnvState which is in linear domain; gainToDecibels()
+    // is called here (once per channel) rather than per sample.
+    float effectiveReleaseCoeffs[8];
+    for (int ch = 0; ch < chCount; ++ch)
+    {
+        effectiveReleaseCoeffs[ch] = mReleaseCoeff;
+        if (mParams.adaptiveRelease)
+        {
+            // mEnvState is in linear domain: 1.0 = no reduction, <1 = reduction.
+            // sustainedGRdB > 0 indicates sustained gain reduction.
+            const float sustainedGRdB = -gainToDecibels(mEnvState[ch]);
+
+            if (sustainedGRdB > 0.5f)
+            {
+                // Speed up release proportionally to sustained GR depth.
+                const float speedup = std::min(1.0f, sustainedGRdB / 6.0f);
+                // faster coeff = coeff^2 (compounding exponential)
+                const float fastCoeff = mReleaseCoeff * mReleaseCoeff;
+                effectiveReleaseCoeffs[ch] = mReleaseCoeff * (1.0f - speedup)
+                                             + fastCoeff * speedup;
+            }
+        }
+    }
+
     for (int s = 0; s < numSamples; ++s)
     {
         // --- 1. Compute required gain per channel ----------------------------
@@ -137,7 +162,7 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
 
         // --- 3. Smooth gain in linear domain ---------------------------------
         // mGainState[ch] is in linear scale (1.0 = no reduction, <1 = reducing).
-        // Tracking in linear domain avoids a per-sample std::pow call while
+        // Tracking in linear domain avoids per-sample transcendental calls while
         // remaining numerically close to dB-domain smoothing for typical
         // attack/release times (>10 ms), where per-sample delta is <0.5%.
         for (int ch = 0; ch < chCount; ++ch)
@@ -146,48 +171,22 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
             const float target = perChRequiredGain[ch];  // already linear
 
             // Update long-term envelope tracker for adaptive release.
-            // mEnvState remains in dB domain to preserve dB-referenced thresholds.
+            // mEnvState is in linear domain (1.0 = no reduction, <1 = reduction).
             if (mParams.adaptiveRelease)
             {
-                const float targetDb = gainToDecibels(target);
                 mEnvState[ch] = mEnvState[ch] * mAdaptiveSmoothCoeff
-                                + targetDb * (1.0f - mAdaptiveSmoothCoeff);
+                                + target * (1.0f - mAdaptiveSmoothCoeff);
             }
 
             if (target < g)
             {
-                // Attack: more reduction needed — smooth in dB domain so the
-                // envelope shape is exponential-in-dB, matching Stage 1.
-                const float gDb      = gainToDecibels(g);
-                const float targetDb = gainToDecibels(target);
-                const float smoothedDb = gDb + (targetDb - gDb) * (1.0f - mAttackCoeff);
-                g = decibelsToGain(smoothedDb);
+                // Attack: more reduction needed — first-order IIR in linear domain.
+                g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
             }
             else
             {
-                // Release: recovering toward 0 dB (unity gain) in dB domain.
-                float effectiveReleaseCoeff = mReleaseCoeff;
-
-                if (mParams.adaptiveRelease)
-                {
-                    // sustainedGRdB > 0 indicates heavy, sustained gain reduction.
-                    const float sustainedGRdB = -mEnvState[ch];
-
-                    if (sustainedGRdB > 0.5f)
-                    {
-                        // Speed up release proportionally to sustained GR depth.
-                        const float speedup = std::min(1.0f, sustainedGRdB / 6.0f);
-                        // faster coeff = coeff^2 (compounding exponential)
-                        const float fastCoeff = mReleaseCoeff * mReleaseCoeff;
-                        effectiveReleaseCoeff = mReleaseCoeff * (1.0f - speedup)
-                                                + fastCoeff * speedup;
-                    }
-                }
-
-                // Exponential recovery toward 0 dB in dB domain — target = 0 dB (unity)
-                const float gDb      = gainToDecibels(g);
-                const float smoothedDb = gDb + (0.0f - gDb) * (1.0f - effectiveReleaseCoeff);
-                g = decibelsToGain(smoothedDb);
+                // Release: recovering toward unity (1.0) in linear domain.
+                g = g * effectiveReleaseCoeffs[ch] + (1.0f - effectiveReleaseCoeffs[ch]);
             }
 
             g = std::max(g, kMinGain);
