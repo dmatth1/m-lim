@@ -26,6 +26,7 @@ namespace ParamID
     inline const juce::String sidechainTilt    = "sidechainTilt";
     inline const juce::String delta            = "delta";
     inline const juce::String displayMode      = "displayMode";
+    inline const juce::String loudnessTarget   = "loudnessTarget";
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

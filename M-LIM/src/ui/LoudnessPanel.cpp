@@ -17,6 +17,65 @@ LoudnessPanel::LoudnessPanel()
         resetHistogram();
     };
     addAndMakeVisible (resetButton_);
+
+    // Target selector button
+    targetButton_.setButtonText (targetChoiceLabel (targetChoice_));
+    targetButton_.setClickingTogglesState (false);
+    targetButton_.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff1E1E2A));
+    targetButton_.setColour (juce::TextButton::textColourOffId, MLIMColours::accentBlue);
+    targetButton_.onClick = [this]
+    {
+        juce::PopupMenu menu;
+        menu.addItem (1, "-9 LUFS (CD)");
+        menu.addItem (2, "-14 LUFS (Streaming)");
+        menu.addItem (3, "-23 LUFS (EBU R128)");
+        menu.addItem (4, "-24 LUFS (ATSC A/85)");
+        menu.addSeparator();
+        menu.addItem (5, "Custom...");
+
+        menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&targetButton_),
+            [this] (int result)
+            {
+                if (result == 0) return;
+
+                const int choiceIndex = result - 1;   // result 1..5 → index 0..4
+
+                if (choiceIndex == 4)
+                {
+                    // Custom: ask for a value via AlertWindow
+                    auto* alertWindow = new juce::AlertWindow ("Custom Target",
+                                                               "Enter target LUFS (e.g. -16):",
+                                                               juce::MessageBoxIconType::NoIcon);
+                    alertWindow->addTextEditor ("value",
+                                                juce::String (customTargetLUFS_, 1),
+                                                "LUFS:");
+                    alertWindow->addButton ("OK",     1, juce::KeyPress (juce::KeyPress::returnKey));
+                    alertWindow->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+
+                    alertWindow->enterModalState (true,
+                        juce::ModalCallbackFunction::create ([this, alertWindow] (int r)
+                        {
+                            if (r == 1)
+                            {
+                                const float val = alertWindow->getTextEditorContents ("value")
+                                                              .getFloatValue();
+                                customTargetLUFS_ = juce::jlimit (-60.0f, 0.0f, val);
+                                targetChoice_ = 4;
+                                setTarget (customTargetLUFS_);
+                                targetButton_.setButtonText (juce::String (customTargetLUFS_, 1));
+                                if (onTargetChanged) onTargetChanged (4);
+                            }
+                            delete alertWindow;
+                        }),
+                        true);
+                    return;
+                }
+
+                setTargetChoice (choiceIndex);
+                if (onTargetChanged) onTargetChanged (choiceIndex);
+            });
+    };
+    addAndMakeVisible (targetButton_);
 }
 
 // ── Data setters ─────────────────────────────────────────────────────────────
@@ -27,6 +86,44 @@ void LoudnessPanel::setIntegrated    (float lufs) { integrated_    = lufs; repai
 void LoudnessPanel::setLoudnessRange (float lu)   { loudnessRange_ = lu;   repaint(); }
 void LoudnessPanel::setTruePeak      (float dBTP) { truePeak_      = dBTP; repaint(); }
 void LoudnessPanel::setTarget        (float lufs) { targetLUFS_    = lufs; repaint(); }
+
+// ── Target choice helpers ─────────────────────────────────────────────────────
+
+float LoudnessPanel::targetChoiceToLUFS (int choiceIndex) noexcept
+{
+    switch (choiceIndex)
+    {
+        case 0: return -9.0f;
+        case 1: return -14.0f;
+        case 2: return -23.0f;
+        case 3: return -24.0f;
+        default: return -14.0f;
+    }
+}
+
+juce::String LoudnessPanel::targetChoiceLabel (int choiceIndex) noexcept
+{
+    switch (choiceIndex)
+    {
+        case 0: return "-9 (CD)";
+        case 1: return "-14 (Strm)";
+        case 2: return "-23 (EBU)";
+        case 3: return "-24 (ATSC)";
+        default: return "Custom";
+    }
+}
+
+void LoudnessPanel::setTargetChoice (int choiceIndex)
+{
+    targetChoice_ = choiceIndex;
+    if (choiceIndex < 4)
+    {
+        const float lufs = targetChoiceToLUFS (choiceIndex);
+        setTarget (lufs);
+        targetButton_.setButtonText (targetChoiceLabel (choiceIndex));
+    }
+    // For custom (index 4), the button text is set by the caller after entering value
+}
 
 // ── Histogram accumulation ────────────────────────────────────────────────────
 
@@ -63,6 +160,14 @@ void LoudnessPanel::resized()
                             rowY + (kRowH - 18) / 2,
                             kBtnW,
                             18);
+
+    // Target selector button: top-right corner of histogram area
+    constexpr int kTargetBtnH = 16;
+    constexpr int kTargetBtnW = 66;
+    targetButton_.setBounds (getWidth() - kTargetBtnW - kPadding,
+                             kPadding,
+                             kTargetBtnW,
+                             kTargetBtnH);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

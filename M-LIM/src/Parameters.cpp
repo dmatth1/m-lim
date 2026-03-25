@@ -177,5 +177,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         0
     ));
 
+    // Loudness target: 0=-9 LUFS (CD), 1=-14 LUFS (Streaming), 2=-23 LUFS (EBU R128),
+    //                  3=-24 LUFS (ATSC A/85), 4=Custom; default 1 (Streaming)
+    params.push_back(std::make_unique<AudioParameterChoice>(
+        ParameterID { ParamID::loudnessTarget, 1 },
+        "Loudness Target",
+        StringArray { "-9 LUFS (CD)", "-14 LUFS (Streaming)", "-23 LUFS (EBU R128)",
+                      "-24 LUFS (ATSC A/85)", "Custom" },
+        1
+    ));
+
     return { params.begin(), params.end() };
 }

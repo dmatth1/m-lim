@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
 #include <functional>
+#include <cmath>
 
 /**
  * LoudnessPanel — Pro-L 2 style loudness histogram + numeric readouts.
@@ -53,6 +54,25 @@ public:
     /** Called when the user clicks the integrated-LUFS Reset button. */
     std::function<void()> onResetIntegrated;
 
+    /**
+     * Called when the user selects a new target from the popup menu.
+     * Argument is the choice index (0-3 = standard targets, 4 = custom).
+     * For custom, the LUFS value is already applied via setTarget().
+     */
+    std::function<void(int)> onTargetChanged;
+
+    /**
+     * Set the active target choice (0-3 = standard, 4 = custom).
+     * Updates the displayed label and target LUFS line.
+     */
+    void setTargetChoice (int choiceIndex);
+
+    /** Returns the short display label for choice index (e.g. "-14 (Strm)"). */
+    static juce::String targetChoiceLabel (int choiceIndex) noexcept;
+
+    /** Returns the LUFS value for a standard target choice (0-3). */
+    static float targetChoiceToLUFS (int choiceIndex) noexcept;
+
     // Component overrides
     void paint   (juce::Graphics& g) override;
     void resized () override;
@@ -74,8 +94,13 @@ private:
     std::array<float, kHistBins> histogramBins_ {};
     float histogramMax_ = 1.0f;
 
+    // ── Target selector state ─────────────────────────────────────────────
+    int   targetChoice_     = 1;         // default: Streaming (-14 LUFS)
+    float customTargetLUFS_ = -14.0f;   // used when targetChoice_ == 4
+
     // ── Children ──────────────────────────────────────────────────────────
-    juce::TextButton resetButton_ { "RST" };
+    juce::TextButton resetButton_  { "RST" };
+    juce::TextButton targetButton_;
 
     // ── Layout constants ──────────────────────────────────────────────────
     static constexpr int kRowH     = 22;

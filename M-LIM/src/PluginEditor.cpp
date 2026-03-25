@@ -1,4 +1,6 @@
 #include "PluginEditor.h"
+#include "Parameters.h"
+#include "ui/LoudnessPanel.h"
 
 namespace
 {
@@ -24,6 +26,14 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (controlStrip_);
 
     wireCallbacks();
+
+    // Sync loudness target from APVTS
+    {
+        auto* param = dynamic_cast<juce::AudioParameterChoice*> (
+            audioProcessor.apvts.getParameter (ParamID::loudnessTarget));
+        if (param != nullptr)
+            loudnessPanel_.setTargetChoice (param->getIndex());
+    }
 
     topBar_.setPresetName (audioProcessor.presetManager.getCurrentPresetName());
 
@@ -72,6 +82,15 @@ void MLIMAudioProcessorEditor::wireCallbacks()
     {
         audioProcessor.presetManager.loadNextPreset (audioProcessor.apvts);
         topBar_.setPresetName (audioProcessor.presetManager.getCurrentPresetName());
+    };
+
+    loudnessPanel_.onTargetChanged = [this] (int choiceIndex)
+    {
+        if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (
+                audioProcessor.apvts.getParameter (ParamID::loudnessTarget)))
+        {
+            *param = choiceIndex;
+        }
     };
 }
 
