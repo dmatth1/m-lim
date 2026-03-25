@@ -1432,3 +1432,162 @@ TEST_CASE("test_lookahead_zero_to_nonzero_transition", "[TransientLimiter]")
             REQUIRE(blockPeak(buf[ch]) <= 1.0f + 1e-3f);
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_saturation_reduces_peak
+//   With saturationAmount=0.5 the output peak must be lower than with
+//   saturationAmount=0.0 for a loud above-threshold signal.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_saturation_reduces_peak", "[TransientLimiter]")
+{
+    const float inputAmplitude = 2.0f;  // +6 dBFS — above threshold
+
+    auto runWithSaturation = [&](float satAmt) -> float
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.saturationAmount = satAmt;
+        params.kneeWidth        = 0.0f;  // hard knee for predictable behaviour
+        limiter.setAlgorithmParams(params);
+        limiter.setLookahead(0.0f);
+
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, inputAmplitude));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+        return blockPeak(buf[0]);
+    };
+
+    const float peakWithSat  = runWithSaturation(0.5f);
+    const float peakNoSat    = runWithSaturation(0.0f);
+
+    // Saturation should compress transients further, lowering the output peak
+    REQUIRE(peakWithSat < peakNoSat);
+    // Both must remain at or below the threshold
+    REQUIRE(peakWithSat <= 1.0f + 1e-4f);
+    REQUIRE(peakNoSat   <= 1.0f + 1e-4f);
+}
+
+// ---------------------------------------------------------------------------
+// test_saturation_full_amount_no_crash
+//   saturationAmount=1.0 with a very loud signal (amplitude 2.0) over
+//   10 blocks must produce only finite samples and not exceed the threshold
+//   by more than a small tolerance.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_saturation_full_amount_no_crash", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 1.0f;
+    params.kneeWidth        = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(1.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+
+    for (int block = 0; block < 10; ++block)
+    {
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), 2.0f);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+        {
+            for (float v : buf[ch])
+                REQUIRE(std::isfinite(v));
+            // Allow a small tolerance above threshold
+            REQUIRE(blockPeak(buf[ch]) <= 1.05f);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_saturation_amount_zero_is_linear
+//   Explicitly confirms that saturationAmount=0.0 leaves a sub-threshold
+//   sine-like signal unchanged — regression baseline for the saturation tests.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_saturation_amount_zero_is_linear", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 0.0f;
+    params.kneeWidth        = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    // Sub-threshold sine-like signal (amplitude 0.5 — well below 1.0)
+    const float amplitude = 0.5f;
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize));
+    for (int i = 0; i < kBlockSize; ++i)
+        buf[0][i] = amplitude * std::sin(2.0f * 3.14159265f * 1000.0f * static_cast<float>(i) / static_cast<float>(kSampleRate));
+    const std::vector<float> reference = buf[0];
+
+    // Warm-up pass
+    auto ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), 1, kBlockSize);
+
+    // Refill and run again so lookahead delay buffer is populated with the same signal
+    buf[0] = reference;
+    ptrs   = makePtrs(buf);
+    limiter.process(ptrs.data(), 1, kBlockSize);
+
+    // Output must equal input: no gain reduction, no saturation distortion
+    for (int i = 0; i < kBlockSize; ++i)
+        REQUIRE(buf[0][i] == Catch::Approx(reference[i]).margin(0.01f));
+}
+
+// ---------------------------------------------------------------------------
+// test_saturation_formula_direct
+//   Feeds a sub-threshold signal with saturationAmount=0.5.
+//   For large input magnitudes (near but below threshold), tanh compression
+//   means output < input.  For very small magnitudes, output ≈ input.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_saturation_formula_direct", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 0.5f;
+    params.kneeWidth        = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    // Large sub-threshold input (0.9 — below 1.0 but large enough for tanh to bite)
+    const float largeAmp = 0.9f;
+    std::vector<std::vector<float>> largeBuf(1, std::vector<float>(kBlockSize, largeAmp));
+    auto largePtrs = makePtrs(largeBuf);
+    // Warm-up
+    limiter.process(largePtrs.data(), 1, kBlockSize);
+    std::fill(largeBuf[0].begin(), largeBuf[0].end(), largeAmp);
+    limiter.process(largePtrs.data(), 1, kBlockSize);
+    const float outLarge = blockPeak(largeBuf[0]);
+
+    // With saturation active, output magnitude < input magnitude
+    REQUIRE(outLarge < largeAmp);
+
+    // Small sub-threshold input (0.01 — tanh(x) ≈ x so output ≈ input)
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    const float smallAmp = 0.01f;
+    std::vector<std::vector<float>> smallBuf(1, std::vector<float>(kBlockSize, smallAmp));
+    auto smallPtrs = makePtrs(smallBuf);
+    // Warm-up
+    limiter.process(smallPtrs.data(), 1, kBlockSize);
+    std::fill(smallBuf[0].begin(), smallBuf[0].end(), smallAmp);
+    limiter.process(smallPtrs.data(), 1, kBlockSize);
+    const float outSmall = blockPeak(smallBuf[0]);
+
+    // For small signals tanh(x)/drive ≈ x/drive, so wet ≈ x/drive.
+    // Output = x*(1-amount) + (x/drive)*amount which is less than x but close.
+    // Just verify it's within a reasonable range of the input.
+    REQUIRE(outSmall == Catch::Approx(smallAmp).epsilon(0.05f));
+}
