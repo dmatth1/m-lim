@@ -9,6 +9,7 @@
 #include "ui/GainReductionMeter.h"
 #include "ui/LoudnessPanel.h"
 #include "ui/ControlStrip.h"
+#include "ui/Colours.h"
 
 class MLIMAudioProcessorEditor : public juce::AudioProcessorEditor,
                                   public juce::Timer
@@ -34,6 +35,12 @@ private:
     LoudnessPanel       loudnessPanel_;
     ControlStrip        controlStrip_;
 
+    // ── Input Gain: vertical slider overlaid on waveform left edge ────────────
+    juce::Slider inputGainSlider_;
+    juce::Label  inputGainLabel_;       // "GAIN" text above slider
+    juce::Label  inputGainValueLabel_;  // current dB value in gold
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputGainAttach_;
+
     // Peak hold state (2-second hold, then fall)
     float inputPeakL_  = -96.0f;
     float inputPeakR_  = -96.0f;
@@ -53,6 +60,9 @@ private:
     static constexpr int kOutputMeterW   = 20;
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
+    static constexpr int kGainSliderW    = 34;  // waveform-edge input gain slider width
+    static constexpr int kGainLabelH     = 14;  // "GAIN" label height
+    static constexpr int kGainValueH     = 12;  // value readout height
 
     juce::ComponentBoundsConstrainer constrainer_;
 

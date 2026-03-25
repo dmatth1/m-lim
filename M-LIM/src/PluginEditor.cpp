@@ -25,6 +25,39 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (loudnessPanel_);
     addAndMakeVisible (controlStrip_);
 
+    // ── Input Gain slider (waveform left-edge overlay) ────────────────────────
+    inputGainSlider_.setSliderStyle (juce::Slider::LinearVertical);
+    inputGainSlider_.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    inputGainSlider_.setRange (-12.0, 36.0, 0.01);
+    inputGainSlider_.setColour (juce::Slider::backgroundColourId, juce::Colour (0xff1A1A2E));
+    inputGainSlider_.setColour (juce::Slider::trackColourId,      MLIMColours::sliderFill.withAlpha (0.8f));
+    inputGainSlider_.setColour (juce::Slider::thumbColourId,      juce::Colour (0xffE0E0E0));
+    addAndMakeVisible (inputGainSlider_);
+
+    inputGainLabel_.setText ("GAIN", juce::dontSendNotification);
+    inputGainLabel_.setFont (juce::Font (9.0f, juce::Font::bold));
+    inputGainLabel_.setJustificationType (juce::Justification::centred);
+    inputGainLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
+    addAndMakeVisible (inputGainLabel_);
+
+    inputGainValueLabel_.setText ("+0.0", juce::dontSendNotification);
+    inputGainValueLabel_.setFont (juce::Font (9.0f, juce::Font::bold));
+    inputGainValueLabel_.setJustificationType (juce::Justification::centred);
+    inputGainValueLabel_.setColour (juce::Label::textColourId, juce::Colour (0xffFFD700));
+    addAndMakeVisible (inputGainValueLabel_);
+
+    // Keep value label in sync with slider
+    inputGainSlider_.onValueChange = [this]
+    {
+        const double v = inputGainSlider_.getValue();
+        const juce::String text = (v >= 0.0 ? "+" : "") + juce::String (v, 1);
+        inputGainValueLabel_.setText (text, juce::dontSendNotification);
+    };
+
+    // APVTS attachment (fires onValueChange on construction to sync value label)
+    inputGainAttach_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        p.apvts, ParamID::inputGain, inputGainSlider_);
+
     wireCallbacks();
 
     // Sync loudness target from APVTS
@@ -118,6 +151,13 @@ void MLIMAudioProcessorEditor::resized()
 
     // Waveform display fills the remaining centre (~70-75% of total width)
     waveformDisplay_.setBounds (bounds);
+
+    // Input Gain slider overlaid on the left edge of the waveform area
+    // "GAIN" label above, value label at bottom, slider in between
+    auto gainOverlay = bounds.withWidth (kGainSliderW);
+    inputGainLabel_.setBounds      (gainOverlay.removeFromTop    (kGainLabelH));
+    inputGainValueLabel_.setBounds (gainOverlay.removeFromBottom (kGainValueH));
+    inputGainSlider_.setBounds     (gainOverlay);
 }
 
 void MLIMAudioProcessorEditor::timerCallback()

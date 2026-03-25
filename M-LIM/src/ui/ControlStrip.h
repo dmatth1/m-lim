@@ -11,8 +11,11 @@
 /**
  * Bottom control strip containing all main controls:
  *
- *  Top row:    [InputGain] [AlgorithmSelector] [Lookahead] [Attack] [Release]
+ *  Top row:    [AlgorithmSelector] [Lookahead] [Attack] [Release]
  *              [ADVANCED>>] (expands to show Channel Link knobs) | [OUTPUT vertical slider]
+ *
+ *  Note: Input Gain is NOT in the control strip — it lives as a vertical slider
+ *        overlaid on the left edge of the WaveformDisplay (see PluginEditor).
  *
  *  Status bar: [MIDI Learn] [● True Peak Limiting] [Oversampling: Xx] [Dither: XX Bits]
  *              ... [TP] [≋] [Loudness] [||] [Short Term] [Out: X.X dBTP]
@@ -43,7 +46,7 @@ private:
     bool isAdvancedExpanded_ { false };
 
     // ── Top row: knobs ────────────────────────────────────────────────────────
-    RotaryKnob inputGainKnob_;
+    // Note: inputGain lives in PluginEditor as a waveform-overlay slider, not here.
     AlgorithmSelector algorithmSelector_;
     RotaryKnob lookaheadKnob_;
     RotaryKnob attackKnob_;
@@ -85,7 +88,7 @@ private:
     juce::Label      outputLevelLabel_;         // "Out: X.X dBTP"
 
     // ── APVTS attachments ─────────────────────────────────────────────────────
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>  inputGainAttach_;
+    // inputGainAttach_ lives in PluginEditor (waveform-edge slider)
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> algorithmAttach_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>  lookaheadAttach_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>  attackAttach_;

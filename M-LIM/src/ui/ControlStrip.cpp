@@ -8,7 +8,7 @@ namespace
     static constexpr int kPadding   = 4;
 
     // Knob column width (equal slices in the top row)
-    static constexpr int kNumKnobs  = 7;   // inputGain + 5 knobs + algo (treated as wide); outputCeiling is separate vertical slider
+    static constexpr int kNumKnobs  = 7;   // algo(x2) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
     // Width reserved for the output ceiling vertical slider on the far right
     static constexpr int kOutputSliderW = 40;
     // Label height above the output ceiling slider
@@ -33,10 +33,7 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     : apvts_ (apvts)
 {
     // ── Knobs: set labels, ranges, suffixes ────────────────────────────────
-    inputGainKnob_.setLabel ("Input");
-    inputGainKnob_.setSuffix ("dB");
-    inputGainKnob_.setRange (-12.0f, 36.0f, 0.01f);
-
+    // Note: inputGain is now a waveform-overlay slider in PluginEditor.
     lookaheadKnob_.setLabel ("Lookahead");
     lookaheadKnob_.setSuffix ("ms");
     lookaheadKnob_.setRange (0.0f, 5.0f, 0.01f);
@@ -80,7 +77,6 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     setupStatusBar();
 
     // ── Add top-row knobs ─────────────────────────────────────────────────
-    addAndMakeVisible (inputGainKnob_);
     addAndMakeVisible (algorithmSelector_);
     addAndMakeVisible (lookaheadKnob_);
     addAndMakeVisible (attackKnob_);
@@ -354,8 +350,7 @@ void ControlStrip::cycleMeasurementMode()
 
 void ControlStrip::createAttachments()
 {
-    inputGainAttach_  = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts_, ParamID::inputGain, inputGainKnob_.getSlider());
+    // inputGainAttach_ is created in PluginEditor (waveform-edge slider)
 
     algorithmAttach_  = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         apvts_, ParamID::algorithm, algorithmSelector_.getComboBox());
@@ -485,13 +480,9 @@ void ControlStrip::resized()
     // ── Top row: knobs ────────────────────────────────────────────────────
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
-    // OutputCeiling is now a vertical slider on the right, not in the knob row
+    // AlgorithmSelector on far left, takes 2 knob-widths
+    // (InputGain is on waveform edge in PluginEditor; OutputCeiling is the right vertical slider)
     int knobW = knobRow.getWidth() / (kNumKnobs + 1); // +1 for wider algo selector
-
-    // InputGain on far left
-    inputGainKnob_.setBounds (knobRow.removeFromLeft (knobW));
-
-    // AlgorithmSelector takes 2 knob-widths
     algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
 
     // Basic knobs: Lookahead, Attack, Release
