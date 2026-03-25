@@ -16,7 +16,7 @@ namespace MLIMColours
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform    { 0xA8607898 };  // medium blue-purple, ~66% alpha
     const juce::Colour outputWaveform   { 0x804060A0 };  // slightly deeper blue, ~50% alpha
-    const juce::Colour outputEnvelope   { 0xCCDDE8FF };  // near-white with slight blue tint, ~80% alpha
+    const juce::Colour outputEnvelope   { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
     const juce::Colour gainReduction    { 0xffFF4444 };  // bright red
 
     // Label colours
