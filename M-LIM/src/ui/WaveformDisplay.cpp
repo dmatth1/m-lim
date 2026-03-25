@@ -1,0 +1,275 @@
+#include "WaveformDisplay.h"
+#include "Colours.h"
+#include <cmath>
+
+// dB grid lines drawn on background
+static const float kGridDB[] = { 0.0f, -3.0f, -6.0f, -9.0f, -12.0f,
+                                 -15.0f, -18.0f, -21.0f, -24.0f };
+
+// ─────────────────────────────────────────────────────────────────────────────
+WaveformDisplay::WaveformDisplay()
+    : history_ (kHistorySize)
+{
+    startTimerHz (60);
+}
+
+WaveformDisplay::~WaveformDisplay()
+{
+    stopTimer();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+void WaveformDisplay::pushMeterData (const MeterData& data)
+{
+    Frame f;
+    // Use the louder channel for display; levels are linear 0-1
+    f.inputLevel   = std::max (data.inputLevelL,  data.inputLevelR);
+    f.outputLevel  = std::max (data.outputLevelL, data.outputLevelR);
+    // gainReduction is stored as a non-positive dB value (0 = no GR, -6 = 6 dB GR)
+    f.gainReduction = (data.gainReduction <= 0.0f) ? -data.gainReduction : data.gainReduction;
+
+    history_[static_cast<std::size_t>(writePos_)] = f;
+    writePos_ = (writePos_ + 1) % kHistorySize;
+    if (frameCount_ < kHistorySize)
+        ++frameCount_;
+}
+
+void WaveformDisplay::setDisplayMode (DisplayMode mode)
+{
+    displayMode_ = mode;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+void WaveformDisplay::timerCallback()
+{
+    repaint();
+}
+
+void WaveformDisplay::resized() {}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+float WaveformDisplay::levelToY (float linear, const juce::Rectangle<float>& area) const noexcept
+{
+    // linear 1.0 → top of area, 0.0 → bottom
+    float clamped = juce::jlimit (0.0f, 1.0f, linear);
+    return area.getBottom() - clamped * area.getHeight();
+}
+
+float WaveformDisplay::grToHeight (float grDB, const juce::Rectangle<float>& area) const noexcept
+{
+    float frac = juce::jlimit (0.0f, 1.0f, grDB / kMaxGRdB);
+    return frac * area.getHeight();
+}
+
+void WaveformDisplay::forEachFrame (
+    std::function<void(int col, const Frame&, int totalCols)> cb) const
+{
+    if (frameCount_ == 0) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+    // oldest frame to display is (writePos_ - total + kHistorySize) % kHistorySize
+    for (int i = 0; i < total; ++i)
+    {
+        int idx = (writePos_ - total + i + kHistorySize) % kHistorySize;
+        cb (i, history_[static_cast<std::size_t> (idx)], total);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Paint
+// ─────────────────────────────────────────────────────────────────────────────
+
+void WaveformDisplay::paint (juce::Graphics& g)
+{
+    if (displayMode_ == DisplayMode::Off)
+    {
+        g.fillAll (MLIMColours::displayBackground);
+        return;
+    }
+
+    // Reserve right strip for dB scale
+    auto bounds = getLocalBounds().toFloat();
+    auto scaleArea = bounds.removeFromRight (kScaleWidth);
+    auto displayArea = bounds;
+
+    drawBackground    (g, displayArea);
+    drawOutputFill    (g, displayArea);
+    drawInputFill     (g, displayArea);
+    drawGainReduction (g, displayArea);
+    drawPeakMarkers   (g, displayArea);
+    drawScale         (g, scaleArea);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void WaveformDisplay::drawBackground (juce::Graphics& g,
+                                       const juce::Rectangle<float>& area) const
+{
+    g.setColour (MLIMColours::displayBackground);
+    g.fillRect (area);
+
+    // Horizontal dB grid lines
+    g.setColour (juce::Colour (0xff2A2A2A));
+    for (float db : kGridDB)
+    {
+        // Map dB to GR fraction (0 dB GR = top, kMaxGRdB GR = bottom)
+        float frac = (-db) / kMaxGRdB;   // dB is negative for GR scale
+        float y = area.getY() + frac * area.getHeight();
+        if (y >= area.getY() && y <= area.getBottom())
+            g.drawHorizontalLine (juce::roundToInt (y), area.getX(), area.getRight());
+    }
+}
+
+void WaveformDisplay::drawOutputFill (juce::Graphics& g,
+                                       const juce::Rectangle<float>& area) const
+{
+    if (frameCount_ == 0) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+    float colW = area.getWidth() / static_cast<float> (total);
+
+    juce::Path path;
+    bool first = true;
+
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float y = levelToY (f.outputLevel, area);
+        if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
+        path.lineTo (x, y);
+        (void) colW;
+    });
+
+    path.lineTo (area.getRight(), area.getBottom());
+    path.closeSubPath();
+
+    g.setColour (MLIMColours::outputWaveform);
+    g.fillPath (path);
+}
+
+void WaveformDisplay::drawInputFill (juce::Graphics& g,
+                                      const juce::Rectangle<float>& area) const
+{
+    if (frameCount_ == 0) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+
+    juce::Path path;
+    bool first = true;
+
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float y = levelToY (f.inputLevel, area);
+        if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
+        path.lineTo (x, y);
+        (void) total;
+    });
+
+    path.lineTo (area.getRight(), area.getBottom());
+    path.closeSubPath();
+
+    g.setColour (MLIMColours::inputWaveform);
+    g.fillPath (path);
+}
+
+void WaveformDisplay::drawGainReduction (juce::Graphics& g,
+                                          const juce::Rectangle<float>& area) const
+{
+    if (frameCount_ == 0) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+
+    juce::Path path;
+    bool first = true;
+
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float h = grToHeight (f.gainReduction, area);
+        float y = area.getY() + h;
+
+        if (first)
+        {
+            path.startNewSubPath (x, area.getY());
+            first = false;
+        }
+        path.lineTo (x, y);
+        (void) total;
+    });
+
+    // Close along the top edge
+    path.lineTo (area.getRight(), area.getY());
+    path.closeSubPath();
+
+    g.setColour (MLIMColours::gainReduction.withAlpha (0.75f));
+    g.fillPath (path);
+}
+
+void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
+                                        const juce::Rectangle<float>& area) const
+{
+    if (frameCount_ < 3) return;
+
+    int total = std::min (frameCount_, kHistorySize);
+    float colW = area.getWidth() / static_cast<float> (total);
+
+    // Build flat arrays for peak detection
+    std::vector<float> gr (static_cast<std::size_t> (total));
+    forEachFrame ([&] (int col, const Frame& f, int /*totalCols*/)
+    {
+        gr[static_cast<std::size_t> (col)] = f.gainReduction;
+    });
+
+    g.setColour (MLIMColours::peakLabel);
+    g.setFont (juce::Font (10.0f));
+
+    for (int i = 1; i < total - 1; ++i)
+    {
+        // Local maximum with a minimum threshold
+        if (gr[static_cast<std::size_t> (i)] > 0.5f
+            && gr[static_cast<std::size_t> (i)] >= gr[static_cast<std::size_t> (i - 1)]
+            && gr[static_cast<std::size_t> (i)] >= gr[static_cast<std::size_t> (i + 1)])
+        {
+            float x    = area.getX() + i * colW;
+            float h    = grToHeight (gr[static_cast<std::size_t> (i)], area);
+            float y    = area.getY() + h;
+            float grDB = gr[static_cast<std::size_t> (i)];
+            juce::String label = juce::String (grDB, 1) + "dB";
+
+            auto labelBounds = juce::Rectangle<float> (x - 20.0f, y + 2.0f, 40.0f, 12.0f);
+            g.drawText (label, labelBounds, juce::Justification::centred, false);
+        }
+    }
+}
+
+void WaveformDisplay::drawScale (juce::Graphics& g,
+                                  const juce::Rectangle<float>& area) const
+{
+    g.setColour (juce::Colour (0xff1E1E1E));
+    g.fillRect (area);
+
+    g.setColour (MLIMColours::panelBorder);
+    g.drawVerticalLine (juce::roundToInt (area.getX()), area.getY(), area.getBottom());
+
+    g.setFont (juce::Font (9.0f));
+
+    // Reuse the same dB grid values as background
+    for (float db : kGridDB)
+    {
+        float frac = (-db) / kMaxGRdB;
+        float y = area.getY() + frac * area.getHeight();
+        if (y < area.getY() || y > area.getBottom()) continue;
+
+        juce::String label = (db == 0.0f) ? "0" : juce::String (juce::roundToInt (db));
+        auto labelRect = juce::Rectangle<float> (area.getX() + 2.0f,
+                                                  y - 6.0f,
+                                                  area.getWidth() - 4.0f,
+                                                  12.0f);
+        g.setColour (MLIMColours::textSecondary);
+        g.drawText (label, labelRect, juce::Justification::centredLeft, false);
+    }
+}

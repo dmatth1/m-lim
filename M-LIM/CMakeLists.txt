@@ -54,7 +54,7 @@ target_compile_definitions(MLIMLib
         JUCE_USE_CURL=0
 )
 
-set_property(TARGET MLIMLib PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(MLIMLib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(MLIMLib
     PUBLIC
@@ -92,6 +92,8 @@ target_sources(MLIM
         src/ui/AlgorithmSelector.cpp
         src/ui/RotaryKnob.cpp
         src/ui/LevelMeter.cpp
+        src/ui/ControlStrip.cpp
+        src/ui/WaveformDisplay.cpp
 )
 
 target_compile_definitions(MLIM

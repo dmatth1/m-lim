@@ -1,6 +1,8 @@
 #include "SidechainFilter.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <cstdint>
 
 SidechainFilter::SidechainFilter()
 {
@@ -57,20 +59,35 @@ void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
     }
 }
 
+// Bit-exact comparison helper: avoids -Wfloat-equal while detecting unchanged values.
+static bool floatBitsEqual (float a, float b) noexcept
+{
+    uint32_t ia, ib;
+    std::memcpy (&ia, &a, sizeof(ia));
+    std::memcpy (&ib, &b, sizeof(ib));
+    return ia == ib;
+}
+
 void SidechainFilter::setHighPassFreq(float hz)
 {
+    if (floatBitsEqual (mPendingHP.load(std::memory_order_relaxed), hz))
+        return;
     mPendingHP.store(hz, std::memory_order_relaxed);
     mCoeffsDirty.store(true, std::memory_order_release);
 }
 
 void SidechainFilter::setLowPassFreq(float hz)
 {
+    if (floatBitsEqual (mPendingLP.load(std::memory_order_relaxed), hz))
+        return;
     mPendingLP.store(hz, std::memory_order_relaxed);
     mCoeffsDirty.store(true, std::memory_order_release);
 }
 
 void SidechainFilter::setTilt(float dB)
 {
+    if (floatBitsEqual (mPendingTilt.load(std::memory_order_relaxed), dB))
+        return;
     mPendingTilt.store(dB, std::memory_order_relaxed);
     mCoeffsDirty.store(true, std::memory_order_release);
 }

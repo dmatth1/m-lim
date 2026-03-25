@@ -123,7 +123,7 @@ private:
     std::atomic<float> mOutputCeilingLinear { 1.0f };
     std::atomic<int>   mAlgorithm { static_cast<int>(LimiterAlgorithm::Transparent) };
     std::atomic<bool>  mTruePeakEnabled { true };
-    std::atomic<bool>  mDCFilterEnabled { true };
+    std::atomic<bool>  mDCFilterEnabled { false };
     std::atomic<bool>  mDitherEnabled   { false };
     std::atomic<bool>  mBypass          { false };
     std::atomic<bool>  mDeltaMode       { false };
