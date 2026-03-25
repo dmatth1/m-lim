@@ -67,7 +67,6 @@ void MLIMAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     {
         const int factor = mPendingOversamplingFactor.load();
         limiterEngine.setOversamplingFactor (factor);
-        mAppliedOversamplingFactor = factor;
     }
 
     limiterEngine.prepare (sampleRate, samplesPerBlock, numChannels);
@@ -173,7 +172,6 @@ void MLIMAudioProcessor::handleAsyncUpdate()
     suspendProcessing (true);
 
     limiterEngine.setOversamplingFactor (factor);
-    mAppliedOversamplingFactor = factor;
 
     // Re-prepare the engine with the current audio session settings
     const double sr        = getSampleRate();
@@ -239,7 +237,6 @@ void MLIMAudioProcessor::initParameterPointers()
     pSidechainLPFreq       = apvts.getRawParameterValue (ParamID::sidechainLPFreq);
     pSidechainTilt         = apvts.getRawParameterValue (ParamID::sidechainTilt);
     pDelta                 = apvts.getRawParameterValue (ParamID::delta);
-    pDisplayMode           = apvts.getRawParameterValue (ParamID::displayMode);
 }
 
 void MLIMAudioProcessor::pushAllParametersToEngine()
