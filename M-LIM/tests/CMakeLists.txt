@@ -14,6 +14,7 @@ set(MLIM_TEST_CASES
     dsp/test_dsp_edge_cases.cpp
     integration/test_dsp_components.cpp
     dsp/test_limiter_engine.cpp
+    dsp/test_limiter_engine_modes.cpp
 )
 
 # Catch2 test executable — DSP sources come from MLIMLib
