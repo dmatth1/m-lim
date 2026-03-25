@@ -2,7 +2,6 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
-#include <deque>
 #include <array>
 #include <atomic>
 #include <limits>
@@ -96,8 +95,48 @@ private:
     static constexpr int kMomentaryBlocks  = 4;
     static constexpr int kShortTermBlocks  = 30;
 
-    std::deque<double> mMomentaryBuffer;  // up to 4 blocks
-    std::deque<double> mShortTermBuffer;  // up to 30 blocks
+    /** Fixed-capacity ring buffer with incremental running sum.
+     *  No heap allocation after construction — all storage is inline.
+     *  push() is O(1); sum()/mean() are O(1) (maintained incrementally). */
+    template<int N>
+    struct FixedRingBuffer
+    {
+        std::array<double, N> buf{};
+        int    head    = 0;    ///< index of oldest element
+        int    count   = 0;    ///< number of valid elements (0..N)
+        double runSum  = 0.0;  ///< maintained incrementally
+
+        void push(double val) noexcept
+        {
+            if (count == N)
+            {
+                runSum    -= buf[static_cast<size_t>(head)];
+                buf[static_cast<size_t>(head)] = val;
+                head       = (head + 1) % N;
+            }
+            else
+            {
+                buf[static_cast<size_t>((head + count) % N)] = val;
+                ++count;
+            }
+            runSum += val;
+        }
+
+        double sum()  const noexcept { return runSum; }
+        double mean() const noexcept { return count > 0 ? runSum / count : 0.0; }
+        bool   full() const noexcept { return count == N; }
+
+        void reset() noexcept
+        {
+            buf.fill(0.0);
+            head   = 0;
+            count  = 0;
+            runSum = 0.0;
+        }
+    };
+
+    FixedRingBuffer<kMomentaryBlocks> mMomentaryRing;
+    FixedRingBuffer<kShortTermBlocks> mShortTermRing;
 
     // -----------------------------------------------------------------------
     // Bounded circular history buffer (replaces unbounded mGatedBlockHistory).

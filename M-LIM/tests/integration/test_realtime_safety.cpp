@@ -26,14 +26,18 @@
 #include <new>
 #include <cmath>
 
+// Shared allocation-tracking utilities (AllocGuard, g_allocCount, g_trackAllocs).
+#include "alloc_tracking.h"
+
 // ---------------------------------------------------------------------------
-// Allocation tracking
+// Allocation tracking — thread-local counters (external linkage so other
+// translation units can access them via alloc_tracking.h).
 // ---------------------------------------------------------------------------
 
 // Thread-local so allocations on other threads (if any) are not counted,
 // and so Catch2's own bookkeeping does not trigger false failures.
-static thread_local int  g_allocCount  = 0;
-static thread_local bool g_trackAllocs = false;
+thread_local int  g_allocCount  = 0;
+thread_local bool g_trackAllocs = false;
 
 void* operator new(std::size_t sz)
 {
@@ -59,20 +63,6 @@ void  operator delete  (void* p) noexcept               { std::free(p); }
 void  operator delete[](void* p) noexcept               { std::free(p); }
 void  operator delete  (void* p, std::size_t) noexcept  { std::free(p); }
 void  operator delete[](void* p, std::size_t) noexcept  { std::free(p); }
-
-/**
- * RAII guard: enables allocation tracking on construction, disables on
- * destruction. Resets the counter at construction time so only allocations
- * within the guarded region are measured.
- */
-struct AllocGuard
-{
-    AllocGuard()  { g_allocCount = 0; g_trackAllocs = true; }
-    ~AllocGuard() { g_trackAllocs = false; }
-
-    /** Snapshot the current count (call inside the guarded block). */
-    int count() const noexcept { return g_allocCount; }
-};
 
 // ---------------------------------------------------------------------------
 // Helpers

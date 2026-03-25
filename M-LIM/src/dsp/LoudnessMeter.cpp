@@ -25,8 +25,8 @@ void LoudnessMeter::prepare(double sampleRate, int numChannels)
     mBlockAccum = 0;
     mBlockPower = 0.0;
 
-    mMomentaryBuffer.clear();
-    mShortTermBuffer.clear();
+    mMomentaryRing.reset();
+    mShortTermRing.reset();
 
     mMomentaryLUFS.store(kNegInf);
     mShortTermLUFS.store(kNegInf);
@@ -155,31 +155,18 @@ void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
 void LoudnessMeter::onBlockComplete(double blockMeanSquare)
 {
     // --- Momentary (400 ms = 4 blocks) ---
-    mMomentaryBuffer.push_back(blockMeanSquare);
-    if (static_cast<int>(mMomentaryBuffer.size()) > kMomentaryBlocks)
-        mMomentaryBuffer.pop_front();
+    mMomentaryRing.push(blockMeanSquare);
 
     // --- Short-term (3 s = 30 blocks) ---
-    mShortTermBuffer.push_back(blockMeanSquare);
-    if (static_cast<int>(mShortTermBuffer.size()) > kShortTermBlocks)
-        mShortTermBuffer.pop_front();
+    mShortTermRing.push(blockMeanSquare);
 
-    // --- Update momentary LUFS ---
-    if (static_cast<int>(mMomentaryBuffer.size()) == kMomentaryBlocks)
-    {
-        double sum = 0.0;
-        for (double v : mMomentaryBuffer)
-            sum += v;
-        mMomentaryLUFS.store(powerToLUFS(sum / kMomentaryBlocks));
-    }
+    // --- Update momentary LUFS (requires full 400 ms window) ---
+    if (mMomentaryRing.full())
+        mMomentaryLUFS.store(powerToLUFS(mMomentaryRing.mean()));
 
     // --- Update short-term LUFS ---
-    {
-        double sum = 0.0;
-        for (double v : mShortTermBuffer)
-            sum += v;
-        mShortTermLUFS.store(powerToLUFS(sum / static_cast<double>(mShortTermBuffer.size())));
-    }
+    if (mShortTermRing.count > 0)
+        mShortTermLUFS.store(powerToLUFS(mShortTermRing.mean()));
 
     // --- Append to circular history buffer (no allocation) ---
     pushHistory(blockMeanSquare);

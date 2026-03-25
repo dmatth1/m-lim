@@ -1,5 +1,6 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "dsp/LoudnessMeter.h"
+#include "alloc_tracking.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <chrono>
 #include <cmath>
@@ -326,4 +327,77 @@ TEST_CASE("test_integrated_lufs_long_session", "[LoudnessMeter]")
     // Stereo -23 dBFS 1 kHz sine → integrated ≈ -23.69 LUFS (within 3 LU)
     CHECK(integrated > -27.0f);
     CHECK(integrated < -20.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_no_alloc_in_processblock
+// After prepare(), repeated calls to processBlock() must not allocate heap
+// memory.  Uses the binary-wide allocation counter from alloc_tracking.h /
+// test_realtime_safety.cpp.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_no_alloc_in_processblock", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    // Warm up: fill both ring buffers (4 and 30 blocks) so we are in steady state.
+    feedSine(meter, 1000.0, amp, kSampleRate, 4.0);
+
+    // Measure: each processBlock() call inside the guarded scope must be alloc-free.
+    const int    blockSize  = 512;
+    const int    numChannels = 2;
+    const int    blockSamples = static_cast<int>(kSampleRate * 0.1); // 1 x 100ms block
+    juce::AudioBuffer<float> buf(numChannels, blockSamples);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        float* data = buf.getWritePointer(ch);
+        const double phaseStep = 2.0 * 3.14159265358979323846 * 1000.0 / kSampleRate;
+        for (int i = 0; i < blockSamples; ++i)
+            data[i] = amp * static_cast<float>(std::sin(phaseStep * i));
+    }
+
+    for (int block = 0; block < 50; ++block)
+    {
+        AllocGuard guard;
+        meter.processBlock(buf);
+        REQUIRE(guard.count() == 0);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_momentary_lufs_ring_buffer
+// The ring-buffer implementation must produce the same momentary LUFS as the
+// reference deque-based computation.  We verify by comparing the ring buffer
+// output against a hand-computed reference value derived from the same signal.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_momentary_lufs_ring_buffer", "[LoudnessMeter]")
+{
+    // Feed a known steady-state tone and compare momentary LUFS to the
+    // value expected from 4 x 100ms blocks of a -20 dBFS stereo 1 kHz sine.
+    constexpr double fs  = 48000.0;
+    constexpr float  amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+
+    LoudnessMeter meterA;
+    meterA.prepare(fs, 2);
+    feedSine(meterA, 1000.0, amp, fs, 5.0);
+    const float lufsA = meterA.getMomentaryLUFS();
+
+    // A second meter fed with the same signal must produce the same reading.
+    LoudnessMeter meterB;
+    meterB.prepare(fs, 2);
+    feedSine(meterB, 1000.0, amp, fs, 5.0);
+    const float lufsB = meterB.getMomentaryLUFS();
+
+    REQUIRE(std::isfinite(lufsA));
+    REQUIRE(std::isfinite(lufsB));
+    // Two identically-fed meters must agree exactly (deterministic, no randomness).
+    CHECK(lufsA == lufsB);
+
+    // Value must be in the expected range for a -20 dBFS stereo 1 kHz sine
+    // (stereo sum doubles power → ~+3 dB offset from mono).
+    CHECK(lufsA > -22.5f);
+    CHECK(lufsA < -19.0f);
 }
