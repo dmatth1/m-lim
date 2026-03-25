@@ -14,7 +14,7 @@ TopBar::TopBar()
     presetLabel_.setText ("Default", juce::dontSendNotification);
     presetLabel_.setFont (juce::Font (12.0f));
     presetLabel_.setColour (juce::Label::textColourId,       MLIMColours::textPrimary);
-    presetLabel_.setColour (juce::Label::backgroundColourId, juce::Colour (0xff232323));
+    presetLabel_.setColour (juce::Label::backgroundColourId, MLIMColours::topBarPresetBackground);
     presetLabel_.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (presetLabel_);
 
@@ -64,8 +64,8 @@ juce::String TopBar::getPresetName() const
 
 void TopBar::styleBarButton (juce::TextButton& btn)
 {
-    btn.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff2A2A2A));
-    btn.setColour (juce::TextButton::buttonOnColourId,juce::Colour (0xff3A3A3A));
+    btn.setColour (juce::TextButton::buttonColourId,  MLIMColours::widgetBackground);
+    btn.setColour (juce::TextButton::buttonOnColourId,MLIMColours::buttonPressedBackground);
     btn.setColour (juce::TextButton::textColourOffId, MLIMColours::textSecondary);
     btn.setColour (juce::TextButton::textColourOnId,  MLIMColours::textPrimary);
 }
@@ -74,7 +74,7 @@ void TopBar::styleBarButton (juce::TextButton& btn)
 
 void TopBar::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff1A1A1A));
+    g.fillAll (MLIMColours::peakLabelBackground);
 
     // Bottom separator line
     g.setColour (MLIMColours::panelBorder);

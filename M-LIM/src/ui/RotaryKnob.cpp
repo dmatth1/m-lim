@@ -62,7 +62,7 @@ void RotaryKnob::paint (juce::Graphics& g)
             const float sinA = std::sin (angle);
             const float cosA = std::cos (angle);
 
-            g.setColour (juce::Colour (0xff555555).withAlpha (alpha));
+            g.setColour (MLIMColours::knobArcDim.withAlpha (alpha));
             g.drawLine (centreX + sinA * innerR, centreY - cosA * innerR,
                         centreX + sinA * outerR,  centreY - cosA * outerR,
                         thickness);

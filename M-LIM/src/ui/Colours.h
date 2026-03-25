@@ -5,11 +5,12 @@
 namespace MLIMColours
 {
     // Background colours
-    const juce::Colour background           { 0xff1E1E1E };
-    const juce::Colour displayBackground    { 0xff141414 };
-    const juce::Colour panelBorder          { 0xff333333 };
-    const juce::Colour widgetBackground     { 0xff2A2A2A };  // combo boxes, tooltips, etc.
-    const juce::Colour peakLabelBackground  { 0xff1A1A1A };  // dark background behind peak labels
+    const juce::Colour background               { 0xff1E1E1E };
+    const juce::Colour displayBackground        { 0xff141414 };
+    const juce::Colour panelBorder              { 0xff333333 };
+    const juce::Colour widgetBackground         { 0xff2A2A2A };  // combo boxes, tooltips, etc.
+    const juce::Colour peakLabelBackground      { 0xff1A1A1A };  // dark background behind peak labels
+    const juce::Colour topBarPresetBackground   { 0xff232323 };  // slightly lighter background for preset label
 
     // Waveform display gradient colours
     const juce::Colour displayGradientTop   { 0xff141828 };  // dark navy
@@ -32,6 +33,7 @@ namespace MLIMColours
     const juce::Colour knobFaceHighlight{ 0xff7080A0 };  // knob highlight for 3D gradient
     const juce::Colour knobFaceShadow   { 0xff303448 };  // knob shadow for 3D gradient
     const juce::Colour knobArc          { 0xff4888C8 };  // medium blue arc for clear value visibility
+    const juce::Colour knobArcDim       { 0xff555555 };  // dim grey for inactive/minimum arc tick marks
     const juce::Colour knobPointer      { 0xffFFFFFF };
     const juce::Colour sliderFill       { 0xff2196F3 };  // accent blue for linear slider fills
 
@@ -49,9 +51,10 @@ namespace MLIMColours
     const juce::Colour controlStripBottom { 0xff2A2D3A };  // darker blue-gray (bottom)
 
     // Button colours
-    const juce::Colour buttonBackground  { 0xff242424 };  // default button/toggle background
-    const juce::Colour buttonOnBackground{ 0xff1A4A1A };  // toggle-on background (dark green)
-    const juce::Colour buttonOnText      { 0xff66DD66 };  // toggle-on text (bright green)
+    const juce::Colour buttonBackground         { 0xff242424 };  // default button/toggle background
+    const juce::Colour buttonOnBackground       { 0xff1A4A1A };  // toggle-on background (dark green)
+    const juce::Colour buttonOnText             { 0xff66DD66 };  // toggle-on text (bright green)
+    const juce::Colour buttonPressedBackground  { 0xff3A3A3A };  // active/pressed state background
 
     // Panel overlay
     const juce::Colour panelOverlay      { 0x20FFFFFF };  // semi-transparent overlay for panels
