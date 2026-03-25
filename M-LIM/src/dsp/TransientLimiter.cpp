@@ -37,6 +37,9 @@ void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numC
     mWritePos.assign(numChannels, 0);
     mGainState.assign(numChannels, 1.0f);
 
+    mSidechainDelayBuffers.assign(numChannels, std::vector<float>(mMaxLookaheadSamples + 1, 0.0f));
+    mSidechainWritePos.assign(numChannels, 0);
+
     // Default release: ~50 ms
     const float releaseMs = 50.0f;
     mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(sampleRate)));
@@ -170,20 +173,25 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
     for (int s = 0; s < numSamples; ++s)
     {
-        // --- 1. Write input into delay buffers ---------------------------------
+        // --- 1. Write input (and sidechain) into delay buffers -----------------
         for (int ch = 0; ch < chCount; ++ch)
         {
-            float sample = channelData[ch][s];
             if (!bypassDelay)
             {
-                mDelayBuffers[ch][mWritePos[ch]] = sample;
+                mDelayBuffers[ch][mWritePos[ch]] = channelData[ch][s];
                 mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
+
+                if (sidechainData != nullptr)
+                {
+                    mSidechainDelayBuffers[ch][mSidechainWritePos[ch]] = sidechainData[ch][s];
+                    mSidechainWritePos[ch] = (mSidechainWritePos[ch] + 1) % bufSize;
+                }
             }
         }
 
         // --- 2. Find per-channel peak in lookahead window ----------------------
-        //        When sidechain provided, use it; otherwise use main input.
-        //        For delay path: scan the delay buffer contents (future audio).
+        //        When sidechain provided, scan sidechain delay buffer.
+        //        Otherwise scan main delay buffer.
         //        For bypass path: just use current input sample directly.
         float perChRequiredGain[8];  // supports up to 8 channels (7.1 surround)
         for (int ch = 0; ch < chCount; ++ch)
@@ -200,32 +208,24 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
             }
             else
             {
-                // Scan all samples currently in the delay buffer.
-                // The buffer holds up to mMaxLookaheadSamples+1 samples;
-                // with valid lookahead only lookahead entries have been written.
-                const auto& buf = (sidechainData != nullptr)
-                                      ? mDelayBuffers[ch]  // sidechain case handled below
-                                      : mDelayBuffers[ch];
+                // Choose which delay buffer to scan for detection:
+                // - sidechain path: scan sidechain delay buffer
+                // - main path: scan main delay buffer
+                const std::vector<float>& scanBuf = (sidechainData != nullptr)
+                                                        ? mSidechainDelayBuffers[ch]
+                                                        : mDelayBuffers[ch];
+                const int scanWritePos = (sidechainData != nullptr)
+                                             ? mSidechainWritePos[ch]
+                                             : mWritePos[ch];
 
-                (void)buf; // suppress unused warning; real scan below
-
-                const std::vector<float>& scanBuf = mDelayBuffers[ch];
-                // Scan lookahead samples behind and up to write cursor
                 peakAbs = 0.0f;
-                int rpos = (mWritePos[ch] - 1 + bufSize) % bufSize;  // most recently written
+                int rpos = (scanWritePos - 1 + bufSize) % bufSize;  // most recently written
                 for (int k = 0; k < lookahead; ++k)
                 {
                     const float val = std::abs(scanBuf[rpos]);
                     if (val > peakAbs)
                         peakAbs = val;
                     rpos = (rpos - 1 + bufSize) % bufSize;
-                }
-
-                // If sidechain provided, we still need to write sidechain into a
-                // separate scan. We handle sidechain by overriding peakAbs here:
-                if (sidechainData != nullptr)
-                {
-                    peakAbs = std::abs(sidechainData[ch][s]);
                 }
             }
 

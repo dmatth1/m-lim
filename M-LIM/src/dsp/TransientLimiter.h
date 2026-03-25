@@ -64,9 +64,13 @@ private:
     float  mThreshold     = 1.0f;   // linear ceiling (default 0 dBFS)
     AlgorithmParams mParams{};
 
-    // Per-channel circular delay buffers (size = mMaxLookaheadSamples + 1)
+    // Per-channel circular delay buffers for main audio (size = mMaxLookaheadSamples + 1)
     std::vector<std::vector<float>> mDelayBuffers;
     std::vector<int> mWritePos;
+
+    // Per-channel circular delay buffers for sidechain detection signal
+    std::vector<std::vector<float>> mSidechainDelayBuffers;
+    std::vector<int> mSidechainWritePos;
 
     // Per-channel smoothed gain state (linear, 0–1; 1 = unity, <1 = reducing)
     std::vector<float> mGainState;

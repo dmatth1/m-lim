@@ -274,6 +274,73 @@ TEST_CASE("test_passthrough_below_threshold", "[TransientLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_sidechain_with_lookahead
+//   When sidechainData is provided and lookahead is enabled, the sidechain
+//   delay buffer must be scanned for peaks (not just the current sidechain
+//   sample).  This means that when the sidechain peak at step N triggers GR,
+//   the scan window keeps that peak visible for the next lookaheadSamples steps,
+//   maintaining the instant-attack gain level throughout the window.
+//
+//   Consequence: the main audio sample that was written at step N is delayed
+//   by (lookaheadSamples - 1) and arrives at the output at step
+//   N + lookaheadSamples - 1.  With the scan active throughout the window,
+//   GR is still at its peak level when this delayed sample is output, so it
+//   cannot exceed the threshold.  Without the scan (bug: only current sample
+//   read), GR would already be releasing by then, and the delayed main peak
+//   would overshoot the threshold.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_with_lookahead", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);  // mono
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;   // hard knee for clear onset
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+
+    const float lookaheadMs = 2.0f;
+    limiter.setLookahead(lookaheadMs);
+    const int lookaheadSamples =
+        static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+    // Main audio: silence everywhere except a large peak at mainPeakPos.
+    // Sidechain: same peak at the same position.
+    //
+    // With lookahead = L, the main peak at input step mainPeakPos arrives at
+    // the output at output step mainPeakPos + L - 1.  The sidechain peak is
+    // detected at output step mainPeakPos.  With correct scan-window lookahead,
+    // GR is held at peak level for the full lookahead window and is still at
+    // its maximum at step mainPeakPos + L - 1, keeping the delayed main peak
+    // within threshold.
+    const int mainPeakPos = 300;
+    std::vector<std::vector<float>> mainBuf(1, std::vector<float>(kBlockSize, 0.0f));
+    mainBuf[0][mainPeakPos] = 4.0f;
+
+    std::vector<std::vector<float>> scBuf(mainBuf);  // sidechain mirrors main
+
+    auto mainPtrs = makePtrs(mainBuf);
+    std::vector<const float*> scPtrs = { scBuf[0].data() };
+    limiter.process(mainPtrs.data(), 1, kBlockSize,
+                    reinterpret_cast<const float* const*>(scPtrs.data()));
+
+    // Overall output peak must not exceed threshold.
+    // (Without the sidechain scan fix, the delayed main peak at output step
+    //  mainPeakPos + lookaheadSamples - 1 would overshoot because GR has
+    //  partially released over those steps.)
+    REQUIRE(blockPeak(mainBuf[0]) <= 1.0f + 1e-4f);
+
+    // GR must have been applied (sidechain detection was active).
+    REQUIRE(limiter.getGainReduction() <= -1.0f);
+
+    // Explicitly verify the output at the exact step where the delayed main
+    // peak arrives — this is the critical moment where the scan fix matters.
+    const int delayedPeakPos = mainPeakPos + lookaheadSamples - 1;
+    if (delayedPeakPos < kBlockSize)
+        REQUIRE(mainBuf[0][delayedPeakPos] <= 1.0f + 1e-4f);
+}
+
+// ---------------------------------------------------------------------------
 // test_custom_threshold
 //   setThreshold() must change the level at which gain reduction activates.
 //   At threshold=0.5, a signal at 0.8 must be limited; at threshold=1.0 the
