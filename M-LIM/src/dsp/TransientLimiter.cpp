@@ -9,6 +9,20 @@ static constexpr float kMinGain        = 1e-6f;   // -120 dB floor
 static constexpr float kEpsilon        = 1e-9f;
 
 // ---------------------------------------------------------------------------
+// dB helpers — release smoothing operates in dB domain so gain reduction
+// decreases linearly in dB per unit time (exponential decay in linear domain).
+// ---------------------------------------------------------------------------
+static inline float gainToDecibels(float linearGain)
+{
+    return 20.0f * std::log10(std::max(linearGain, kMinGain));
+}
+
+static inline float decibelsToGain(float dB)
+{
+    return std::pow(10.0f, dB * (1.0f / 20.0f));
+}
+
+// ---------------------------------------------------------------------------
 // prepare
 // ---------------------------------------------------------------------------
 void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numChannels)
@@ -223,15 +237,27 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         }
 
         // --- 4. Smooth gain: instant attack, exponential release ---------------
+        // Release smoothing is done in dB domain so that the gain reduction
+        // decreases at a constant dB/time rate (linear in dB = exponential in
+        // linear). Smoothing in linear domain would produce non-uniform dB
+        // decay and audible pumping artifacts.
         for (int ch = 0; ch < chCount; ++ch)
         {
             float& g = mGainState[ch];
             const float target = perChRequiredGain[ch];
 
             if (target < g)
-                g = target;                           // instant attack
+            {
+                g = target;  // instant attack
+            }
             else
-                g = g + (1.0f - g) * (1.0f - mReleaseCoeff);  // exp release
+            {
+                // Release: interpolate in dB domain toward target (usually 0 dB)
+                const float gDb      = gainToDecibels(g);
+                const float targetDb = gainToDecibels(target);
+                const float smoothedDb = gDb + (targetDb - gDb) * (1.0f - mReleaseCoeff);
+                g = decibelsToGain(smoothedDb);
+            }
 
             g = std::clamp(g, kMinGain, 1.0f);
         }

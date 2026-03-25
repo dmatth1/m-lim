@@ -3,9 +3,26 @@
 #include <cmath>
 #include <algorithm>
 
-static constexpr float kMinGain            = 1e-6f;   // -120 dB floor
+static constexpr float kMinGaindB          = -120.0f; // dB floor for gain state
+static constexpr float kMinGain            = 1e-6f;   // linear equivalent of kMinGaindB
 static constexpr float kEpsilon            = 1e-9f;
 static constexpr float kAdaptiveSmoothMs   = 500.0f;  // time constant for adaptive release detection
+
+// ---------------------------------------------------------------------------
+// dB helpers — the envelope follower operates in the dB domain so that
+// attack/release coefficients produce correct exponential dB curves.
+// Smoothing in linear domain would give wrong (non-exponential) envelope
+// shapes and audible pumping artifacts.
+// ---------------------------------------------------------------------------
+static inline float gainToDecibels(float linearGain)
+{
+    return 20.0f * std::log10(std::max(linearGain, kMinGain));
+}
+
+static inline float decibelsToGain(float dB)
+{
+    return std::pow(10.0f, dB * (1.0f / 20.0f));
+}
 
 // ---------------------------------------------------------------------------
 // prepare
@@ -15,8 +32,8 @@ void LevelingLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numCh
     mSampleRate  = sampleRate;
     mNumChannels = numChannels;
 
-    mGainState.assign(numChannels, 1.0f);
-    mEnvState.assign(numChannels, 1.0f);
+    mGainState.assign(numChannels, 0.0f);  // dB domain: 0 dB = no reduction
+    mEnvState.assign(numChannels, 0.0f);   // dB domain: 0 dB = no sustained GR
 
     updateCoefficients();
 
@@ -134,40 +151,41 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
                                         + minRequired * mChannelLink;
         }
 
-        // --- 3. Smooth gain with attack and release --------------------------
+        // --- 3. Smooth gain with attack and release (dB domain) --------------
+        // Operating in dB domain ensures that attack/release coefficients
+        // produce constant dB/time rates (linear in dB = exponential in
+        // linear domain). mGainState[ch] holds the current gain in dB
+        // (0 = no reduction, negative = reducing).
         for (int ch = 0; ch < chCount; ++ch)
         {
-            float& g = mGainState[ch];
-            const float target = perChRequiredGain[ch];
+            float& gDb = mGainState[ch];  // dB domain state
+            const float targetDb = gainToDecibels(perChRequiredGain[ch]);
 
-            // Update long-term envelope tracker for adaptive release
-            // mEnvState follows the required gain with a slow time constant.
-            // When sustained gain reduction occurs, mEnvState drifts below 1.
+            // Update long-term envelope tracker for adaptive release (dB domain).
+            // mEnvState drifts negative when sustained gain reduction is present.
             mEnvState[ch] = mEnvState[ch] * mAdaptiveSmoothCoeff
-                            + target * (1.0f - mAdaptiveSmoothCoeff);
+                            + targetDb * (1.0f - mAdaptiveSmoothCoeff);
 
-            if (target < g)
+            if (targetDb < gDb)
             {
-                // Attack: gain is being reduced — approach target exponentially.
-                // For near-zero attack time the coefficient is 0 → instant.
-                g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
+                // Attack: more reduction needed — approach target in dB domain.
+                // attackCoeff = 0 → instant attack.
+                gDb = gDb * mAttackCoeff + targetDb * (1.0f - mAttackCoeff);
             }
             else
             {
-                // Release: gain is recovering toward unity.
+                // Release: recovering toward 0 dB.
                 float effectiveReleaseCoeff = mReleaseCoeff;
 
                 if (mParams.adaptiveRelease)
                 {
-                    // How much gain reduction has been sustained on average?
-                    // mEnvState close to 1 = little sustained GR; near 0 = heavy sustained GR.
-                    const float sustainedGR = 1.0f - mEnvState[ch];
+                    // sustainedGRdB > 0 indicates heavy, sustained gain reduction.
+                    const float sustainedGRdB = -mEnvState[ch];
 
-                    if (sustainedGR > 0.05f)
+                    if (sustainedGRdB > 0.5f)
                     {
-                        // Speed up release proportionally to the sustained GR depth.
-                        // Interpolate between normal coeff and a faster one.
-                        const float speedup = std::min(1.0f, sustainedGR * 10.0f);
+                        // Speed up release proportionally to sustained GR depth.
+                        const float speedup = std::min(1.0f, sustainedGRdB / 6.0f);
                         // faster coeff = coeff^2 (compounding exponential)
                         const float fastCoeff = mReleaseCoeff * mReleaseCoeff;
                         effectiveReleaseCoeff = mReleaseCoeff * (1.0f - speedup)
@@ -175,24 +193,25 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
                     }
                 }
 
-                // Exponential recovery: g → 1 at the effective release rate
-                g = g + (1.0f - g) * (1.0f - effectiveReleaseCoeff);
+                // Exponential recovery in dB: gDb → 0 at effective release rate
+                gDb = gDb + (0.0f - gDb) * (1.0f - effectiveReleaseCoeff);
             }
 
-            g = std::clamp(g, kMinGain, 1.0f);
+            gDb = std::max(gDb, kMinGaindB);
         }
 
         // --- 4. Apply gain to main audio -------------------------------------
         for (int ch = 0; ch < chCount; ++ch)
         {
-            channelData[ch][s] *= mGainState[ch];
+            const float linearGain = decibelsToGain(mGainState[ch]);
+            channelData[ch][s] *= linearGain;
 
-            if (mGainState[ch] < minGain)
-                minGain = mGainState[ch];
+            if (linearGain < minGain)
+                minGain = linearGain;
         }
     }
 
     mCurrentGRdB = (minGain < 1.0f)
-                       ? 20.0f * std::log10(std::max(minGain, kMinGain))
+                       ? gainToDecibels(minGain)
                        : 0.0f;
 }

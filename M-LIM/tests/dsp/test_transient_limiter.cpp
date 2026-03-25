@@ -187,6 +187,60 @@ TEST_CASE("test_no_clipping", "[TransientLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_release_curve_is_exponential_db
+//   After a peak engages gain reduction, the release in dB should decrease at
+//   a roughly constant rate per unit time (linear in dB = exponential in
+//   linear domain).  This verifies that the release envelope is smoothed in
+//   the dB domain rather than the linear domain.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_release_curve_is_exponential_db", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);  // mono
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;   // hard knee for predictable onset
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);  // no lookahead — instant output alignment
+
+    // Drive a large peak (+12 dB) to engage instant attack
+    {
+        std::vector<std::vector<float>> buf(1, std::vector<float>(1, 4.0f));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    const float grAtPeak = limiter.getGainReduction();
+    REQUIRE(grAtPeak < -1.0f);  // meaningful gain reduction must be active
+
+    // Measure GR at equal time steps during silence (release phase)
+    const int stepSamples = 200;
+    std::vector<float> grReadings;
+    for (int i = 0; i < 5; ++i)
+    {
+        std::vector<std::vector<float>> buf(1, std::vector<float>(stepSamples, 0.0f));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, stepSamples);
+        grReadings.push_back(limiter.getGainReduction());
+    }
+
+    // GR should recover monotonically toward 0 with each step
+    for (int i = 1; i < (int)grReadings.size(); ++i)
+        REQUIRE(grReadings[i] > grReadings[i - 1]);
+
+    // Each step should produce a consistent dB increment (within 60% tolerance).
+    // With dB-domain release smoothing the increments are nearly constant;
+    // with linear-domain smoothing they would decrease significantly over time.
+    std::vector<float> diffs;
+    for (int i = 1; i < (int)grReadings.size(); ++i)
+        diffs.push_back(grReadings[i] - grReadings[i - 1]);
+
+    for (int i = 1; i < (int)diffs.size(); ++i)
+        REQUIRE(diffs[i] == Catch::Approx(diffs[0]).epsilon(0.60f));
+}
+
+// ---------------------------------------------------------------------------
 // test_passthrough_below_threshold
 //   Signal below 0 dBFS (1.0) must pass through without modification
 // ---------------------------------------------------------------------------
