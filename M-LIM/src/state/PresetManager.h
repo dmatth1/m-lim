@@ -53,12 +53,14 @@ private:
     juce::String currentPresetName;
 
     /**
-     * Advances the preset cursor to the next/previous name in the sorted list.
-     * Does NOT load the preset into APVTS.  Use loadNextPreset() /
-     * loadPreviousPreset() from external code.
+     * Advances the preset cursor by direction (+1 = next, -1 = previous) in
+     * the sorted list, wrapping around at both ends.  Calls getPresetNames()
+     * exactly once.
+     *
+     * @return The new preset name after stepping, or an empty string if the
+     *         preset list is empty.
      */
-    void nextPreset();
-    void previousPreset();
+    juce::String stepPreset(int direction);
 
     /** Returns the File for a preset name (root directory only for saves). */
     juce::File presetFileForName(const juce::String& name) const;

@@ -67,68 +67,36 @@ juce::StringArray PresetManager::getPresetNames() const
     return names;
 }
 
-bool PresetManager::loadNextPreset(juce::AudioProcessorValueTreeState& apvts)
+juce::String PresetManager::stepPreset(int direction)
 {
     auto names = getPresetNames();
     if (names.isEmpty())
-        return false;
+        return {};
 
     int index = names.indexOf(currentPresetName);
     if (index < 0)
         index = 0;
     else
-        index = (index + 1) % names.size();
+        index = (index + direction + names.size()) % names.size();
 
-    // Advance the cursor unconditionally so getCurrentPresetName() is correct
-    // even if the load fails (shouldn't happen for healthy presets).
     currentPresetName = names[index];
-    return loadPreset(currentPresetName, apvts);
+    return currentPresetName;
+}
+
+bool PresetManager::loadNextPreset(juce::AudioProcessorValueTreeState& apvts)
+{
+    auto name = stepPreset(+1);
+    if (name.isEmpty())
+        return false;
+    return loadPreset(name, apvts);
 }
 
 bool PresetManager::loadPreviousPreset(juce::AudioProcessorValueTreeState& apvts)
 {
-    auto names = getPresetNames();
-    if (names.isEmpty())
+    auto name = stepPreset(-1);
+    if (name.isEmpty())
         return false;
-
-    int index = names.indexOf(currentPresetName);
-    if (index < 0)
-        index = 0;
-    else
-        index = (index - 1 + names.size()) % names.size();
-
-    currentPresetName = names[index];
-    return loadPreset(currentPresetName, apvts);
-}
-
-void PresetManager::nextPreset()
-{
-    auto names = getPresetNames();
-    if (names.isEmpty())
-        return;
-
-    int index = names.indexOf(currentPresetName);
-    if (index < 0)
-        index = 0;
-    else
-        index = (index + 1) % names.size();
-
-    currentPresetName = names[index];
-}
-
-void PresetManager::previousPreset()
-{
-    auto names = getPresetNames();
-    if (names.isEmpty())
-        return;
-
-    int index = names.indexOf(currentPresetName);
-    if (index < 0)
-        index = 0;
-    else
-        index = (index - 1 + names.size()) % names.size();
-
-    currentPresetName = names[index];
+    return loadPreset(name, apvts);
 }
 
 juce::String PresetManager::getCurrentPresetName() const

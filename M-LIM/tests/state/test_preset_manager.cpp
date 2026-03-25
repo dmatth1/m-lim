@@ -333,6 +333,41 @@ TEST_CASE("test_load_previous_advances_and_loads", "[PresetManager]")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_load_next_twice_advances_from_last_loaded", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+
+    // Save three presets with distinct gain values (sorted order: A, B, C)
+    *gainParam = -3.0f;
+    pm.savePreset("A", proc.apvts);
+    *gainParam = -6.0f;
+    pm.savePreset("B", proc.apvts);
+    *gainParam = -9.0f;
+    pm.savePreset("C", proc.apvts);
+
+    // After saving "C" the cursor is at "C"
+    REQUIRE(pm.getCurrentPresetName() == "C");
+
+    // First loadNextPreset: C -> A (wrap)
+    bool ok1 = pm.loadNextPreset(proc.apvts);
+    REQUIRE(ok1 == true);
+    REQUIRE(pm.getCurrentPresetName() == "A");
+    REQUIRE(gainParam->get() == Catch::Approx(-3.0f).epsilon(0.01f));
+
+    // Second loadNextPreset: A -> B (continues from where the first call left off)
+    bool ok2 = pm.loadNextPreset(proc.apvts);
+    REQUIRE(ok2 == true);
+    REQUIRE(pm.getCurrentPresetName() == "B");
+    REQUIRE(gainParam->get() == Catch::Approx(-6.0f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 TEST_CASE("test_factory_presets_exist", "[PresetManager]")
 {
     // Point PresetManager at the source-tree presets directory which contains
