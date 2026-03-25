@@ -410,36 +410,45 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
     int total = std::min (frameCount_, kHistorySize);
     float colW = area.getWidth() / static_cast<float> (total);
 
-    // Build flat arrays for peak detection (reuse pre-allocated scratch buffer)
-    auto& gr = mGrScratch_;
+    // Build flat array of input levels (reuse pre-allocated scratch buffer)
+    auto& inp = mGrScratch_;
     forEachFrame ([&] (int col, const Frame& f, int /*totalCols*/)
     {
-        gr[static_cast<std::size_t> (col)] = f.gainReduction;
+        inp[static_cast<std::size_t> (col)] = f.inputLevel;
     });
 
-    g.setColour (MLIMColours::peakLabel);
-    g.setFont (juce::Font (10.0f));
+    g.setFont (juce::Font (9.0f));
+
+    float lastLabelX = -100.0f; // track last drawn label x to avoid overlap
 
     for (int i = 1; i < total - 1; ++i)
     {
-        // Local maximum with a minimum threshold
-        if (gr[static_cast<std::size_t> (i)] > 0.5f
-            && gr[static_cast<std::size_t> (i)] >= gr[static_cast<std::size_t> (i - 1)]
-            && gr[static_cast<std::size_t> (i)] >= gr[static_cast<std::size_t> (i + 1)])
+        float v = inp[static_cast<std::size_t> (i)];
+
+        // Local maximum in input level above ~-6 dBFS threshold (linear 0.5)
+        if (v > 0.5f
+            && v >= inp[static_cast<std::size_t> (i - 1)]
+            && v >= inp[static_cast<std::size_t> (i + 1)])
         {
-            float x    = area.getX() + i * colW;
-            float h    = grToHeight (gr[static_cast<std::size_t> (i)], area);
-            float y    = area.getY() + h;
-            float grDB = gr[static_cast<std::size_t> (i)];
-            juce::String label = juce::String (grDB, 1) + "dB";
+            float x = area.getX() + i * colW;
+
+            // Skip if too close to previous label
+            if (x - lastLabelX < 15.0f)
+                continue;
+
+            float y    = levelToY (v, area);
+            float dBFS = 20.0f * std::log10 (juce::jlimit (1e-6f, 1.0f, v));
+            juce::String label = juce::String (dBFS, 1);
 
             float labelW = g.getCurrentFont().getStringWidthFloat (label) + 8.0f;
-            auto bgRect = juce::Rectangle<float> (x - labelW * 0.5f, y + 2.0f, labelW, 14.0f);
+            // Position badge slightly above the peak
+            auto bgRect = juce::Rectangle<float> (x - labelW * 0.5f, y - 16.0f, labelW, 14.0f);
             g.setColour (MLIMColours::peakLabel.withAlpha (0.85f));
             g.fillRoundedRectangle (bgRect, 3.0f);
             g.setColour (juce::Colour (0xff1A1A1A));
-            g.setFont (juce::Font (9.0f));
             g.drawText (label, bgRect, juce::Justification::centred, false);
+
+            lastLabelX = x;
         }
     }
 }
