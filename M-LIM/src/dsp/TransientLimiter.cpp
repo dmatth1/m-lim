@@ -8,6 +8,11 @@
 static constexpr float kMaxLookaheadMs = 5.0f;
 static constexpr float kEpsilon        = 1e-9f;
 
+// Release time range for the shape-controlled release envelope.
+// releaseShape 0 → kReleaseMinMs, releaseShape 1 → kReleaseMaxMs.
+static constexpr float kReleaseMinMs = 10.0f;
+static constexpr float kReleaseMaxMs = 500.0f;
+
 // ---------------------------------------------------------------------------
 // prepare
 // ---------------------------------------------------------------------------
@@ -86,7 +91,7 @@ void TransientLimiter::setAlgorithmParams(const AlgorithmParams& params)
 
     // Map releaseShape (0–1) to a release time in ms (10–500 ms range)
     // Higher releaseShape = longer release (smoother/more transparent)
-    const float releaseMs = 10.0f + params.releaseShape * 490.0f;
+    const float releaseMs = kReleaseMinMs + params.releaseShape * (kReleaseMaxMs - kReleaseMinMs);
     mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(mSampleRate)));
 }
 
