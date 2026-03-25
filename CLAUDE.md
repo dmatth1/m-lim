@@ -78,7 +78,7 @@ cd build && ctest --output-on-failure
 - **Thread safety**: Audio thread uses only atomics and lock-free FIFOs. No allocations or locks in processBlock.
 - **Parameter access**: All parameters via `juce::AudioProcessorValueTreeState` (APVTS). UI attaches via `SliderAttachment`/`ButtonAttachment`.
 - **Audio→UI data**: `LockFreeFIFO<MeterData>` pushes waveform/meter snapshots from audio thread. UI pops in 60fps timer.
-- **DSP chain**: Input gain → Sidechain filter → Oversampling up → TransientLimiter → LevelingLimiter → Oversampling down → DC filter → Dither → Output ceiling
+- **DSP chain**: Input gain → Oversampling up → TransientLimiter → LevelingLimiter → Oversampling down → Output ceiling → DC filter → Dither (Sidechain filter operates on a parallel detection copy, not the main audio path)
 - **Limiter design**: Dual-stage — Stage 1 (TransientLimiter) catches peaks with lookahead, Stage 2 (LevelingLimiter) shapes release envelope.
 - **Naming**: PascalCase for classes, camelCase for methods/variables, SCREAMING_SNAKE for constants.
 - **File layout**: One class per .h/.cpp pair. Header has class declaration, cpp has implementation.

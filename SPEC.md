@@ -182,7 +182,7 @@ M-LIM/
 - File: `src/dsp/TransientLimiter.h`
 - `class TransientLimiter`
 - `void prepare(double sampleRate, int maxBlockSize, int numChannels)`
-- `void process(float** channelData, int numChannels, int numSamples)`
+- `void process(float** channelData, int numChannels, int numSamples, const float* const* sidechainData = nullptr)` — when sidechainData is non-null, use it for peak detection while applying gain reduction to channelData
 - `void setLookahead(float ms)` — sets lookahead buffer size
 - `void setChannelLink(float pct)` — 0-1 range
 - `void setAlgorithmParams(const AlgorithmParams& params)`
@@ -192,7 +192,7 @@ M-LIM/
 - File: `src/dsp/LevelingLimiter.h`
 - `class LevelingLimiter`
 - `void prepare(double sampleRate, int maxBlockSize, int numChannels)`
-- `void process(float** channelData, int numChannels, int numSamples)`
+- `void process(float** channelData, int numChannels, int numSamples, const float* const* sidechainData = nullptr)` — when sidechainData is non-null, use it for envelope following while applying gain reduction to channelData
 - `void setAttack(float ms)`
 - `void setRelease(float ms)`
 - `void setChannelLink(float pct)`
@@ -249,6 +249,7 @@ M-LIM/
 ### DitherInterface
 - File: `src/dsp/Dither.h`
 - `class Dither`
+- `void prepare(double sampleRate)` — selects noise shaping coefficients appropriate for the sample rate
 - `void process(float* data, int numSamples)`
 - `void setBitDepth(int bits)` — 16/18/20/22/24
 - `void setNoiseShaping(int mode)` — 0=Basic, 1=Optimized, 2=Weighted
