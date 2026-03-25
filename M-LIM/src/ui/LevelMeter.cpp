@@ -104,7 +104,7 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     }
 
     // warning zone
-    if (fillTop < warnBot && dangerBot < barTop + fillH + barTop)
+    if (fillTop < warnBot)
     {
         float top = juce::jmax (fillTop, warnTop);
         float bot = juce::jmin (warnBot, barTop + barH);
