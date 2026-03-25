@@ -67,6 +67,9 @@ public:
      */
     void setTargetChoice (int choiceIndex);
 
+    /** Returns the currently active target choice index. */
+    int getTargetChoice() const noexcept { return targetChoice_; }
+
     /** Returns the short display label for choice index (e.g. "-14 (Strm)"). */
     static juce::String targetChoiceLabel (int choiceIndex) noexcept;
 

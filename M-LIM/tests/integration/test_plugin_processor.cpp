@@ -606,6 +606,31 @@ TEST_CASE("test_editor_create_destroy_no_crash", "[PluginProcessor][Editor]")
 }
 
 // ============================================================================
+// test_loudness_target_syncs_to_panel_on_state_restore
+// Create a processor+editor, then set loudnessTarget via the APVTS parameter
+// and verify that LoudnessPanel reflects the new choice.
+// ============================================================================
+TEST_CASE("test_loudness_target_syncs_to_panel_on_state_restore", "[PluginProcessor][Editor]")
+{
+    juce::MessageManager::getInstance();
+
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    MLIMAudioProcessorEditor editor (proc);
+
+    // Set loudnessTarget to index 3 — this fires the APVTS listener which calls
+    // loudnessPanel_.setTargetChoice(3)
+    auto* param = proc.apvts.getParameter (ParamID::loudnessTarget);
+    REQUIRE (param != nullptr);
+    param->setValueNotifyingHost (param->convertTo0to1 (3.0f));
+
+    // The APVTS listener is called synchronously on the message thread, so the
+    // panel should be updated immediately.
+    REQUIRE (editor.getLoudnessPanel().getTargetChoice() == 3);
+}
+
+// ============================================================================
 // test_tail_length_includes_oversampler
 // After prepareToPlay with 2x oversampling, getTailLengthSeconds() must be
 // >= getLatencySamples() / sampleRate (i.e. includes oversampler latency).

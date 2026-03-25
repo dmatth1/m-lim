@@ -12,7 +12,8 @@
 #include "ui/Colours.h"
 
 class MLIMAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                  public juce::Timer
+                                  public juce::Timer,
+                                  public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     explicit MLIMAudioProcessorEditor (MLIMAudioProcessor& p);
@@ -21,6 +22,10 @@ public:
     void paint   (juce::Graphics& g) override;
     void resized () override;
     void timerCallback () override;
+    void parameterChanged (const juce::String& paramID, float newValue) override;
+
+    /** For testing: returns a reference to the loudness panel. */
+    LoudnessPanel& getLoudnessPanel() noexcept { return loudnessPanel_; }
 
 private:
     MLIMAudioProcessor& audioProcessor;

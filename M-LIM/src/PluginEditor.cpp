@@ -60,13 +60,13 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
 
     wireCallbacks();
 
-    // Sync loudness target from APVTS
-    {
-        auto* param = dynamic_cast<juce::AudioParameterChoice*> (
-            audioProcessor.apvts.getParameter (ParamID::loudnessTarget));
-        if (param != nullptr)
-            loudnessPanel_.setTargetChoice (param->getIndex());
-    }
+    // Register APVTS listener for loudnessTarget so state restores sync the panel
+    audioProcessor.apvts.addParameterListener (ParamID::loudnessTarget, this);
+
+    // Initial sync from APVTS
+    if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (
+            audioProcessor.apvts.getParameter (ParamID::loudnessTarget)))
+        loudnessPanel_.setTargetChoice (param->getIndex());
 
     topBar_.setPresetName (audioProcessor.presetManager.getCurrentPresetName());
 
@@ -79,8 +79,15 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
 
 MLIMAudioProcessorEditor::~MLIMAudioProcessorEditor()
 {
+    audioProcessor.apvts.removeParameterListener (ParamID::loudnessTarget, this);
     stopTimer();
     setLookAndFeel (nullptr);
+}
+
+void MLIMAudioProcessorEditor::parameterChanged (const juce::String& paramID, float newValue)
+{
+    if (paramID == ParamID::loudnessTarget)
+        loudnessPanel_.setTargetChoice (static_cast<int> (newValue));
 }
 
 void MLIMAudioProcessorEditor::wireCallbacks()
