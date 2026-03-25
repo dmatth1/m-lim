@@ -88,6 +88,8 @@ public:
     float getTruePeakL() const;
     float getTruePeakR() const;
     int   getLatencySamples() const;  ///< Total latency for host compensation
+    float getOversamplerLatency() const;  ///< Raw oversampler latency in samples (float)
+    float getLookaheadMs() const;         ///< Current lookahead in milliseconds
 
     /** Returns true if an oversampling factor change was detected on the audio thread
      *  but the actual reallocation is pending (must be done off the audio thread).

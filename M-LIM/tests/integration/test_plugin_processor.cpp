@@ -604,3 +604,29 @@ TEST_CASE("test_editor_create_destroy_no_crash", "[PluginProcessor][Editor]")
         );
     }
 }
+
+// ============================================================================
+// test_tail_length_includes_oversampler
+// After prepareToPlay with 2x oversampling, getTailLengthSeconds() must be
+// >= getLatencySamples() / sampleRate (i.e. includes oversampler latency).
+// ============================================================================
+TEST_CASE("test_tail_length_includes_oversampler", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Enable 2x oversampling via the parameter before prepare
+    if (auto* p = proc.apvts.getParameter (ParamID::oversamplingFactor))
+        p->setValueNotifyingHost (p->convertTo0to1 (1.0f)); // factor = 1 → 2x
+
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    const int    latencySamples  = proc.getLatencySamples();
+    const double tailSec         = proc.getTailLengthSeconds();
+    const double expectedMinSec  = static_cast<double>(latencySamples) / kSampleRate - 0.001;
+
+    INFO("latencySamples=" << latencySamples << " tailSec=" << tailSec
+         << " expectedMin=" << expectedMinSec);
+
+    REQUIRE(latencySamples >= 0);
+    REQUIRE(tailSec >= expectedMinSec);
+}

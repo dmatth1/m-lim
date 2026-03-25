@@ -610,3 +610,32 @@ TEST_CASE("test_oversampling_with_sidechain", "[LimiterEngine]")
         REQUIRE(gr <= 0.0f);
     }
 }
+
+// ============================================================================
+// test_latency_reported_rounds_not_truncates
+// With 2x oversampling enabled, getLatencySamples() must be > 0 and must equal
+// std::lround(oversamplerFloat) + rounded lookahead samples (not truncated).
+// ============================================================================
+TEST_CASE("test_latency_reported_rounds_not_truncates", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    // Use 2x oversampling (factor=1)
+    engine.setOversamplingFactor(1);
+    engine.prepare(kSampleRate, kBlockSize, 2);
+
+    const int reportedLatency = engine.getLatencySamples();
+
+    // Must be positive when oversampling is active
+    REQUIRE(reportedLatency > 0);
+
+    // Reported value must match the rounded computation, not truncated.
+    // Oversampler latency is a float; we verify rounding is applied by
+    // comparing to the rounded oversampler value obtained directly.
+    const float oversamplerFloat = engine.getOversamplerLatency();
+    const float lookaheadMs      = engine.getLookaheadMs();
+    const int   expectedLookahead = static_cast<int>(std::round(lookaheadMs * 0.001f * static_cast<float>(kSampleRate)));
+    const int   expectedOversampler = static_cast<int>(std::lround(oversamplerFloat));
+    const int   expected = expectedLookahead + expectedOversampler;
+
+    REQUIRE(reportedLatency == expected);
+}
