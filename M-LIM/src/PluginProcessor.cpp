@@ -233,6 +233,7 @@ void MLIMAudioProcessor::initParameterPointers()
     pSidechainLPFreq       = apvts.getRawParameterValue (ParamID::sidechainLPFreq);
     pSidechainTilt         = apvts.getRawParameterValue (ParamID::sidechainTilt);
     pDelta                 = apvts.getRawParameterValue (ParamID::delta);
+    pDisplayMode           = apvts.getRawParameterValue (ParamID::displayMode);
 }
 
 void MLIMAudioProcessor::pushAllParametersToEngine()
@@ -256,6 +257,9 @@ void MLIMAudioProcessor::pushAllParametersToEngine()
     if (pSidechainLPFreq)       limiterEngine.setSidechainLPFreq      (pSidechainLPFreq->load());
     if (pSidechainTilt)         limiterEngine.setSidechainTilt        (pSidechainTilt->load());
     if (pDelta)                 limiterEngine.setDeltaMode            (pDelta->load() >= 0.5f);
+    // TODO: pDisplayMode controls WaveformDisplay scrolling speed — it is a UI-only
+    // parameter and should be read directly by WaveformDisplay via
+    // apvts.getRawParameterValue(ParamID::displayMode). Do NOT push it to the DSP engine.
 }
 
 void MLIMAudioProcessor::updateLatency()

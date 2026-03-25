@@ -86,6 +86,7 @@ private:
     std::atomic<float>* pSidechainLPFreq       = nullptr;
     std::atomic<float>* pSidechainTilt         = nullptr;
     std::atomic<float>* pDelta                 = nullptr;
+    std::atomic<float>* pDisplayMode          = nullptr;
 
     // Oversampling factor changes require reallocation; defer to prepareToPlay
     std::atomic<bool>  mOversamplingChangePending { false };
