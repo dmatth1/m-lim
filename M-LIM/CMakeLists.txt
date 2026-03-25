@@ -27,6 +27,39 @@ if(CLAP_SUPPORT)
     list(APPEND PLUGIN_FORMATS CLAP)
 endif()
 
+# MLIMLib — static library of all DSP/state source files shared by plugin and tests
+add_library(MLIMLib STATIC
+    src/dsp/DCFilter.cpp
+    src/dsp/Dither.cpp
+    src/dsp/SidechainFilter.cpp
+    src/dsp/Oversampler.cpp
+    src/dsp/LoudnessMeter.cpp
+    src/dsp/TransientLimiter.cpp
+    src/dsp/LevelingLimiter.cpp
+    src/dsp/TruePeakDetector.cpp
+    src/dsp/LimiterEngine.cpp
+)
+
+target_include_directories(MLIMLib
+    PUBLIC
+        src
+)
+
+target_compile_definitions(MLIMLib
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+)
+
+target_link_libraries(MLIMLib
+    PUBLIC
+        juce::juce_audio_processors
+        juce::juce_dsp
+        juce::juce_audio_utils
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+)
+
 juce_add_plugin(MLIM
     VERSION "1.0.0"
     COMPANY_NAME "MLIMaudio"
@@ -67,6 +100,7 @@ target_include_directories(MLIM
 
 target_link_libraries(MLIM
     PRIVATE
+        MLIMLib
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_dsp
