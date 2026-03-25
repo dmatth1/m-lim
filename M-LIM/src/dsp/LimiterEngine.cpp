@@ -280,7 +280,7 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // Combined GR from both stages
     const float grL = mTransientLimiter.getGainReduction();
     const float grS = mLevelingLimiter.getGainReduction();
-    const float totalGR = std::min(grL, grS);  // both are 0 or negative dB
+    const float totalGR = juce::jmax(grL + grS, -60.0f);  // sum both stages (both ≤ 0 dB), clamp floor
     mGRdB.store(totalGR);
     mTruePkL.store(mTruePeakL.getPeak());
     mTruePkR.store(mTruePeakR.getPeak());

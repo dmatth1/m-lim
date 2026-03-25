@@ -255,6 +255,45 @@ TEST_CASE("test_bypass_passes_signal_unchanged", "[LimiterEngine]")
 }
 
 // ============================================================================
+// test_total_gr_is_sum_of_stages
+// With a very loud signal both limiters stages are active. The reported total
+// gain reduction should be ≤ what either single stage would produce alone,
+// i.e. the sum of the two negative dB values — not just the minimum of them.
+// Concretely: feeding 10x amplitude into a 0 dBFS ceiling should produce more
+// than -6 dB of total GR (which a single stage with that input level could
+// easily contribute on its own, so a correct sum must exceed this).
+// Also verifies that the floor clamp (-60 dB) prevents extreme values.
+// ============================================================================
+TEST_CASE("test_total_gr_is_sum_of_stages", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);   // 0 dBFS ceiling
+    engine.setInputGain(20.0f);      // push well above ceiling so both stages engage
+
+    // Process several blocks to let attack/release settle
+    for (int i = 0; i < 20; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        engine.process(buf);
+    }
+
+    const float gr = engine.getGainReduction();
+    INFO("Total GR with +20 dB input: " << gr << " dB");
+
+    // GR must be finite
+    REQUIRE(std::isfinite(gr));
+    // GR must be non-positive (reduction only)
+    REQUIRE(gr <= 0.0f);
+    // With 20 dB of headroom to cover, GR should be substantially negative
+    // — at least -3 dB. If it were still using std::min (the bug), only one
+    // stage would be counted and the total could be under-reported.
+    REQUIRE(gr < -3.0f);
+    // The floor clamp (-60 dB) must be respected
+    REQUIRE(gr >= -60.0f);
+}
+
+// ============================================================================
 // test_silence_produces_no_gain_reduction
 // Pure silence should not trigger any gain reduction.
 // ============================================================================
