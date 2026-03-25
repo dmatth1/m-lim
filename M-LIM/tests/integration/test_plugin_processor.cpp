@@ -692,3 +692,65 @@ TEST_CASE("test_display_mode_syncs_to_waveform_on_state_restore", "[PluginProces
     REQUIRE (editor.getWaveformDisplay().getDisplayMode()
              == WaveformDisplay::DisplayMode::Infinite);
 }
+
+// ============================================================================
+// test_set_state_wrong_tag_leaves_state_unchanged
+// setStateInformation() with valid XML but a mismatched root tag must NOT
+// alter the current parameter state.
+// ============================================================================
+TEST_CASE("test_set_state_wrong_tag_leaves_state_unchanged", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Set inputGain to a known non-default value (6 dB)
+    if (auto* param = proc.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (6.0f));
+
+    auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGain != nullptr);
+    REQUIRE (rawGain->load() == Catch::Approx (6.0f).margin (0.01f));
+
+    // Build a valid XML blob whose root tag deliberately does NOT match the
+    // APVTS state type (which is "MLIMParameters").
+    auto wrongXml = std::make_unique<juce::XmlElement> ("WrongTag");
+    wrongXml->setAttribute ("inputGain", "0.0");  // different value in the XML
+
+    juce::MemoryBlock wrongBlock;
+    juce::AudioProcessor::copyXmlToBinary (*wrongXml, wrongBlock);
+
+    // Loading wrong-tag state must be silently ignored
+    REQUIRE_NOTHROW (proc.setStateInformation (wrongBlock.getData(),
+                                               static_cast<int> (wrongBlock.getSize())));
+
+    // inputGain must still be 6.0 — not replaced by the XML's 0.0
+    REQUIRE (rawGain->load() == Catch::Approx (6.0f).margin (0.01f));
+}
+
+// ============================================================================
+// test_set_state_correct_tag_replaces_state
+// setStateInformation() with valid XML and the matching root tag MUST replace
+// the current parameter state.
+// ============================================================================
+TEST_CASE("test_set_state_correct_tag_replaces_state", "[PluginProcessor]")
+{
+    // Processor A: set inputGain = 12 dB and export state
+    MLIMAudioProcessor procA;
+    if (auto* param = procA.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (12.0f));
+
+    juce::MemoryBlock stateData;
+    procA.getStateInformation (stateData);
+    REQUIRE (stateData.getSize() > 0);
+
+    // Processor B: start with default inputGain (0 dB), then load procA's state
+    MLIMAudioProcessor procB;
+    auto* rawGainB = procB.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGainB != nullptr);
+    REQUIRE (rawGainB->load() == Catch::Approx (0.0f).margin (0.01f));
+
+    procB.setStateInformation (stateData.getData(),
+                               static_cast<int> (stateData.getSize()));
+
+    // State must now reflect procA's value
+    REQUIRE (rawGainB->load() == Catch::Approx (12.0f).margin (0.01f));
+}
