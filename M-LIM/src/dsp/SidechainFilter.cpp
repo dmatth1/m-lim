@@ -83,6 +83,7 @@ void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
 
 void SidechainFilter::setHighPassFreq(float hz)
 {
+    hz = std::clamp(hz, 20.0f, 2000.0f);
     if (floatBitsEqual (mPendingHP.load(std::memory_order_relaxed), hz))
         return;
     mPendingHP.store(hz, std::memory_order_relaxed);
@@ -91,6 +92,7 @@ void SidechainFilter::setHighPassFreq(float hz)
 
 void SidechainFilter::setLowPassFreq(float hz)
 {
+    hz = std::clamp(hz, 2000.0f, 20000.0f);
     if (floatBitsEqual (mPendingLP.load(std::memory_order_relaxed), hz))
         return;
     mPendingLP.store(hz, std::memory_order_relaxed);
@@ -99,6 +101,7 @@ void SidechainFilter::setLowPassFreq(float hz)
 
 void SidechainFilter::setTilt(float dB)
 {
+    dB = std::clamp(dB, -6.0f, 6.0f);
     if (floatBitsEqual (mPendingTilt.load(std::memory_order_relaxed), dB))
         return;
     mPendingTilt.store(dB, std::memory_order_relaxed);

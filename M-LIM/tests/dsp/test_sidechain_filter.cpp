@@ -496,6 +496,74 @@ TEST_CASE("test_combined_hp_lp_passband", "[SidechainFilter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_setter_clamping_no_crash
+// Calls each setter with values well outside the valid range, verifies no
+// crash and that all output samples remain finite (the clamp prevents
+// degenerate bilinear-transform coefficients from producing NaN/Inf).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_setter_clamping_no_crash", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize = 256;
+
+    auto allFiniteAfterProcess = [&](SidechainFilter& f) -> bool
+    {
+        juce::AudioBuffer<float> buf(1, kBlockSize);
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+        REQUIRE_NOTHROW(f.process(buf));
+
+        const float* out = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            if (!std::isfinite(out[i])) return false;
+        return true;
+    };
+
+    // --- setHighPassFreq out of range ---
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setHighPassFreq(-1.0f);    // below minimum (20 Hz) → clamped to 20 Hz
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setHighPassFreq(99999.0f); // above maximum (2000 Hz) → clamped to 2000 Hz
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+
+    // --- setLowPassFreq out of range ---
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setLowPassFreq(-1.0f);     // below minimum (2000 Hz) → clamped to 2000 Hz
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setLowPassFreq(99999.0f);  // above maximum (20000 Hz) → clamped to 20000 Hz
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+
+    // --- setTilt out of range ---
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setTilt(-100.0f);          // below minimum (-6 dB) → clamped to -6 dB
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlockSize);
+        f.setTilt(100.0f);           // above maximum (+6 dB) → clamped to +6 dB
+        REQUIRE(allFiniteAfterProcess(f));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_inplace_coefficients_correctness
 // Verifies that after the RT-safe coefficient update path (in-place writes to
 // pre-allocated Coefficients objects), the filter output is consistent with
