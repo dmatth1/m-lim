@@ -825,3 +825,97 @@ TEST_CASE("test_latency_changes_after_reprepare", "[LimiterEngine]")
     // Deferred flag must be clear after prepare()
     REQUIRE(engine.hasDeferredOversamplingChange() == false);
 }
+
+// ============================================================================
+// test_sidechain_hp_reduces_bass_triggering
+// A loud 50 Hz sine should trigger much less GR when sidechain HP is set to
+// 500 Hz (which filters the bass from the detection path) vs. 20 Hz (flat).
+// ============================================================================
+TEST_CASE("test_sidechain_hp_reduces_bass_triggering", "[LimiterEngine]")
+{
+    // Generate a loud 50 Hz sine at 2x ceiling amplitude
+    auto make50HzSine = [](float amplitude, int numSamples, double fs = kSampleRate)
+    {
+        juce::AudioBuffer<float> buf(2, numSamples);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                data[i] = amplitude * static_cast<float>(
+                               std::sin(kTwoPi * 50.0 * i / fs));
+        }
+        return buf;
+    };
+
+    auto measureGR = [&](float hpFreq) -> float
+    {
+        LimiterEngine eng;
+        eng.prepare(kSampleRate, kBlockSize, 2);
+        eng.setOutputCeiling(0.0f);
+        eng.setSidechainHPFreq(hpFreq);
+        // Feed 20 blocks to let the limiter/filter reach steady state
+        for (int i = 0; i < 20; ++i)
+        {
+            auto buf = make50HzSine(2.0f, kBlockSize);
+            eng.process(buf);
+        }
+        return eng.getGainReduction();
+    };
+
+    const float grLowHP  = measureGR(20.0f);   // bass passes sidechain detection → more GR
+    const float grHighHP = measureGR(500.0f);  // bass filtered from detection → less GR
+
+    INFO("GR with HP=20 Hz:  " << grLowHP  << " dB");
+    INFO("GR with HP=500 Hz: " << grHighHP << " dB");
+
+    // grLowHP should be more negative (more reduction); grHighHP closer to 0
+    REQUIRE(grHighHP > grLowHP);
+}
+
+// ============================================================================
+// test_sidechain_tilt_affects_gr
+// For a treble-heavy signal, positive sidechain tilt (+6 dB) boosts high
+// frequencies in the detection path, causing more GR compared to flat tilt.
+// ============================================================================
+TEST_CASE("test_sidechain_tilt_affects_gr", "[LimiterEngine]")
+{
+    // Generate a broadband signal rich in high frequencies (8 kHz sine)
+    auto makeHighFreqSine = [](float amplitude, int numSamples, double fs = kSampleRate)
+    {
+        juce::AudioBuffer<float> buf(2, numSamples);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                data[i] = amplitude * static_cast<float>(
+                               std::sin(kTwoPi * 8000.0 * i / fs));
+        }
+        return buf;
+    };
+
+    auto measureGR = [&](float tiltDb) -> float
+    {
+        LimiterEngine eng;
+        eng.prepare(kSampleRate, kBlockSize, 2);
+        eng.setOutputCeiling(0.0f);
+        eng.setSidechainTilt(tiltDb);
+        // Feed 20 blocks so the filter/limiter reaches steady state
+        for (int i = 0; i < 20; ++i)
+        {
+            // Use amplitude just above unity so limiter engages
+            auto buf = makeHighFreqSine(1.2f, kBlockSize);
+            eng.process(buf);
+        }
+        return eng.getGainReduction();
+    };
+
+    const float grFlat     = measureGR(0.0f);   // flat detection
+    const float grTiltUp   = measureGR(6.0f);   // highs boosted in detection → more GR
+
+    INFO("GR with tilt=0 dB:  " << grFlat   << " dB");
+    INFO("GR with tilt=+6 dB: " << grTiltUp << " dB");
+
+    // Positive tilt boosts high-frequency content in the detection path,
+    // causing the limiter to see more energy and apply more gain reduction.
+    REQUIRE(grTiltUp < grFlat);  // more negative = more reduction
+}
