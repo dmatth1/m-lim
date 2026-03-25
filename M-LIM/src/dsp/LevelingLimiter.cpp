@@ -1,4 +1,5 @@
 #include "LevelingLimiter.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <algorithm>
 
@@ -100,6 +101,7 @@ float LevelingLimiter::computeRequiredGain(float peakAbs) const
 void LevelingLimiter::process(float** channelData, int numChannels, int numSamples,
                                const float* const* sidechainData)
 {
+    juce::ScopedNoDenormals noDenormals;
     if (mGainState.empty() || numChannels <= 0 || numSamples <= 0)
         return;
 

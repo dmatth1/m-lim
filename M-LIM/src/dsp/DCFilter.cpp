@@ -1,4 +1,5 @@
 #include "DCFilter.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 
 static constexpr double kCutoffHz = 5.0;
@@ -12,6 +13,7 @@ void DCFilter::prepare(double sampleRate)
 
 void DCFilter::process(float* data, int numSamples)
 {
+    juce::ScopedNoDenormals noDenormals;
     for (int i = 0; i < numSamples; ++i)
     {
         float x = data[i];

@@ -1,4 +1,5 @@
 #include "TruePeakDetector.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <algorithm>
 
@@ -59,6 +60,7 @@ float TruePeakDetector::processSample(float sample)
 
 void TruePeakDetector::processBlock(const float* input, int numSamples)
 {
+    juce::ScopedNoDenormals noDenormals;
     for (int i = 0; i < numSamples; ++i)
         processSample(input[i]);
 }

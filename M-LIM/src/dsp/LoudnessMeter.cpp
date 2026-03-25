@@ -101,6 +101,7 @@ void LoudnessMeter::setupKWeightingFilters()
 // ---------------------------------------------------------------------------
 void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
 {
+    juce::ScopedNoDenormals noDenormals;
     const int numCh  = std::min(buffer.getNumChannels(), mNumChannels);
     const int numSmp = buffer.getNumSamples();
 

@@ -26,6 +26,7 @@ void SidechainFilter::prepare(double sampleRate, int /*maxBlockSize*/)
 
 void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
 {
+    juce::ScopedNoDenormals noDenormals;
     const int numChannels = std::min(buffer.getNumChannels(), kMaxChannels);
     const int numSamples  = buffer.getNumSamples();
 

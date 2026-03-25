@@ -1,4 +1,5 @@
 #include "TransientLimiter.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <algorithm>
 #include <numeric>
@@ -132,6 +133,7 @@ float TransientLimiter::softSaturate(float x, float amount)
 void TransientLimiter::process(float** channelData, int numChannels, int numSamples,
                                 const float* const* sidechainData)
 {
+    juce::ScopedNoDenormals noDenormals;
     if (mDelayBuffers.empty() || numChannels <= 0 || numSamples <= 0)
         return;
 

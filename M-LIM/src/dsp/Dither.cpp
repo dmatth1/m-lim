@@ -1,4 +1,5 @@
 #include "Dither.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 
 void Dither::prepare(double sampleRate)
@@ -51,6 +52,7 @@ void Dither::setNoiseShaping(int mode)
 
 void Dither::process(float* data, int numSamples)
 {
+    juce::ScopedNoDenormals noDenormals;
     const float step = mStepSize;
 
     for (int i = 0; i < numSamples; ++i)
