@@ -254,6 +254,17 @@ void LoudnessPanel::paint (juce::Graphics& g)
              -1.0f,
              false,
              0.0f);
+
+    // ── Large LUFS readout ────────────────────────────────────────────────
+    const int largeTop = readoutTop + kPadding + 5 * kRowH + kPadding;
+    if (getHeight() > largeTop + 10)
+    {
+        g.setColour (MLIMColours::panelBorder);
+        g.drawHorizontalLine (largeTop, 2.0f, static_cast<float> (getWidth() - 2));
+
+        drawLargeReadout (g, getLocalBounds().withTrimmedTop (largeTop)
+                                             .withHeight (kLargeReadoutH));
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -376,6 +387,33 @@ juce::Colour LoudnessPanel::histogramBarColour (float binLUFS,
         return MLIMColours::meterWarning;                         // approaching: yellow
     else
         return MLIMColours::meterSafe.withAlpha (0.85f);           // below target: steel blue
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
+                                      juce::Rectangle<int> bounds) const
+{
+    const juce::String valStr = fmtLUFS (shortTerm_);
+    const juce::Colour valColour = (shortTerm_ < targetLUFS_)
+                                 ? MLIMColours::textPrimary
+                                 : MLIMColours::meterDanger;
+
+    // Value in large bold font — occupies the upper 2/3 of the strip
+    g.setFont (juce::Font (28.0f, juce::Font::bold));
+    g.setColour (valColour);
+    g.drawText (valStr,
+                bounds.withTrimmedBottom (bounds.getHeight() / 3),
+                juce::Justification::centred,
+                false);
+
+    // "LUFS" unit label in smaller font — occupies the lower 1/3
+    g.setFont (juce::Font (10.0f));
+    g.setColour (MLIMColours::textSecondary);
+    g.drawText ("LUFS",
+                bounds.withTrimmedTop (bounds.getHeight() * 2 / 3),
+                juce::Justification::centred,
+                false);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

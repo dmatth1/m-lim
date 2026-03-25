@@ -109,15 +109,16 @@ private:
     std::unique_ptr<juce::AlertWindow> customAlertWindow_;
 
     // ── Layout constants ──────────────────────────────────────────────────
-    static constexpr int kRowH     = 22;
-    static constexpr int kPadding  = 4;
-    static constexpr int kLabelW   = 72;
-    static constexpr int kValueW   = 52;
-    static constexpr int kBtnW     = 28;
-    static constexpr float kMinLUFS = -60.0f;
+    static constexpr int kRowH         = 22;
+    static constexpr int kPadding      = 4;
+    static constexpr int kLabelW       = 72;
+    static constexpr int kValueW       = 52;
+    static constexpr int kBtnW         = 28;
+    static constexpr int kLargeReadoutH = 48;  // height of large-number strip at bottom
+    static constexpr float kMinLUFS    = -60.0f;
 
-    /** Height reserved for the numeric readout rows at the bottom. */
-    static constexpr int kReadoutAreaH = kPadding + 5 * kRowH + kPadding;
+    /** Height reserved for the numeric readout rows + large display at the bottom. */
+    static constexpr int kReadoutAreaH = kPadding + 5 * kRowH + kPadding + kLargeReadoutH;
 
     // ── Private drawing helpers ───────────────────────────────────────────
 
@@ -151,6 +152,9 @@ private:
 
     /** Return the histogram bar colour for a given LUFS level vs target. */
     static juce::Colour histogramBarColour (float binLUFS, float targetLUFS) noexcept;
+
+    /** Draw the large-format LUFS numeric readout strip. */
+    void drawLargeReadout (juce::Graphics& g, juce::Rectangle<int> bounds) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LoudnessPanel)
 };
