@@ -1,4 +1,4 @@
-# Task 195: Move floatBitsEqual() to DspUtil.h
+# Task 208: Move floatBitsEqual() to DspUtil.h
 
 ## Description
 `floatBitsEqual()` is defined as a static function in two separate translation units:

@@ -1,4 +1,4 @@
-# Task 198: Call updateLatency() explicitly in setStateInformation() after state restore
+# Task 218: Call updateLatency() explicitly in setStateInformation() after state restore
 
 ## Description
 `MLIMAudioProcessor::setStateInformation()` restores plugin state by calling `apvts.replaceState()`. Latency is currently updated only indirectly: the APVTS fires `parameterChanged()` for parameters whose values changed, and the registered listener for `ParamID::lookahead` calls `updateLatency()`. This works in the common case, but fails silently in two edge cases:
@@ -47,4 +47,4 @@ void MLIMAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 Note: `setStateInformation()` is called on the message thread, same as `updateLatency()` — no thread-safety issue.
 
 ## Dependencies
-None
+Requires task 210 (both modify PluginProcessor.cpp — drain FIFO task first to avoid conflicts)

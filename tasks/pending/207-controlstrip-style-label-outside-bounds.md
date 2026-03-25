@@ -1,4 +1,4 @@
-# Task 195: ControlStrip — "STYLE" and "CHANNEL LINKING" Labels Drawn Outside Component Bounds
+# Task 207: ControlStrip — "STYLE" and "CHANNEL LINKING" Labels Drawn Outside Component Bounds
 
 ## Description
 `ControlStrip::paint()` draws a "STYLE" label above the `AlgorithmSelector` and, when the Advanced panel is open, a "CHANNEL LINKING" label above the linking knobs. Both are positioned using `getBounds().getY() - 12`, which evaluates to a **negative Y coordinate** in the component's local coordinate system — placing the text above the component boundary where JUCE's paint clipper cuts it off. Neither label is ever visible.

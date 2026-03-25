@@ -1,4 +1,4 @@
-# Task 196: Replace push_back() with index-based access in LoudnessMeter audio thread path
+# Task 213: Replace push_back() with index-based access in LoudnessMeter audio thread path
 
 ## Description
 `LoudnessMeter::computeIntegratedLUFS()` runs on the audio thread (called from `processBlock()` via `updateIntegratedAndLRA()` every ~1 s). It currently uses the pattern:

@@ -1,4 +1,4 @@
-# Task 195: Drain MeterData FIFO in releaseResources()
+# Task 210: Drain MeterData FIFO in releaseResources()
 
 ## Description
 `MLIMAudioProcessor::releaseResources()` is currently empty. The `mProcessorMeterFIFO` (and the engine's internal FIFO) may hold stale `MeterData` snapshots pushed during the previous audio session. When the host calls `releaseResources()` and then restarts audio with a call to `prepareToPlay()`, the UI timer will pop those stale entries on the next `timerCallback()`, applying outdated level/LUFS values to the meters. This can produce a brief flash of wrong meter readings after every transport stop/start cycle or when the host changes the audio format.

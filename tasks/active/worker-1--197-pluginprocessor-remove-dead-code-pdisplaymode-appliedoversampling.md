@@ -1,4 +1,4 @@
-# Task 197: Remove dead-code members pDisplayMode and mAppliedOversamplingFactor
+# Task 216: Remove dead-code members pDisplayMode and mAppliedOversamplingFactor
 
 ## Description
 Two private members of `MLIMAudioProcessor` are dead code:
@@ -37,4 +37,4 @@ After removing `pDisplayMode`, confirm that `ParamID::displayMode` is still used
 - The editor registers `addParameterListener(ParamID::displayMode, this)` and reads it directly via `apvts.getParameter()` — no change needed there.
 
 ## Dependencies
-None
+Requires task 210 (both modify PluginProcessor.cpp — drain FIFO task first to avoid conflicts)

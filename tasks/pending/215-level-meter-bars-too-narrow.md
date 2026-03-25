@@ -1,4 +1,4 @@
-# Task 197: LevelMeter — Channel Bars Only 3.4px Wide at Current Component Size
+# Task 215: LevelMeter — Channel Bars Only 3.4px Wide at Current Component Size
 
 ## Description
 `LevelMeter::paint()` computes bar width as:
@@ -69,4 +69,4 @@ With 48px total and 18px scale: `availW = 30px`, `barW = 30 × 0.42 = 12.6px` �
 Note: widening the meters slightly reduces the waveform display width (from ~675px to ~639px at 900px total). The waveform still occupies ~71% of total width, well within the target ~70%.
 
 ## Dependencies
-None
+Requires task 211 (both modify PluginEditor.h layout constants — do GR meter width first)

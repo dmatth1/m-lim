@@ -1,4 +1,4 @@
-# Task 196: Add Range Clamping to SidechainFilter Setters
+# Task 214: Add Range Clamping to SidechainFilter Setters
 
 ## Description
 `SidechainFilter` has three parameter setters — `setHighPassFreq()`, `setLowPassFreq()`, and `setTilt()` — that accept raw float values without any validation or clamping. If the UI or a host passes an out-of-range value, the bilinear transform coefficient computation can produce NaN or unstable filter coefficients, causing audio artifacts or silence.

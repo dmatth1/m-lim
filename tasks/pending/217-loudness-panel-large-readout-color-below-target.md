@@ -1,4 +1,4 @@
-# Task 198: LoudnessPanel — Large LUFS Readout Uses Near-White When Below Target
+# Task 217: LoudnessPanel — Large LUFS Readout Uses Near-White When Below Target
 
 ## Description
 `LoudnessPanel::drawLargeReadout()` selects the colour for the large numeric LUFS display as:

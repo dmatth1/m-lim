@@ -1,4 +1,4 @@
-# Task 196: GainReductionMeter — Bar Area Only 3px Wide at Default Component Size
+# Task 211: GainReductionMeter — Bar Area Only 3px Wide at Default Component Size
 
 ## Description
 `GainReductionMeter` reserves `kScaleW = 22` pixels on the right for dB scale labels. In `PluginEditor.h`, the GR meter is allocated `kGRMeterW = 25` pixels wide. After removing the scale area:
@@ -78,4 +78,4 @@ g.setFont(juce::Font(8.0f));
 ```
 
 ## Dependencies
-None
+Requires task 201 (both modify GainReductionMeter.cpp — do colour pass first to avoid merge conflicts)
