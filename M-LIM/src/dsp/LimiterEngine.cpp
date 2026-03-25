@@ -477,7 +477,7 @@ int LimiterEngine::getLatencySamples() const
 {
     // Lookahead latency (at original sample rate) + oversampler latency
     const float lookaheadMs = mLookaheadMs.load();
-    const int lookaheadSamples = static_cast<int>(std::round(lookaheadMs * 0.001 * mSampleRate));
+    const int lookaheadSamples = static_cast<int>(lookaheadMs * 0.001 * mSampleRate);
     const int oversamplerLatency = static_cast<int>(std::lround(mOversampler.getLatencySamples()));
     return lookaheadSamples + oversamplerLatency;
 }

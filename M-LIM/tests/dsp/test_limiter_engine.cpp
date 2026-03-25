@@ -612,11 +612,11 @@ TEST_CASE("test_oversampling_with_sidechain", "[LimiterEngine]")
 }
 
 // ============================================================================
-// test_latency_reported_rounds_not_truncates
-// With 2x oversampling enabled, getLatencySamples() must be > 0 and must equal
-// std::lround(oversamplerFloat) + rounded lookahead samples (not truncated).
+// test_latency_reported_truncates_not_rounds
+// getLatencySamples() must use truncation (int cast) for the lookahead
+// conversion, matching TransientLimiter::setLookahead().
 // ============================================================================
-TEST_CASE("test_latency_reported_rounds_not_truncates", "[LimiterEngine]")
+TEST_CASE("test_latency_reported_truncates_not_rounds", "[LimiterEngine]")
 {
     LimiterEngine engine;
     // Use 2x oversampling (factor=1)
@@ -628,12 +628,10 @@ TEST_CASE("test_latency_reported_rounds_not_truncates", "[LimiterEngine]")
     // Must be positive when oversampling is active
     REQUIRE(reportedLatency > 0);
 
-    // Reported value must match the rounded computation, not truncated.
-    // Oversampler latency is a float; we verify rounding is applied by
-    // comparing to the rounded oversampler value obtained directly.
+    // Reported value must match the truncated computation (int cast), not rounded.
     const float oversamplerFloat = engine.getOversamplerLatency();
     const float lookaheadMs      = engine.getLookaheadMs();
-    const int   expectedLookahead = static_cast<int>(std::round(lookaheadMs * 0.001f * static_cast<float>(kSampleRate)));
+    const int   expectedLookahead = static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
     const int   expectedOversampler = static_cast<int>(std::lround(oversamplerFloat));
     const int   expected = expectedLookahead + expectedOversampler;
 
@@ -918,4 +916,63 @@ TEST_CASE("test_sidechain_tilt_affects_gr", "[LimiterEngine]")
     // Positive tilt boosts high-frequency content in the detection path,
     // causing the limiter to see more energy and apply more gain reduction.
     REQUIRE(grTiltUp < grFlat);  // more negative = more reduction
+}
+
+// ============================================================================
+// test_latency_44100_5ms_truncates_to_220
+// At 44100 Hz with 5 ms lookahead and no oversampling, getLatencySamples()
+// must return 220 (truncation) not 221 (rounding).
+// 5 * 0.001 * 44100 = 220.5 → truncate → 220
+// ============================================================================
+TEST_CASE("test_latency_44100_5ms_truncates_to_220", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(0); // no oversampling
+    engine.setLookahead(5.0f);       // 5 ms before prepare so mSampleRate is set first
+    engine.prepare(44100.0, kBlockSize, 2);
+
+    const int reported = engine.getLatencySamples();
+    INFO("Reported latency at 44100 Hz, 5ms: " << reported);
+    // int(5 * 0.001 * 44100) = int(220.5) = 220
+    REQUIRE(reported == 220);
+}
+
+// ============================================================================
+// test_latency_48000_1ms_truncates_to_48
+// At 48000 Hz with 1 ms lookahead and no oversampling, getLatencySamples()
+// must return 48.
+// 1 * 0.001 * 48000 = 48.0 → truncate → 48
+// ============================================================================
+TEST_CASE("test_latency_48000_1ms_truncates_to_48", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(0); // no oversampling
+    engine.setLookahead(1.0f);       // 1 ms
+    engine.prepare(48000.0, kBlockSize, 2);
+
+    const int reported = engine.getLatencySamples();
+    INFO("Reported latency at 48000 Hz, 1ms: " << reported);
+    REQUIRE(reported == 48);
+}
+
+// ============================================================================
+// test_latency_44100_5ms_4x_oversampling
+// At 44100 Hz with 5 ms lookahead and 4x oversampling (factor=2),
+// the lookahead portion of getLatencySamples() must equal int(5 * 0.001 * 44100) = 220.
+// Total latency = 220 + oversamplerLatency.
+// ============================================================================
+TEST_CASE("test_latency_44100_5ms_4x_oversampling", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(2); // 4x oversampling
+    engine.setLookahead(5.0f);       // 5 ms
+    engine.prepare(44100.0, kBlockSize, 2);
+
+    const int reported = engine.getLatencySamples();
+    const int oversamplerLatency = static_cast<int>(std::lround(engine.getOversamplerLatency()));
+    // lookahead portion must be int(5 * 0.001 * 44100) = 220
+    const int expectedLookahead = static_cast<int>(5.0 * 0.001 * 44100.0);
+    REQUIRE(expectedLookahead == 220);
+    INFO("Reported latency: " << reported << ", oversampler: " << oversamplerLatency);
+    REQUIRE(reported == expectedLookahead + oversamplerLatency);
 }
