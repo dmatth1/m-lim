@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_dsp/juce_dsp.h>
-#include <atomic>
 
 /**
  * Oversampler — wraps juce::dsp::Oversampling<float> for the limiter DSP chain.
@@ -38,18 +37,6 @@ public:
 
     int getFactor() const;
 
-    /** Request a factor change without immediate rebuild (real-time safe).
-     *  Call needsRebuild() to check if a rebuild is pending, then
-     *  commitRebuild() from a non-real-time thread to apply the change. */
-    void requestFactor(int pendingFactor);
-
-    /** Returns true if a factor change was requested but not yet committed. */
-    bool needsRebuild() const;
-
-    /** Apply the pending factor and rebuild the oversampling object.
-     *  Allocates memory — must be called from a non-real-time thread. */
-    void commitRebuild();
-
     /** Returns the latency introduced by oversampling in samples (at the original rate).
      *  Returns 0 when factor == 0. */
     float getLatencySamples() const;
@@ -63,5 +50,4 @@ private:
     int                mNumChannels  = 2;
     int                mFactor       = 0;
     bool               mPrepared     = false;
-    std::atomic<int>   mPendingFactor { 0 };
 };
