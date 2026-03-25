@@ -252,16 +252,7 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         // --- 3. Channel linking ------------------------------------------------
         //  At mChannelLink=1.0: all channels share the minimum required gain.
         //  At mChannelLink=0.0: each channel is independent.
-        if (chCount > 1 && mChannelLink > 0.0f)
-        {
-            float minRequired = 1.0f;
-            for (int ch = 0; ch < chCount; ++ch)
-                minRequired = std::min(minRequired, perChRequiredGain[ch]);
-
-            for (int ch = 0; ch < chCount; ++ch)
-                perChRequiredGain[ch] = perChRequiredGain[ch] * (1.0f - mChannelLink)
-                                        + minRequired * mChannelLink;
-        }
+        applyChannelLinking(perChRequiredGain, chCount, mChannelLink);
 
         // --- 4. Smooth gain: instant attack, exponential release ---------------
         // Release smoothing is done in dB domain so that the gain reduction

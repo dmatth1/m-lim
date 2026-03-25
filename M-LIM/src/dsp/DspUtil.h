@@ -19,3 +19,23 @@ inline float decibelsToGain(float dB)
 {
     return std::pow(10.0f, dB * (1.0f / 20.0f));
 }
+
+// ---------------------------------------------------------------------------
+// Channel-linking blend helper.
+// Blends each element of perChGain toward the minimum across all channels.
+// @param perChGain  pointer to chCount gain values (modified in-place)
+// @param chCount    number of channels
+// @param link       blend factor 0=independent, 1=fully linked
+// ---------------------------------------------------------------------------
+inline void applyChannelLinking(float* perChGain, int chCount, float link) noexcept
+{
+    if (chCount > 1 && link > 0.0f)
+    {
+        float minGain = 1.0f;
+        for (int ch = 0; ch < chCount; ++ch)
+            minGain = std::min(minGain, perChGain[ch]);
+
+        for (int ch = 0; ch < chCount; ++ch)
+            perChGain[ch] = perChGain[ch] * (1.0f - link) + minGain * link;
+    }
+}

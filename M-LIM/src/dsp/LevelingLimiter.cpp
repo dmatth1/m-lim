@@ -133,16 +133,7 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
         }
 
         // --- 2. Channel linking -----------------------------------------------
-        if (chCount > 1 && mChannelLink > 0.0f)
-        {
-            float minRequired = 1.0f;
-            for (int ch = 0; ch < chCount; ++ch)
-                minRequired = std::min(minRequired, perChRequiredGain[ch]);
-
-            for (int ch = 0; ch < chCount; ++ch)
-                perChRequiredGain[ch] = perChRequiredGain[ch] * (1.0f - mChannelLink)
-                                        + minRequired * mChannelLink;
-        }
+        applyChannelLinking(perChRequiredGain, chCount, mChannelLink);
 
         // --- 3. Smooth gain in linear domain ---------------------------------
         // mGainState[ch] is in linear scale (1.0 = no reduction, <1 = reducing).
