@@ -32,7 +32,7 @@ void LevelingLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numCh
     mSampleRate  = sampleRate;
     mNumChannels = numChannels;
 
-    mGainState.assign(numChannels, 0.0f);  // dB domain: 0 dB = no reduction
+    mGainState.assign(numChannels, 1.0f);  // linear domain: 1.0 = no reduction
     mEnvState.assign(numChannels, 0.0f);   // dB domain: 0 dB = no sustained GR
 
     updateCoefficients();
@@ -159,30 +159,35 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
                                         + minRequired * mChannelLink;
         }
 
-        // --- 3. Smooth gain with attack and release (dB domain) --------------
-        // Operating in dB domain ensures that attack/release coefficients
-        // produce constant dB/time rates (linear in dB = exponential in
-        // linear domain). mGainState[ch] holds the current gain in dB
-        // (0 = no reduction, negative = reducing).
+        // --- 3. Smooth gain in linear domain ---------------------------------
+        // mGainState[ch] is in linear scale (1.0 = no reduction, <1 = reducing).
+        // Tracking in linear domain avoids a per-sample std::pow call while
+        // remaining numerically close to dB-domain smoothing for typical
+        // attack/release times (>10 ms), where per-sample delta is <0.5%.
         for (int ch = 0; ch < chCount; ++ch)
         {
-            float& gDb = mGainState[ch];  // dB domain state
-            const float targetDb = gainToDecibels(perChRequiredGain[ch]);
+            float& g = mGainState[ch];  // linear domain state
+            const float target = perChRequiredGain[ch];  // already linear
 
-            // Update long-term envelope tracker for adaptive release (dB domain).
-            // mEnvState drifts negative when sustained gain reduction is present.
-            mEnvState[ch] = mEnvState[ch] * mAdaptiveSmoothCoeff
-                            + targetDb * (1.0f - mAdaptiveSmoothCoeff);
-
-            if (targetDb < gDb)
+            // Update long-term envelope tracker for adaptive release.
+            // mEnvState remains in dB domain to preserve dB-referenced thresholds.
+            if (mParams.adaptiveRelease)
             {
-                // Attack: more reduction needed — approach target in dB domain.
+                const float targetDb = gainToDecibels(target);
+                mEnvState[ch] = mEnvState[ch] * mAdaptiveSmoothCoeff
+                                + targetDb * (1.0f - mAdaptiveSmoothCoeff);
+            }
+
+            if (target < g)
+            {
+                // Attack: more reduction needed — approach target in linear domain.
                 // attackCoeff = 0 → instant attack.
-                gDb = gDb * mAttackCoeff + targetDb * (1.0f - mAttackCoeff);
+                g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
             }
             else
             {
-                // Release: recovering toward 0 dB.
+                // Release: recovering toward 1.0 (unity gain) in linear domain.
+                // g = g * c + 1.0 * (1 - c)
                 float effectiveReleaseCoeff = mReleaseCoeff;
 
                 if (mParams.adaptiveRelease)
@@ -201,17 +206,17 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
                     }
                 }
 
-                // Exponential recovery in dB: gDb → 0 at effective release rate
-                gDb = gDb + (0.0f - gDb) * (1.0f - effectiveReleaseCoeff);
+                // Exponential recovery toward 1.0 in linear domain
+                g = g * effectiveReleaseCoeff + (1.0f - effectiveReleaseCoeff);
             }
 
-            gDb = std::max(gDb, kMinGaindB);
+            g = std::max(g, kMinGain);
         }
 
         // --- 4. Apply gain to main audio -------------------------------------
         for (int ch = 0; ch < chCount; ++ch)
         {
-            const float linearGain = decibelsToGain(mGainState[ch]);
+            const float linearGain = mGainState[ch];  // already linear, no conversion needed
             channelData[ch][s] *= linearGain;
 
             if (linearGain < minGain)

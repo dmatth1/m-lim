@@ -74,8 +74,8 @@ private:
 
     AlgorithmParams mParams{};
 
-    // Per-channel state (both stored in dB domain: 0 = no reduction, negative = reducing)
-    std::vector<float> mGainState;  // smoothed gain in dB (converted to linear for application)
+    // Per-channel state
+    std::vector<float> mGainState;  // smoothed gain in linear scale (1.0 = no reduction)
     std::vector<float> mEnvState;   // long-term smoothed gain in dB for adaptive release
 
     float mCurrentGRdB = 0.0f;  // reported gain reduction in dB
