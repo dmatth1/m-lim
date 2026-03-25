@@ -4,7 +4,7 @@
 Set up the JUCE CMake project skeleton for M-LIM plugin. Initialize git submodules for JUCE and clap-juce-extensions, create the directory structure, and configure CMakeLists.txt to build VST3/AU/CLAP targets. Create stub files for PluginProcessor and PluginEditor so the project compiles.
 
 ## Produces
-Implements: `PluginProcessorCore`
+artifact:M-LIM/build
 
 ## Consumes
 None

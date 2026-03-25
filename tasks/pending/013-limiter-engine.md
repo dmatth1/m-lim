@@ -50,4 +50,4 @@ Read: `SPEC.md` — LimiterEngineInterface, MeterDataInterface
 - Bypass: pass audio through unchanged but still meter
 
 ## Dependencies
-Requires tasks 005, 006, 007, 008, 009, 011, 012
+Requires tasks 005, 006, 007, 008, 009, 011, 012, 032

@@ -149,6 +149,9 @@ M-LIM/
   - `"ditherNoiseShaping"` — choice (Basic/Optimized/Weighted)
   - `"bypass"` — bool, default false
   - `"unityGainMode"` — bool, default false
+  - `"sidechainHP"` — float, 20 to 2000 Hz, default 20 (detection path high-pass)
+  - `"sidechainLP"` — float, 2000 to 20000 Hz, default 20000 (detection path low-pass)
+  - `"sidechainTilt"` — float, -6 to +6 dB, default 0 (detection path tilt EQ)
   - `"delta"` — bool, default false
   - `"sidechainHPFreq"` — float, 20 to 2000 Hz, default 20 (off)
   - `"sidechainLPFreq"` — float, 2000 to 20000 Hz, default 20000 (off)
