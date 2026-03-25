@@ -156,7 +156,7 @@ void LevelMeter::drawPeakLabel (juce::Graphics& g,
     juce::Colour col = (peakDB >= kDangerDB) ? MLIMColours::meterDanger
                      : (peakDB >= kWarnDB)   ? MLIMColours::meterWarning
                                              : MLIMColours::textSecondary;
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (col);
     g.drawText (text, labelArea, juce::Justification::centred, false);
 }
@@ -166,7 +166,7 @@ void LevelMeter::drawScale (juce::Graphics& g, float barTop, float barH) const
     const auto bounds = getLocalBounds().toFloat();
     const float barY  = barTop;
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (MLIMColours::textSecondary);
 
     const float scaleX = bounds.getRight() - (float) kScaleWidth;

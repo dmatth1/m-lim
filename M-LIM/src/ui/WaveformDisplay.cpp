@@ -229,7 +229,7 @@ void WaveformDisplay::drawModeSelector (juce::Graphics& g) const
         g.fillRoundedRectangle (rect, 3.0f);
     }
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (textCol);
     g.drawText (label, rect, juce::Justification::centredLeft, false);
 }
@@ -293,7 +293,7 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
                                               y - 6.0f,
                                               scaleArea.getWidth() - 4.0f,
                                               12.0f);
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (lineColour);
     g.drawText (label, labelRect, juce::Justification::centredLeft, false);
 }
@@ -409,7 +409,7 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
         inp[static_cast<std::size_t> (col)] = f.inputLevel;
     });
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
 
     float lastLabelX = -100.0f; // track last drawn label x to avoid overlap
 
@@ -454,7 +454,7 @@ void WaveformDisplay::drawScale (juce::Graphics& g,
     g.setColour (MLIMColours::panelBorder);
     g.drawVerticalLine (juce::roundToInt (area.getX()), area.getY(), area.getBottom());
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
 
     // Reuse the same dB grid values as background
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)

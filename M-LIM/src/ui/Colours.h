@@ -59,6 +59,11 @@ namespace MLIMColours
     // Accent
     const juce::Colour accentBlue       { 0xff2196F3 };
 
+    // Font sizes
+    static constexpr float kFontSizeSmall  = 9.0f;
+    static constexpr float kFontSizeMedium = 10.0f;
+    static constexpr float kFontSizeLarge  = 11.0f;
+
     // dBFS grid markings used across meter and waveform displays (3 dB steps, 0 to -30)
     static constexpr float kMeterGridDB[] = {
         0.0f, -3.0f, -6.0f, -9.0f, -12.0f,

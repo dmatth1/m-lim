@@ -121,7 +121,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     // Label text ABOVE the knob
     g.setColour (MLIMColours::textSecondary);
-    g.setFont (juce::Font (11.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeLarge));
     g.drawFittedText (labelText,
                       juce::Rectangle<int> ((int)knobX, (int)bounds.getY(),
                                             (int)knobSize, (int)labelH),
@@ -129,7 +129,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     // Value + suffix text BELOW the knob (cached; updated only on value/suffix change)
     g.setColour (MLIMColours::textPrimary);
-    g.setFont (juce::Font (11.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeLarge));
     g.drawFittedText (cachedValueStr_,
                       juce::Rectangle<int> ((int)knobX, (int)(knobY + knobSize + 2),
                                             (int)knobSize, (int)valueH),

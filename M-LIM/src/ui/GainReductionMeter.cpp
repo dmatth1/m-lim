@@ -131,7 +131,7 @@ void GainReductionMeter::drawScale (juce::Graphics& g,
     g.drawVerticalLine (juce::roundToInt (scaleArea.getX()),
                         scaleArea.getY(), scaleArea.getBottom());
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
 
     // Marks at 0, -3, -6, -9, -12, -18, -24 dB
     static const float kMarks[] = { 0.0f, 3.0f, 6.0f, 9.0f, 12.0f, 18.0f, 24.0f };
@@ -169,11 +169,11 @@ void GainReductionMeter::drawNumeric (juce::Graphics& g,
     auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
     auto pk  = cur.withY (cur.getBottom());
 
-    g.setFont (juce::Font (10.0f, juce::Font::bold));
+    g.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
     g.setColour (MLIMColours::gainReduction);
     g.drawText (curStr, cur, juce::Justification::centred, false);
 
-    g.setFont (juce::Font (9.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (MLIMColours::peakLabel);
     g.drawText (pkStr, pk, juce::Justification::centred, false);
 }

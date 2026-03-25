@@ -68,7 +68,7 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
 
     outputCeilingLabel_.setText ("OUTPUT", juce::dontSendNotification);
     outputCeilingLabel_.setJustificationType (juce::Justification::centred);
-    outputCeilingLabel_.setFont (juce::Font (10.0f, juce::Font::bold));
+    outputCeilingLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
     outputCeilingLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
 
     // ── Setup buttons, combo boxes, and status bar ─────────────────────────
@@ -171,13 +171,13 @@ void ControlStrip::setupStatusBar()
                                        MLIMColours::buttonOnText);
 
     // ── Oversampling status label ──────────────────────────────────────────
-    oversamplingStatusLabel_.setFont (juce::Font (10.0f));
+    oversamplingStatusLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     oversamplingStatusLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
     oversamplingStatusLabel_.setJustificationType (juce::Justification::centredLeft);
     oversamplingStatusLabel_.setText ("Oversampling: Off", juce::dontSendNotification);
 
     // ── Dither status label ────────────────────────────────────────────────
-    ditherStatusLabel_.setFont (juce::Font (10.0f));
+    ditherStatusLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     ditherStatusLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
     ditherStatusLabel_.setJustificationType (juce::Justification::centredLeft);
     ditherStatusLabel_.setText ("Dither: Off", juce::dontSendNotification);
@@ -195,7 +195,7 @@ void ControlStrip::setupStatusBar()
     measurementModeButton_.onClick = [this] { cycleMeasurementMode(); };
 
     // ── Output level label ─────────────────────────────────────────────────
-    outputLevelLabel_.setFont (juce::Font (10.0f, juce::Font::bold));
+    outputLevelLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
     outputLevelLabel_.setColour (juce::Label::textColourId, MLIMColours::textPrimary);
     outputLevelLabel_.setJustificationType (juce::Justification::centredRight);
     outputLevelLabel_.setText ("Out: -.-- dBTP", juce::dontSendNotification);
@@ -428,7 +428,7 @@ void ControlStrip::paint (juce::Graphics& g)
     {
         auto algoB = algorithmSelector_.getBounds();
         g.setColour (MLIMColours::textSecondary);
-        g.setFont (juce::Font (juce::FontOptions().withHeight (9.0f).withStyle ("Bold")));
+        g.setFont (juce::Font (juce::FontOptions().withHeight (MLIMColours::kFontSizeSmall).withStyle ("Bold")));
         g.drawText ("STYLE",
                     algoB.getX(), algoB.getY() - 12,
                     algoB.getWidth(), 12,
@@ -449,7 +449,7 @@ void ControlStrip::paint (juce::Graphics& g)
 
         // "CHANNEL LINKING" label above the panel
         g.setColour (MLIMColours::textSecondary);
-        g.setFont (juce::Font (juce::FontOptions().withHeight (9.0f).withStyle ("Bold")));
+        g.setFont (juce::Font (juce::FontOptions().withHeight (MLIMColours::kFontSizeSmall).withStyle ("Bold")));
         g.drawText ("CHANNEL LINKING",
                     linkBounds.getX(), linkBounds.getY() - 12,
                     linkBounds.getWidth(), 12,

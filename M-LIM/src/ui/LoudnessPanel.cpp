@@ -408,7 +408,7 @@ void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
                 false);
 
     // "LUFS" unit label in smaller font — occupies the lower 1/3
-    g.setFont (juce::Font (10.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     g.setColour (MLIMColours::textSecondary);
     g.drawText ("LUFS",
                 bounds.withTrimmedTop (bounds.getHeight() * 2 / 3),
@@ -430,12 +430,12 @@ void LoudnessPanel::drawRow (juce::Graphics& g,
 
     // Label
     g.setColour (MLIMColours::textSecondary);
-    g.setFont (juce::Font (10.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     g.drawText (label, r.removeFromLeft (kLabelW), juce::Justification::centredLeft, false);
 
     // Value
     g.setColour (MLIMColours::textPrimary);
-    g.setFont (juce::Font (11.0f, juce::Font::bold));
+    g.setFont (juce::Font (MLIMColours::kFontSizeLarge, juce::Font::bold));
     g.drawText (valueStr, r.removeFromLeft (kValueW), juce::Justification::centredRight, false);
 
     // Bar (optional)
