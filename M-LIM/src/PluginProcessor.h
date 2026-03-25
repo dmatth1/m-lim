@@ -2,9 +2,14 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Parameters.h"
+#include "dsp/LimiterEngine.h"
 #include "dsp/MeterData.h"
+#include "state/ABState.h"
+#include "state/PresetManager.h"
+#include "state/UndoManager.h"
 
-class MLIMAudioProcessor : public juce::AudioProcessor
+class MLIMAudioProcessor : public juce::AudioProcessor,
+                           private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     MLIMAudioProcessor();
@@ -39,6 +44,55 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
+    // State management — public for UI access
+    ABState       abState;
+    PresetManager presetManager;
+    UndoManager   undoManager;
+
+    // Meter FIFO — audio thread pushes MeterData, UI thread pops
+    LockFreeFIFO<MeterData>& getMeterFIFO() { return limiterEngine.getMeterFIFO(); }
+
 private:
+    LimiterEngine limiterEngine;
+
+    // Raw parameter pointers — initialised once in constructor, read on audio thread
+    std::atomic<float>* pInputGain             = nullptr;
+    std::atomic<float>* pOutputCeiling         = nullptr;
+    std::atomic<float>* pAlgorithm             = nullptr;
+    std::atomic<float>* pLookahead             = nullptr;
+    std::atomic<float>* pAttack                = nullptr;
+    std::atomic<float>* pRelease               = nullptr;
+    std::atomic<float>* pChannelLinkTransients = nullptr;
+    std::atomic<float>* pChannelLinkRelease    = nullptr;
+    std::atomic<float>* pTruePeakEnabled       = nullptr;
+    std::atomic<float>* pOversamplingFactor    = nullptr;
+    std::atomic<float>* pDCFilterEnabled       = nullptr;
+    std::atomic<float>* pDitherEnabled         = nullptr;
+    std::atomic<float>* pDitherBitDepth        = nullptr;
+    std::atomic<float>* pDitherNoiseShaping    = nullptr;
+    std::atomic<float>* pBypass                = nullptr;
+    std::atomic<float>* pUnityGainMode         = nullptr;
+    std::atomic<float>* pSidechainHPFreq       = nullptr;
+    std::atomic<float>* pSidechainLPFreq       = nullptr;
+    std::atomic<float>* pSidechainTilt         = nullptr;
+    std::atomic<float>* pDelta                 = nullptr;
+
+    // Oversampling factor changes require reallocation; defer to prepareToPlay
+    std::atomic<bool>  mOversamplingChangePending { false };
+    std::atomic<int>   mPendingOversamplingFactor { 0 };
+    int                mAppliedOversamplingFactor = -1;
+
+    // -----------------------------------------------------------------------
+    // APVTS::Listener — called on message thread when params change
+    // -----------------------------------------------------------------------
+    void parameterChanged (const juce::String& paramID, float newValue) override;
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+    void initParameterPointers();
+    void pushAllParametersToEngine();
+    void updateLatency();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MLIMAudioProcessor)
 };

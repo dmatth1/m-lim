@@ -14,6 +14,7 @@ set(MLIM_TEST_CASES
     dsp/test_dsp_edge_cases.cpp
     integration/test_dsp_components.cpp
     integration/test_parameter_state.cpp
+    integration/test_plugin_processor.cpp
     dsp/test_limiter_engine.cpp
     dsp/test_limiter_engine_modes.cpp
     dsp/test_lockfree_fifo.cpp
@@ -32,6 +33,9 @@ add_executable(MLIMTests
     # Parameters.cpp is not in MLIMLib (it lives in the plugin target), so
     # include it directly here for the parameter-state integration tests.
     ../src/Parameters.cpp
+    # PluginProcessor and PluginEditor — needed for processor integration tests
+    ../src/PluginProcessor.cpp
+    ../src/PluginEditor.cpp
 )
 
 target_include_directories(MLIMTests
@@ -44,6 +48,9 @@ target_compile_definitions(MLIMTests
     PRIVATE
         CATCH_AMALGAMATED_CUSTOM_MAIN
         MLIM_PRESETS_DIR="${CMAKE_SOURCE_DIR}/presets"
+        # JucePlugin_Name is normally provided by juce_add_plugin; define it
+        # for the standalone test binary so PluginProcessor.cpp compiles.
+        JucePlugin_Name="M-LIM"
 )
 
 target_link_libraries(MLIMTests
