@@ -368,6 +368,81 @@ TEST_CASE("test_load_next_twice_advances_from_last_loaded", "[PresetManager]")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_save_overwrites_existing", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+
+    // First save: Alpha with gain = -6
+    *gainParam = -6.0f;
+    pm.savePreset("Alpha", proc.apvts);
+    REQUIRE(pm.getCurrentPresetName() == "Alpha");
+
+    // Second save: Alpha with gain = -12 (overwrite)
+    *gainParam = -12.0f;
+    pm.savePreset("Alpha", proc.apvts);
+    REQUIRE(pm.getCurrentPresetName() == "Alpha");
+
+    // Exactly one preset in the list
+    auto names = pm.getPresetNames();
+    REQUIRE(names.size() == 1);
+    REQUIRE(names[0] == "Alpha");
+
+    // File count in directory must be exactly 1
+    auto files = tmp.dir.findChildFiles(juce::File::findFiles, false, "*.xml");
+    REQUIRE(files.size() == 1);
+
+    // Load should restore the second save (gain = -12, not -6)
+    *gainParam = 0.0f;
+    bool loaded = pm.loadPreset("Alpha", proc.apvts);
+    REQUIRE(loaded == true);
+    REQUIRE(pm.getCurrentPresetName() == "Alpha");
+    REQUIRE(gainParam->get() == Catch::Approx(-12.0f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_overwrite_does_not_duplicate_index", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+
+    // Save "Beta" three times with different values
+    *gainParam = -3.0f;
+    pm.savePreset("Beta", proc.apvts);
+    *gainParam = -6.0f;
+    pm.savePreset("Beta", proc.apvts);
+    *gainParam = -9.0f;
+    pm.savePreset("Beta", proc.apvts);
+
+    // Preset list must contain "Beta" exactly once
+    auto names = pm.getPresetNames();
+    REQUIRE(names.size() == 1);
+    REQUIRE(names[0] == "Beta");
+
+    // File count in directory must be exactly 1
+    auto files = tmp.dir.findChildFiles(juce::File::findFiles, false, "*.xml");
+    REQUIRE(files.size() == 1);
+
+    // loadNextPreset from "Beta" (only preset) must wrap back to "Beta" — no duplicates
+    *gainParam = 0.0f;
+    bool ok = pm.loadNextPreset(proc.apvts);
+    REQUIRE(ok == true);
+    REQUIRE(pm.getCurrentPresetName() == "Beta");
+    // Must have loaded the last save (gain = -9)
+    REQUIRE(gainParam->get() == Catch::Approx(-9.0f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 TEST_CASE("test_factory_presets_exist", "[PresetManager]")
 {
     // Point PresetManager at the source-tree presets directory which contains
