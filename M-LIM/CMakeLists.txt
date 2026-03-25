@@ -22,7 +22,7 @@ else()
 endif()
 
 # Plugin formats
-set(PLUGIN_FORMATS VST3)
+set(PLUGIN_FORMATS VST3 Standalone)
 if(APPLE)
     list(APPEND PLUGIN_FORMATS AU)
 endif()

@@ -1,19 +1,29 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <array>
 #include <functional>
 
 /**
- * LoudnessPanel — shows ITU-R BS.1770-4 loudness readings with bar meters.
+ * LoudnessPanel — Pro-L 2 style loudness histogram + numeric readouts.
  *
- * Layout (vertical stack):
+ * Top area: loudness distribution histogram
+ *   - Horizontal bars at each dB level (-35 to 0 LUFS, 0.5 dB steps)
+ *   - Bar width = time accumulated at that loudness level
+ *   - Color-coded relative to target LUFS
+ *   - dB scale labels on the left
+ *   - Target level highlighted with distinct background
+ *
+ * Bottom area: numeric readout rows
  *   Momentary LUFS   [value] [bar]
  *   Short-Term LUFS  [value] [bar]
  *   Integrated LUFS  [value] [bar] [Reset]
  *   Range LU         [value]
  *   True Peak dBTP   [value]
  *
- * Call the set*() methods from the 60 fps UI timer after draining the FIFO.
+ * Call setMomentary/setShortTerm/setIntegrated/... from the 60 fps UI timer.
+ * Call pushLoudnessData() with the active LUFS reading each frame to accumulate
+ * the histogram.
  */
 class LoudnessPanel : public juce::Component
 {
@@ -31,6 +41,15 @@ public:
     /** Set the target LUFS reference line on bar meters (default -14 LUFS). */
     void setTarget (float lufs);
 
+    /**
+     * Push a loudness reading to accumulate the histogram.
+     * Call once per UI frame with the current short-term or integrated LUFS.
+     */
+    void pushLoudnessData (float lufs);
+
+    /** Clear all histogram bins and reset the display. */
+    void resetHistogram();
+
     /** Called when the user clicks the integrated-LUFS Reset button. */
     std::function<void()> onResetIntegrated;
 
@@ -39,6 +58,7 @@ public:
     void resized () override;
 
 private:
+    // ── Loudness state ────────────────────────────────────────────────────
     float momentary_     = -std::numeric_limits<float>::infinity();
     float shortTerm_     = -std::numeric_limits<float>::infinity();
     float integrated_    = -std::numeric_limits<float>::infinity();
@@ -46,14 +66,39 @@ private:
     float truePeak_      = -std::numeric_limits<float>::infinity();
     float targetLUFS_    = -14.0f;
 
+    // ── Histogram state ───────────────────────────────────────────────────
+    static constexpr int   kHistBins = 70;       // -35 to 0 LUFS in 0.5 dB steps
+    static constexpr float kHistMin  = -35.0f;
+    static constexpr float kHistStep = 0.5f;
+
+    std::array<float, kHistBins> histogramBins_ {};
+    float histogramMax_ = 1.0f;
+
+    // ── Children ──────────────────────────────────────────────────────────
     juce::TextButton resetButton_ { "RST" };
 
-    /** Draw one row: label on left, formatted value in middle, optional bar on right. */
+    // ── Layout constants ──────────────────────────────────────────────────
+    static constexpr int kRowH     = 22;
+    static constexpr int kPadding  = 4;
+    static constexpr int kLabelW   = 72;
+    static constexpr int kValueW   = 52;
+    static constexpr int kBtnW     = 28;
+    static constexpr float kMinLUFS = -60.0f;
+
+    /** Height reserved for the numeric readout rows at the bottom. */
+    static constexpr int kReadoutAreaH = kPadding + 5 * kRowH + kPadding;
+
+    // ── Private drawing helpers ───────────────────────────────────────────
+
+    /** Draw the loudness distribution histogram in the given bounds. */
+    void drawHistogram (juce::Graphics& g, juce::Rectangle<int> bounds) const;
+
+    /** Draw one readout row: label / value / optional bar. */
     void drawRow (juce::Graphics& g,
                   const juce::Rectangle<int>& rowBounds,
                   const juce::String& label,
                   const juce::String& valueStr,
-                  float  barFill,        ///< 0-1 normalised fill, <0 means no bar
+                  float  barFill,
                   bool   showTarget,
                   float  targetFrac) const;
 
@@ -73,12 +118,8 @@ private:
     /** Format a dBTP value. */
     static juce::String fmtDBTP (float dBTP);
 
-    static constexpr int kRowH     = 22;
-    static constexpr int kPadding  = 4;
-    static constexpr int kLabelW   = 72;
-    static constexpr int kValueW   = 52;
-    static constexpr int kBtnW     = 28;
-    static constexpr float kMinLUFS = -60.0f;
+    /** Return the histogram bar colour for a given LUFS level vs target. */
+    static juce::Colour histogramBarColour (float binLUFS, float targetLUFS) noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LoudnessPanel)
 };

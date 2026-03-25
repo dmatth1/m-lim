@@ -1,6 +1,7 @@
 #include "LoudnessPanel.h"
 #include "Colours.h"
 #include <cmath>
+#include <algorithm>
 #include <limits>
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -10,7 +11,11 @@ LoudnessPanel::LoudnessPanel()
     resetButton_.setClickingTogglesState (false);
     resetButton_.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff2A2A2A));
     resetButton_.setColour (juce::TextButton::textColourOffId, MLIMColours::textSecondary);
-    resetButton_.onClick = [this] { if (onResetIntegrated) onResetIntegrated(); };
+    resetButton_.onClick = [this]
+    {
+        if (onResetIntegrated) onResetIntegrated();
+        resetHistogram();
+    };
     addAndMakeVisible (resetButton_);
 }
 
@@ -23,36 +28,73 @@ void LoudnessPanel::setLoudnessRange (float lu)   { loudnessRange_ = lu;   repai
 void LoudnessPanel::setTruePeak      (float dBTP) { truePeak_      = dBTP; repaint(); }
 void LoudnessPanel::setTarget        (float lufs) { targetLUFS_    = lufs; repaint(); }
 
+// ── Histogram accumulation ────────────────────────────────────────────────────
+
+void LoudnessPanel::pushLoudnessData (float lufs)
+{
+    if (std::isinf (lufs) || std::isnan (lufs)
+        || lufs < kHistMin || lufs > 0.0f)
+        return;
+
+    int bin = juce::jlimit (0, kHistBins - 1,
+                            static_cast<int> ((lufs - kHistMin) / kHistStep));
+    histogramBins_[static_cast<size_t> (bin)] += 1.0f;
+
+    histogramMax_ = *std::max_element (histogramBins_.begin(), histogramBins_.end());
+    repaint();
+}
+
+void LoudnessPanel::resetHistogram()
+{
+    histogramBins_.fill (0.0f);
+    histogramMax_ = 1.0f;
+    repaint();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 void LoudnessPanel::resized()
 {
-    // Place reset button next to the Integrated row
-    int rowY = kPadding + kRowH * 2;   // 0-indexed row 2 = Integrated
-    auto btnBounds = juce::Rectangle<int> (
-        getWidth() - kBtnW - kPadding,
-        rowY + (kRowH - 18) / 2,
-        kBtnW,
-        18);
-    resetButton_.setBounds (btnBounds);
+    const int histH  = std::max (0, getHeight() - kReadoutAreaH);
+    // Integrated row = row index 2 within the readout area
+    const int rowY   = histH + kPadding + kRowH * 2;
+
+    resetButton_.setBounds (getWidth() - kBtnW - kPadding,
+                            rowY + (kRowH - 18) / 2,
+                            kBtnW,
+                            18);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 void LoudnessPanel::paint (juce::Graphics& g)
 {
-    // Background
+    // Panel background
     g.setColour (MLIMColours::displayBackground);
     g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);
 
     g.setColour (MLIMColours::panelBorder);
     g.drawRoundedRectangle (getLocalBounds().reduced (1).toFloat(), 4.0f, 1.0f);
 
-    float targetFrac = lufsToFrac (targetLUFS_);
+    // ── Histogram ────────────────────────────────────────────────────────
+    const int histH = std::max (0, getHeight() - kReadoutAreaH);
+    if (histH > 30)
+    {
+        auto histBounds = getLocalBounds().withHeight (histH);
+        drawHistogram (g, histBounds);
+
+        // Separator line between histogram and readout rows
+        g.setColour (MLIMColours::panelBorder);
+        g.drawHorizontalLine (histH, 2.0f, static_cast<float> (getWidth() - 2));
+    }
+
+    // ── Numeric readout rows ──────────────────────────────────────────────
+    const int readoutTop = histH;
+    const float targetFrac = lufsToFrac (targetLUFS_);
 
     // Row 0: Momentary
     drawRow (g,
-             getLocalBounds().withTrimmedTop (kPadding + kRowH * 0).withHeight (kRowH),
+             getLocalBounds().withTrimmedTop (readoutTop + kPadding + kRowH * 0).withHeight (kRowH),
              "Momentary",
              fmtLUFS (momentary_),
              lufsToFrac (momentary_),
@@ -61,16 +103,16 @@ void LoudnessPanel::paint (juce::Graphics& g)
 
     // Row 1: Short-Term
     drawRow (g,
-             getLocalBounds().withTrimmedTop (kPadding + kRowH * 1).withHeight (kRowH),
+             getLocalBounds().withTrimmedTop (readoutTop + kPadding + kRowH * 1).withHeight (kRowH),
              "Short-Term",
              fmtLUFS (shortTerm_),
              lufsToFrac (shortTerm_),
              true,
              targetFrac);
 
-    // Row 2: Integrated (reset button is a child component, drawn on top)
+    // Row 2: Integrated (reset button is a child component)
     drawRow (g,
-             getLocalBounds().withTrimmedTop (kPadding + kRowH * 2).withHeight (kRowH),
+             getLocalBounds().withTrimmedTop (readoutTop + kPadding + kRowH * 2).withHeight (kRowH),
              "Integrated",
              fmtLUFS (integrated_),
              lufsToFrac (integrated_),
@@ -79,26 +121,148 @@ void LoudnessPanel::paint (juce::Graphics& g)
 
     // Row 3: Range (no bar)
     {
-        juce::String val = std::isinf (loudnessRange_)
+        juce::String val = (std::isinf (loudnessRange_) || loudnessRange_ <= 0.0f)
                          ? "---"
                          : juce::String (loudnessRange_, 1);
         drawRow (g,
-                 getLocalBounds().withTrimmedTop (kPadding + kRowH * 3).withHeight (kRowH),
+                 getLocalBounds().withTrimmedTop (readoutTop + kPadding + kRowH * 3).withHeight (kRowH),
                  "Range",
                  val + " LU",
-                 -1.0f,   // no bar
+                 -1.0f,
                  false,
                  0.0f);
     }
 
     // Row 4: True Peak (no bar)
     drawRow (g,
-             getLocalBounds().withTrimmedTop (kPadding + kRowH * 4).withHeight (kRowH),
+             getLocalBounds().withTrimmedTop (readoutTop + kPadding + kRowH * 4).withHeight (kRowH),
              "True Peak",
              fmtDBTP (truePeak_),
              -1.0f,
              false,
              0.0f);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+void LoudnessPanel::drawHistogram (juce::Graphics& g,
+                                   juce::Rectangle<int> bounds) const
+{
+    // Layout: left strip = dB scale labels, right area = histogram bars
+    constexpr int kScaleW = 26;
+    constexpr int kBarPad = 3;   // padding around bars area
+
+    const auto scaleRect = bounds.withWidth (kScaleW);
+    const auto barsArea  = bounds.withTrimmedLeft (kScaleW).reduced (kBarPad, kBarPad);
+
+    const float totalH    = static_cast<float> (barsArea.getHeight());
+    const float barH      = totalH / static_cast<float> (kHistBins);
+    const float maxVal    = std::max (histogramMax_, 1.0f);
+    const float barAreaW  = static_cast<float> (barsArea.getWidth());
+    const float originX   = static_cast<float> (barsArea.getX());
+    const float originY   = static_cast<float> (barsArea.getY());
+
+    // ── Draw histogram bars (bin 0 = -35 LUFS at bottom, bin 69 = 0 LUFS at top) ──
+    for (int i = 0; i < kHistBins; ++i)
+    {
+        const float binLUFS = kHistMin + static_cast<float> (i) * kHistStep;
+
+        // Map bin index to Y: higher LUFS (louder) = higher on screen (smaller Y)
+        // bin kHistBins-1 (0 LUFS) maps to top, bin 0 (-35 LUFS) maps to bottom
+        const float normPos = static_cast<float> (i) / static_cast<float> (kHistBins);
+        const float barY    = originY + totalH - (normPos + 1.0f / kHistBins) * totalH;
+
+        // Target level highlight (slightly lighter background)
+        if (std::abs (binLUFS - targetLUFS_) < kHistStep * 0.5f)
+        {
+            g.setColour (juce::Colour (0xff2A2A3A));
+            g.fillRect (juce::Rectangle<float> (originX, barY, barAreaW, barH));
+        }
+
+        const float count    = histogramBins_[static_cast<size_t> (i)];
+        const float barWidth = (count / maxVal) * barAreaW;
+
+        if (barWidth >= 0.5f)
+        {
+            g.setColour (histogramBarColour (binLUFS, targetLUFS_));
+            g.fillRect (juce::Rectangle<float> (originX, barY + 0.5f,
+                                                barWidth,
+                                                std::max (barH - 1.0f, 0.5f)));
+        }
+    }
+
+    // ── Draw target indicator line ────────────────────────────────────────
+    {
+        const float normTarget = (targetLUFS_ - kHistMin) / (kHistBins * kHistStep);
+        const float targetY    = originY + totalH - normTarget * totalH;
+
+        g.setColour (MLIMColours::peakLabel.withAlpha (0.85f));
+        g.drawHorizontalLine (juce::roundToInt (targetY),
+                              originX,
+                              originX + barAreaW);
+
+        // Target label on the scale side
+        juce::String targetStr = juce::String (static_cast<int> (std::round (targetLUFS_)));
+        g.setFont (juce::Font (8.5f, juce::Font::bold));
+        g.setColour (MLIMColours::peakLabel);
+        g.drawText (targetStr,
+                    scaleRect.withY (juce::roundToInt (targetY) - 6).withHeight (12),
+                    juce::Justification::centredRight,
+                    false);
+    }
+
+    // ── dB scale labels ───────────────────────────────────────────────────
+    // Draw labels every 5 dB: 0, -5, -10, -15, -20, -25, -30, -35
+    g.setFont (juce::Font (8.0f));
+    g.setColour (MLIMColours::textSecondary);
+
+    for (int dB = 0; dB >= -35; dB -= 5)
+    {
+        const float normPos = (static_cast<float> (dB) - kHistMin) / (kHistBins * kHistStep);
+        const float labelY  = originY + totalH - normPos * totalH;
+
+        // Skip if too close to the target label
+        if (std::abs (static_cast<float> (dB) - targetLUFS_) < 3.0f)
+            continue;
+
+        juce::String label = (dB == 0) ? "0" : juce::String (dB);
+        g.drawText (label,
+                    scaleRect.withY (juce::roundToInt (labelY) - 6).withHeight (12),
+                    juce::Justification::centredRight,
+                    false);
+
+        // Tick mark
+        g.setColour (MLIMColours::panelBorder);
+        g.drawHorizontalLine (juce::roundToInt (labelY),
+                              originX,
+                              originX + 3.0f);
+        g.setColour (MLIMColours::textSecondary);
+    }
+
+    // ── "LUFS" header label ───────────────────────────────────────────────
+    g.setFont (juce::Font (8.0f));
+    g.setColour (MLIMColours::textSecondary.withAlpha (0.7f));
+    g.drawText ("LUFS",
+                bounds.withHeight (12).withY (bounds.getY() + 2),
+                juce::Justification::centred,
+                false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+juce::Colour LoudnessPanel::histogramBarColour (float binLUFS,
+                                                float targetLUFS) noexcept
+{
+    const float diff = binLUFS - targetLUFS;   // positive = louder than target
+
+    if (diff >= 0.0f)
+        return MLIMColours::meterDanger;                          // above target: red
+    else if (diff >= -2.0f)
+        return juce::Colour (0xffFF8C00);                         // at target ±2: orange
+    else if (diff >= -6.0f)
+        return MLIMColours::meterWarning;                         // approaching: yellow
+    else
+        return MLIMColours::textPrimary.withAlpha (0.75f);        // below target: light gray
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,10 +290,8 @@ void LoudnessPanel::drawRow (juce::Graphics& g,
     // Bar (optional)
     if (barFill >= 0.0f)
     {
-        r.removeFromLeft (4);  // small gap
-        // Reserve space for reset button if this is the Integrated row
-        auto barRect = r.toFloat();
-        drawBar (g, barRect, barFill, showTarget, targetFrac);
+        r.removeFromLeft (4);
+        drawBar (g, r.toFloat(), barFill, showTarget, targetFrac);
     }
 }
 
