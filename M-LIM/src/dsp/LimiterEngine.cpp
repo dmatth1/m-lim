@@ -184,6 +184,17 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
         float outR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outL;
         mTruePkL.store(outL);
         mTruePkR.store(outR);
+
+        MeterData md;
+        md.inputLevelL   = inLevelL;
+        md.inputLevelR   = inLevelR;
+        md.outputLevelL  = outL;
+        md.outputLevelR  = outR;
+        md.gainReduction = 0.0f;
+        md.truePeakL     = outL;
+        md.truePeakR     = outR;
+        md.waveformSample = 0.0f;
+        mMeterFIFO.push(md);
         return;
     }
 

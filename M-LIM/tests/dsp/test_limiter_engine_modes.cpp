@@ -373,6 +373,37 @@ TEST_CASE("test_delta_output_bounded", "[LimiterEngineModes]")
 }
 
 // ============================================================================
+// test_bypass_pushes_meter_data
+// In bypass mode, process() must push at least one MeterData to the FIFO so
+// the UI meters keep updating.  gainReduction must be 0.0 and both input and
+// output levels must reflect the non-silent signal.
+// ============================================================================
+TEST_CASE("test_bypass_pushes_meter_data", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setBypass(true);
+
+    // Non-silent buffer: sine at 0.5 amplitude
+    juce::AudioBuffer<float> buf = makeSine(0.5f);
+    engine.process(buf);
+
+    auto& fifo = engine.getMeterFIFO();
+    MeterData md;
+    const bool popped = fifo.pop(md);
+
+    // (a) At least one MeterData must have been pushed
+    REQUIRE(popped);
+
+    // (b) No gain reduction in bypass
+    REQUIRE(md.gainReduction == Catch::Approx(0.0f).margin(1e-6f));
+
+    // (c) Levels must reflect the non-silent input
+    REQUIRE(md.inputLevelL  > 0.0f);
+    REQUIRE(md.outputLevelL > 0.0f);
+}
+
+// ============================================================================
 // test_dither_toggle
 // Enabling and disabling dither during processing should not crash
 // and should produce finite output.
