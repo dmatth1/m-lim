@@ -20,6 +20,11 @@ struct MeterData
     float truePeakL    = 0.0f;   ///< True peak level, left channel (linear)
     float truePeakR    = 0.0f;   ///< True peak level, right channel
 
+    float momentaryLUFS  = 0.0f; ///< Momentary loudness (400 ms window), in LUFS
+    float shortTermLUFS  = 0.0f; ///< Short-term loudness (3 s window), in LUFS
+    float integratedLUFS = 0.0f; ///< Integrated loudness since reset, in LUFS
+    float loudnessRange  = 0.0f; ///< Loudness range (EBU R128), in LU
+
     std::array<float, 512> waveformBuffer{};  ///< Waveform/GR snapshot for WaveformDisplay
     int waveformSize = 0;                     ///< Valid samples in waveformBuffer
 };

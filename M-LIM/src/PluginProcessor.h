@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Parameters.h"
 #include "dsp/LimiterEngine.h"
+#include "dsp/LoudnessMeter.h"
 #include "dsp/MeterData.h"
 #include "state/ABState.h"
 #include "state/PresetManager.h"
@@ -49,11 +50,18 @@ public:
     PresetManager presetManager;
     UndoManager   undoManager;
 
-    // Meter FIFO — audio thread pushes MeterData, UI thread pops
-    LockFreeFIFO<MeterData>& getMeterFIFO() { return limiterEngine.getMeterFIFO(); }
+    // Meter FIFO — audio thread pushes MeterData (with LUFS), UI thread pops
+    LockFreeFIFO<MeterData>& getMeterFIFO() { return mProcessorMeterFIFO; }
+
+    // Loudness meter — read from any thread (results are atomic)
+    const LoudnessMeter& getLoudnessMeter() const noexcept { return loudnessMeter; }
 
 private:
     LimiterEngine limiterEngine;
+    LoudnessMeter loudnessMeter;
+
+    // Processor-owned FIFO: audio thread drains engine FIFO, augments with LUFS, pushes here
+    LockFreeFIFO<MeterData> mProcessorMeterFIFO { 32 };
 
     // Raw parameter pointers — initialised once in constructor, read on audio thread
     std::atomic<float>* pInputGain             = nullptr;

@@ -11,6 +11,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,36 @@ TEST_CASE("test_state_save_load", "[PluginProcessor]")
     REQUIRE (inputGainB->load()  == Catch::Approx (6.0f).margin (0.01f));
     REQUIRE (ceilingB->load()    == Catch::Approx (-1.0f).margin (0.01f));
     REQUIRE (lookaheadB->load()  == Catch::Approx (2.5f).margin (0.01f));
+}
+
+// ============================================================================
+// test_loudness_metering_active
+// Process enough sine wave blocks to accumulate LUFS data and verify the
+// loudness meter reports a finite, non-silence value.
+// ============================================================================
+TEST_CASE("test_loudness_metering_active", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer (kNumChannels, kBlockSize);
+    juce::MidiBuffer midiBuffer;
+
+    // Need > 400 ms for momentary window to fill: 400 ms @ 44100 / 512 = ~35 blocks.
+    // Process 100 to be safe.
+    for (int block = 0; block < 100; ++block)
+    {
+        fillSine (buffer, 0.5f); // -6 dBFS sine
+        proc.processBlock (buffer, midiBuffer);
+    }
+
+    const float momentary = proc.getLoudnessMeter().getMomentaryLUFS();
+
+    // Must be a valid finite LUFS value (not -infinity or NaN)
+    REQUIRE (std::isfinite (momentary));
+    // A -6 dBFS sine should produce a loudness well above silence
+    REQUIRE (momentary < 0.0f);
+    REQUIRE (momentary > -100.0f);
 }
 
 // ============================================================================

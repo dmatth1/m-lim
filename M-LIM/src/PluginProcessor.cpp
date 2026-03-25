@@ -62,6 +62,7 @@ void MLIMAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     }
 
     limiterEngine.prepare (sampleRate, samplesPerBlock, numChannels);
+    loudnessMeter.prepare (sampleRate, numChannels);
 
     // Push all current parameter values to the engine
     pushAllParametersToEngine();
@@ -120,6 +121,20 @@ void MLIMAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // here (it allocates memory). Changes are handled via parameterChanged + prepareToPlay.
 
     limiterEngine.process (buffer);
+
+    // Measure output loudness (post-limiting signal)
+    loudnessMeter.processBlock (buffer);
+
+    // Drain engine FIFO, augment with LUFS values, push to processor FIFO
+    MeterData md;
+    while (limiterEngine.getMeterFIFO().pop (md))
+    {
+        md.momentaryLUFS  = loudnessMeter.getMomentaryLUFS();
+        md.shortTermLUFS  = loudnessMeter.getShortTermLUFS();
+        md.integratedLUFS = loudnessMeter.getIntegratedLUFS();
+        md.loudnessRange  = loudnessMeter.getLoudnessRange();
+        mProcessorMeterFIFO.push (md);
+    }
 }
 
 // ---------------------------------------------------------------------------
