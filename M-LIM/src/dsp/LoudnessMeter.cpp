@@ -11,6 +11,8 @@ static constexpr double kPi              = 3.14159265358979323846;
 static constexpr double kLufsCorrectiondB = -0.691; // BS.1770-4: 10*log10(Σ G_i * z_i) - 0.691
 static constexpr double kAbsGateLUFS     = -70.0;   // absolute gate threshold
 static constexpr double kRelGateOffset   = -10.0;   // relative gate = ungated mean - 10 LU
+static constexpr double kBS1770PreFilterFreqHz  = 1681.974450955533;  // ITU-R BS.1770-4 pre-filter Fc
+static constexpr double kBS1770RLBHighPassFreqHz = 38.13547087602444; // ITU-R BS.1770-4 RLB HP Fc
 
 // ---------------------------------------------------------------------------
 // prepare
@@ -66,7 +68,7 @@ void LoudnessMeter::setupKWeightingFilters()
     // Bilinear transform with K = tan(pi * f0 / fs), f0 = 1681.974 Hz
     // ------------------------------------------------------------------
     {
-        const double f0 = 1681.974450955533;
+        const double f0 = kBS1770PreFilterFreqHz;
         const double Q  = 0.7071752369554196;
         const double dB = 3.99984385397;
 
@@ -92,7 +94,7 @@ void LoudnessMeter::setupKWeightingFilters()
     // Stage 2: RLB high-pass (2nd-order Butterworth, fc ~38.135 Hz)
     // ------------------------------------------------------------------
     {
-        const double fc = 38.13547087602444;
+        const double fc = kBS1770RLBHighPassFreqHz;
         const double K  = std::tan(kPi * fc / mSampleRate);
         const double K2 = K * K;
         const double sq2 = std::sqrt(2.0);
