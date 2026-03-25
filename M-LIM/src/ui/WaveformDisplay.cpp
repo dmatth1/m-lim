@@ -113,7 +113,13 @@ void WaveformDisplay::paint (juce::Graphics& g)
 void WaveformDisplay::drawBackground (juce::Graphics& g,
                                        const juce::Rectangle<float>& area) const
 {
-    g.setColour (MLIMColours::displayBackground);
+    // Subtle vertical gradient: near-black with blue tint at top, dark blue-gray at bottom
+    juce::ColourGradient gradient = juce::ColourGradient::vertical (
+        MLIMColours::displayGradientTop,
+        area.getY(),
+        MLIMColours::displayGradientBottom,
+        area.getBottom());
+    g.setGradientFill (gradient);
     g.fillRect (area);
 
     // Horizontal dB grid lines

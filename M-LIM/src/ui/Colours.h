@@ -5,9 +5,13 @@
 namespace MLIMColours
 {
     // Background colours
-    const juce::Colour background       { 0xff1E1E1E };
-    const juce::Colour displayBackground{ 0xff141414 };
-    const juce::Colour panelBorder      { 0xff333333 };
+    const juce::Colour background           { 0xff1E1E1E };
+    const juce::Colour displayBackground    { 0xff141414 };
+    const juce::Colour panelBorder          { 0xff333333 };
+
+    // Waveform display gradient colours
+    const juce::Colour displayGradientTop   { 0xff0D0D12 };  // near-black with slight blue tint
+    const juce::Colour displayGradientBottom{ 0xff1A1A2E };  // dark blue-gray
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform    { 0x994FC3F7 };  // light cyan, alpha ~0.6
