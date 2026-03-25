@@ -10,7 +10,8 @@ RotaryKnob::RotaryKnob()
     slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
     slider.setRotaryParameters (kRotaryStartAngle, kRotaryEndAngle, true);
-    slider.onValueChange = [this] { sliderValueChanged(); };
+    slider.onValueChange = [this] { updateCachedValue(); sliderValueChanged(); };
+    updateCachedValue();
     addAndMakeVisible (slider);
 }
 
@@ -125,11 +126,10 @@ void RotaryKnob::paint (juce::Graphics& g)
                                             (int)knobSize, 13),
                       juce::Justification::centred, 1);
 
-    // Value + suffix text
-    juce::String valueStr = juce::String (slider.getValue(), 1) + " " + suffixText;
+    // Value + suffix text (cached; updated only on value/suffix change)
     g.setColour (MLIMColours::textPrimary);
     g.setFont (juce::Font (11.0f));
-    g.drawFittedText (valueStr,
+    g.drawFittedText (cachedValueStr_,
                       juce::Rectangle<int> ((int)knobX, (int)textY + 13,
                                             (int)knobSize, 13),
                       juce::Justification::centred, 1);
@@ -171,6 +171,7 @@ void RotaryKnob::setLabel (const juce::String& label)
 void RotaryKnob::setSuffix (const juce::String& suffix)
 {
     suffixText = suffix;
+    updateCachedValue();
     repaint();
 }
 
@@ -179,4 +180,9 @@ void RotaryKnob::sliderValueChanged()
     repaint();
     if (onValueChange)
         onValueChange ((float)slider.getValue());
+}
+
+void RotaryKnob::updateCachedValue()
+{
+    cachedValueStr_ = juce::String (slider.getValue(), 1) + " " + suffixText;
 }

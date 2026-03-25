@@ -26,8 +26,10 @@ private:
     juce::Slider slider;
     juce::String labelText;
     juce::String suffixText;
+    juce::String cachedValueStr_;
 
     void sliderValueChanged();
+    void updateCachedValue();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RotaryKnob)
 };
