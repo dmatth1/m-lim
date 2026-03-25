@@ -1,0 +1,6 @@
+[submodule "M-LIM/libs/JUCE"]
+	path = M-LIM/libs/JUCE
+	url = https://github.com/juce-framework/JUCE.git
+[submodule "M-LIM/libs/clap-juce-extensions"]
+	path = M-LIM/libs/clap-juce-extensions
+	url = https://github.com/free-audio/clap-juce-extensions.git
