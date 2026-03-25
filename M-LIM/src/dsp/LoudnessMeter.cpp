@@ -41,8 +41,7 @@ void LoudnessMeter::prepare(double sampleRate, int numChannels)
     mHistorySize.store(0, std::memory_order_relaxed);
 
     // Pre-allocate working buffers for updateIntegratedAndLRA
-    mWindowPowers.clear();
-    mWindowPowers.reserve(static_cast<size_t>(kMaxHistoryBlocks));
+    mWindowPowers.assign(static_cast<size_t>(kMaxHistoryBlocks), 0.0);
     mPrefixSums.resize(static_cast<size_t>(kMaxHistoryBlocks + 1), 0.0);
 
     // Reset LRA histogram
@@ -210,14 +209,13 @@ float LoudnessMeter::computeIntegratedLUFS()
     const int n = mHistorySize.load(std::memory_order_relaxed);
 
     // Build 400 ms sliding windows (hop = 100 ms).
-    // mWindowPowers is pre-allocated; clear() + push_back() does not allocate.
-    mWindowPowers.clear();
+    // mWindowPowers is pre-allocated to kMaxHistoryBlocks; use indexed assignment.
     const int numWin400 = n - kMomentaryBlocks + 1;
     for (int i = 0; i < numWin400; ++i)
     {
         const double sum = mPrefixSums[static_cast<size_t>(i + kMomentaryBlocks)]
                          - mPrefixSums[static_cast<size_t>(i)];
-        mWindowPowers.push_back(sum / kMomentaryBlocks);
+        mWindowPowers[static_cast<size_t>(i)] = sum / kMomentaryBlocks;
     }
 
     // Absolute gate: -70 LUFS
@@ -226,8 +224,9 @@ float LoudnessMeter::computeIntegratedLUFS()
     // First pass: mean of all windows above absolute gate
     double sumAbove = 0.0;
     int    cntAbove = 0;
-    for (double p : mWindowPowers)
+    for (int i = 0; i < numWin400; ++i)
     {
+        const double p = mWindowPowers[static_cast<size_t>(i)];
         if (p > absGateLinear)
         {
             sumAbove += p;
@@ -245,8 +244,9 @@ float LoudnessMeter::computeIntegratedLUFS()
     // Second pass: mean of all windows above relative gate
     double sumRel = 0.0;
     int    cntRel = 0;
-    for (double p : mWindowPowers)
+    for (int i = 0; i < numWin400; ++i)
     {
+        const double p = mWindowPowers[static_cast<size_t>(i)];
         if (p > absGateLinear && p > relGateLinear)
         {
             sumRel += p;
