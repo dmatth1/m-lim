@@ -43,29 +43,37 @@ LoudnessPanel::LoudnessPanel()
                 if (choiceIndex == 4)
                 {
                     // Custom: ask for a value via AlertWindow
-                    auto* alertWindow = new juce::AlertWindow ("Custom Target",
-                                                               "Enter target LUFS (e.g. -16):",
-                                                               juce::MessageBoxIconType::NoIcon);
-                    alertWindow->addTextEditor ("value",
-                                                juce::String (customTargetLUFS_, 1),
-                                                "LUFS:");
-                    alertWindow->addButton ("OK",     1, juce::KeyPress (juce::KeyPress::returnKey));
-                    alertWindow->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+                    // Lifetime is managed by customAlertWindow_ (RAII); SafePointer
+                    // guards against the component being destroyed before callback fires.
+                    juce::Component::SafePointer<LoudnessPanel> safeThis (this);
 
-                    alertWindow->enterModalState (true,
-                        juce::ModalCallbackFunction::create ([this, alertWindow] (int r)
+                    customAlertWindow_ = std::make_unique<juce::AlertWindow> (
+                        "Custom Target",
+                        "Enter target LUFS (e.g. -16):",
+                        juce::MessageBoxIconType::NoIcon);
+                    customAlertWindow_->addTextEditor ("value",
+                                                       juce::String (customTargetLUFS_, 1),
+                                                       "LUFS:");
+                    customAlertWindow_->addButton ("OK",     1, juce::KeyPress (juce::KeyPress::returnKey));
+                    customAlertWindow_->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+
+                    customAlertWindow_->enterModalState (true,
+                        juce::ModalCallbackFunction::create ([safeThis] (int r)
                         {
+                            if (safeThis == nullptr) return;
                             if (r == 1)
                             {
-                                const float val = alertWindow->getTextEditorContents ("value")
-                                                              .getFloatValue();
-                                customTargetLUFS_ = juce::jlimit (-60.0f, 0.0f, val);
-                                targetChoice_ = 4;
-                                setTarget (customTargetLUFS_);
-                                targetButton_.setButtonText (juce::String (customTargetLUFS_, 1));
-                                if (onTargetChanged) onTargetChanged (4);
+                                const float val = safeThis->customAlertWindow_
+                                                      ->getTextEditorContents ("value")
+                                                      .getFloatValue();
+                                safeThis->customTargetLUFS_ = juce::jlimit (-60.0f, 0.0f, val);
+                                safeThis->targetChoice_ = 4;
+                                safeThis->setTarget (safeThis->customTargetLUFS_);
+                                safeThis->targetButton_.setButtonText (
+                                    juce::String (safeThis->customTargetLUFS_, 1));
+                                if (safeThis->onTargetChanged) safeThis->onTargetChanged (4);
                             }
-                            delete alertWindow;
+                            safeThis->customAlertWindow_.reset();
                         }),
                         true);
                     return;

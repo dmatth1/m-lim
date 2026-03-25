@@ -102,6 +102,9 @@ private:
     juce::TextButton resetButton_  { "RST" };
     juce::TextButton targetButton_;
 
+    // ── Owned modal dialog (RAII lifetime, reset in callback or destructor) ─
+    std::unique_ptr<juce::AlertWindow> customAlertWindow_;
+
     // ── Layout constants ──────────────────────────────────────────────────
     static constexpr int kRowH     = 22;
     static constexpr int kPadding  = 4;
