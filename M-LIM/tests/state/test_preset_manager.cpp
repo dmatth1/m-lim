@@ -156,6 +156,117 @@ TEST_CASE("test_next_previous", "[PresetManager]")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_save_overwrite_no_duplicate", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+
+    // First save with gain = -6
+    *gainParam = -6.0f;
+    pm.savePreset("MyPreset", proc.apvts);
+
+    // Second save with gain = -12 (same name, different value)
+    *gainParam = -12.0f;
+    pm.savePreset("MyPreset", proc.apvts);
+
+    // Must have exactly 1 entry — not 2
+    auto names = pm.getPresetNames();
+    REQUIRE(names.size() == 1);
+    REQUIRE(names[0] == "MyPreset");
+
+    // Load should restore the second save (gain = -12)
+    *gainParam = 0.0f;
+    bool loaded = pm.loadPreset("MyPreset", proc.apvts);
+    REQUIRE(loaded == true);
+    REQUIRE(gainParam->get() == Catch::Approx(-12.0f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_special_chars_no_crash", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Names with path-separator / filesystem-illegal characters must not crash.
+    // The implementation may silently fail to write (acceptable) but must not throw.
+    REQUIRE_NOTHROW(pm.savePreset("Test/Preset:Name",    proc.apvts));
+    REQUIRE_NOTHROW(pm.savePreset("Bad\\Name",           proc.apvts));
+    REQUIRE_NOTHROW(pm.savePreset("Qu?ery*File<>|",      proc.apvts));
+    REQUIRE_NOTHROW(pm.savePreset("Quote\"Name",         proc.apvts));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_long_name_no_crash", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // 300-character name exceeds the 255-byte Linux filename limit.
+    // Must not crash — may silently fail to save.
+    juce::String longName(juce::String::repeatedString("A", 300));
+    REQUIRE(longName.length() == 300);
+    REQUIRE_NOTHROW(pm.savePreset(longName, proc.apvts));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_save_load_parameter_fidelity", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    auto* ceilParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("ceiling"));
+    REQUIRE(gainParam != nullptr);
+    REQUIRE(ceilParam != nullptr);
+
+    // Set non-default, non-round values to catch floating-point serialisation issues
+    *gainParam = -18.5f;
+    *ceilParam = -2.7f;
+
+    pm.savePreset("FidelityTest", proc.apvts);
+
+    // Reset to defaults before loading
+    *gainParam = 0.0f;
+    *ceilParam = -0.1f;
+
+    bool loaded = pm.loadPreset("FidelityTest", proc.apvts);
+    REQUIRE(loaded == true);
+
+    // Both parameter values must be faithfully restored
+    REQUIRE(gainParam->get() == Catch::Approx(-18.5f).epsilon(0.01f));
+    REQUIRE(ceilParam->get() == Catch::Approx(-2.7f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_empty_preset_list_navigate_no_crash", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // No presets have been saved — navigation must not crash
+    REQUIRE(pm.getPresetNames().isEmpty());
+    REQUIRE_NOTHROW(pm.nextPreset());
+    REQUIRE_NOTHROW(pm.previousPreset());
+    REQUIRE_NOTHROW(pm.nextPreset());
+
+    // Current preset name remains empty (or at least consistent)
+    REQUIRE_NOTHROW(pm.getCurrentPresetName());
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 TEST_CASE("test_factory_presets_exist", "[PresetManager]")
 {
     // Point PresetManager at the source-tree presets directory which contains
