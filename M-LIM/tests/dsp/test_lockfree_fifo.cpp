@@ -2,6 +2,8 @@
 #include "dsp/MeterData.h"
 #include <cmath>
 #include <limits>
+#include <thread>
+#include <atomic>
 
 // ============================================================
 // MeterData default values
@@ -205,6 +207,102 @@ TEST_CASE("test_rapid_push_pop_cycle", "[lockfree_fifo]")
     }
 
     CHECK(mismatch == 0);
+}
+
+// ============================================================
+// Concurrent producer/consumer — FIFO ordering
+// ============================================================
+
+TEST_CASE("test_concurrent_producer_consumer_ordering", "[lockfree_fifo]")
+{
+    LockFreeFIFO<MeterData> fifo(256);
+    constexpr int N = 100000;
+
+    std::thread producer([&]() {
+        for (int i = 0; i < N; ++i)
+        {
+            MeterData d;
+            d.inputLevelL = static_cast<float>(i);
+            while (!fifo.push(d)) {}  // spin until space available
+        }
+    });
+
+    int lastSeen = -1;
+    int received = 0;
+    std::thread consumer([&]() {
+        while (received < N)
+        {
+            MeterData d;
+            if (fifo.pop(d))
+            {
+                REQUIRE(d.inputLevelL == Catch::Approx(static_cast<float>(lastSeen + 1)));
+                REQUIRE_FALSE(std::isnan(d.inputLevelL));
+                REQUIRE_FALSE(std::isinf(d.inputLevelL));
+                lastSeen = static_cast<int>(d.inputLevelL);
+                ++received;
+            }
+        }
+    });
+
+    producer.join();
+    consumer.join();
+    REQUIRE(received == N);
+}
+
+// ============================================================
+// Concurrent producer/consumer — full struct data integrity
+// ============================================================
+
+TEST_CASE("test_concurrent_data_integrity", "[lockfree_fifo]")
+{
+    LockFreeFIFO<MeterData> fifo(256);
+    constexpr int N = 100000;
+    std::atomic<int> corrupted{0};
+
+    std::thread producer([&]() {
+        for (int i = 0; i < N; ++i)
+        {
+            MeterData d;
+            d.inputLevelL      = static_cast<float>(i);
+            d.gainReduction    = static_cast<float>(-(i % 10000));
+            d.waveformSize     = i % (MeterData::kMaxWaveformSamples + 1);
+            d.waveformBuffer[0] = static_cast<float>(i) * 0.1f;
+            d.waveformBuffer[1] = static_cast<float>(i) * 0.2f;
+            d.waveformBuffer[2] = static_cast<float>(i) * 0.3f;
+            while (!fifo.push(d)) {}
+        }
+    });
+
+    int received = 0;
+    std::thread consumer([&]() {
+        while (received < N)
+        {
+            MeterData d;
+            if (fifo.pop(d))
+            {
+                ++received;
+                int i = static_cast<int>(d.inputLevelL);
+
+                // Verify all populated fields are finite and self-consistent
+                bool ok = std::isfinite(d.inputLevelL)
+                       && std::isfinite(d.gainReduction)
+                       && d.gainReduction == Catch::Approx(static_cast<float>(-(i % 10000))).margin(1e-3f)
+                       && d.waveformSize  == (i % (MeterData::kMaxWaveformSamples + 1))
+                       && d.waveformBuffer[0] == Catch::Approx(static_cast<float>(i) * 0.1f).margin(1e-3f)
+                       && d.waveformBuffer[1] == Catch::Approx(static_cast<float>(i) * 0.2f).margin(1e-3f)
+                       && d.waveformBuffer[2] == Catch::Approx(static_cast<float>(i) * 0.3f).margin(1e-3f);
+
+                if (!ok)
+                    ++corrupted;
+            }
+        }
+    });
+
+    producer.join();
+    consumer.join();
+
+    REQUIRE(received == N);
+    CHECK(corrupted.load() == 0);
 }
 
 // ============================================================
