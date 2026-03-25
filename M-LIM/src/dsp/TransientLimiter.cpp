@@ -185,7 +185,9 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         //        When sidechain provided, use it; otherwise use main input.
         //        For delay path: scan the delay buffer contents (future audio).
         //        For bypass path: just use current input sample directly.
-        std::vector<float> perChRequiredGain(chCount, 1.0f);
+        float perChRequiredGain[8];  // supports up to 8 channels (7.1 surround)
+        for (int ch = 0; ch < chCount; ++ch)
+            perChRequiredGain[ch] = 1.0f;
 
         for (int ch = 0; ch < chCount; ++ch)
         {
