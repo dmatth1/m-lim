@@ -94,6 +94,7 @@ target_sources(MLIM
         src/ui/LevelMeter.cpp
         src/ui/ControlStrip.cpp
         src/ui/WaveformDisplay.cpp
+        src/ui/LoudnessPanel.cpp
 )
 
 target_compile_definitions(MLIM
