@@ -26,7 +26,7 @@ namespace MLIMColours
     const juce::Colour knobFace         { 0xff505872 };  // steel blue-grey (was 3A3A3A)
     const juce::Colour knobFaceHighlight{ 0xff7080A0 };  // knob highlight for 3D gradient
     const juce::Colour knobFaceShadow   { 0xff303448 };  // knob shadow for 3D gradient
-    const juce::Colour knobArc          { 0xff5C6A84 };  // subtle blue-grey arc
+    const juce::Colour knobArc          { 0xff4888C8 };  // medium blue arc for clear value visibility
     const juce::Colour knobPointer      { 0xffFFFFFF };
     const juce::Colour sliderFill       { 0xff2196F3 };  // accent blue for linear slider fills
 
