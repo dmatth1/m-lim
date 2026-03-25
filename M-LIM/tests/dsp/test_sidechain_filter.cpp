@@ -33,6 +33,42 @@ static double rms(const juce::AudioBuffer<float>& buf)
 }
 
 // ---------------------------------------------------------------------------
+// test_process_zero_sample_buffer_no_crash
+// juce::AudioBuffer<float>(2, 0) creates a valid buffer with 0 samples.
+// process() must handle it without crashing and must not corrupt the
+// internal IIR filter state (a subsequent real buffer must produce finite output).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_process_zero_sample_buffer_no_crash", "[SidechainFilter]")
+{
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, 512);
+
+    // A buffer with 2 channels and 0 samples
+    juce::AudioBuffer<float> zeroBuf(2, 0);
+    REQUIRE_NOTHROW(filter.process(zeroBuf));
+
+    // Verify internal state is intact by processing a real buffer next
+    // and checking all output samples are finite.
+    static constexpr int kBlockSize = 256;
+    juce::AudioBuffer<float> realBuf(2, kBlockSize);
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        float* data = realBuf.getWritePointer(ch);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 440.0 * i / kSampleRate));
+    }
+
+    filter.process(realBuf);
+
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        const float* out = realBuf.getReadPointer(ch);
+        for (int i = 0; i < kBlockSize; ++i)
+            REQUIRE(std::isfinite(out[i]));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_highpass_attenuates_bass
 // ---------------------------------------------------------------------------
 TEST_CASE("test_highpass_attenuates_bass", "[SidechainFilter]")

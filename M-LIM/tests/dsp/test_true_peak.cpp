@@ -213,6 +213,34 @@ TEST_CASE("test_processblock_returns_correct_peak_object", "[TruePeakDetector]")
     REQUIRE(det.getPeak() >= 0.9f);
 }
 
+TEST_CASE("test_process_block_zero_samples_no_crash", "[TruePeakDetector]")
+{
+    // Call processBlock(ptr, 0) — the inner for-loop must not execute,
+    // getPeak() must remain 0.0f (unchanged from the reset state after prepare()).
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    float dummy = 0.0f;
+    det.processBlock(&dummy, 0);
+
+    REQUIRE(det.getPeak() == 0.0f);
+}
+
+TEST_CASE("test_process_block_single_sample", "[TruePeakDetector]")
+{
+    // Process exactly one sample — the ring buffer must wrap without going
+    // out of bounds, and the result must be a finite, non-negative value.
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    const float input = 0.5f;
+    det.processBlock(&input, 1);
+
+    const float peak = det.getPeak();
+    REQUIRE(std::isfinite(peak));
+    REQUIRE(peak >= 0.0f);
+}
+
 TEST_CASE("test_fir_coefficient_integrity", "[TruePeakDetector]")
 {
     // Verify that the transposed kCoeffsByTap table contains identical values

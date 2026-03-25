@@ -74,3 +74,33 @@ TEST_CASE("test_reset_clears_state", "[DCFilter]")
     // After reset, x[n-1] and y[n-1] should be zero, so output = 0
     REQUIRE(zero == Catch::Approx(0.0f).margin(1e-6f));
 }
+
+TEST_CASE("test_process_zero_samples_no_crash", "[DCFilter]")
+{
+    // Call process(buf, 0) after prepare() — the for-loop must not execute,
+    // internal state (xPrev, yPrev) must remain at their initial values,
+    // and subsequent real processing must still produce correct DC removal.
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // Process 0 samples — must not crash and must not touch state
+    float dummy = 0.0f;
+    filter.process(&dummy, 0);
+
+    // State should be unchanged (both still 0.0f after prepare/reset).
+    // Verify by processing a known DC signal and confirming DC is removed.
+    const int numSamples = static_cast<int>(kSampleRate); // 1 second
+    std::vector<float> signal(numSamples, 0.5f);           // pure DC offset
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure DC in the latter half (filter settled)
+    double sum = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sum += signal[i];
+    const double dc = sum / (numSamples - start);
+
+    // DC should be near zero — state was not corrupted by the zero-length call
+    REQUIRE(std::abs(dc) < 1e-3);
+}
