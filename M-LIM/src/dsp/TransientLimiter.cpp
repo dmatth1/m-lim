@@ -71,7 +71,7 @@ void TransientLimiter::setLookahead(float ms)
 // ---------------------------------------------------------------------------
 void TransientLimiter::setThreshold(float linear)
 {
-    mThreshold = std::clamp(linear, 1e-6f, 1.0f);
+    mThreshold = clampThreshold(linear);
 }
 
 // ---------------------------------------------------------------------------

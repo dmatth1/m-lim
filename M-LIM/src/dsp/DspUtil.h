@@ -27,6 +27,13 @@ inline float decibelsToGain(float dB)
 // @param chCount    number of channels
 // @param link       blend factor 0=independent, 1=fully linked
 // ---------------------------------------------------------------------------
+// Clamps a linear threshold gain value to a safe [kDspUtilMinGain, 1.0f] range.
+// kDspUtilMinGain (1e-6f) prevents division-by-zero in gain calculations.
+inline float clampThreshold(float linear) noexcept
+{
+    return std::clamp(linear, kDspUtilMinGain, 1.0f);
+}
+
 inline void applyChannelLinking(float* perChGain, int chCount, float link) noexcept
 {
     if (chCount > 1 && link > 0.0f)
