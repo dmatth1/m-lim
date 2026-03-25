@@ -85,6 +85,12 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     // Allocate sidechain working buffers
     mSidechainData.assign(numChannels, std::vector<float>(maxBlockSize, 0.0f));
 
+    // Pre-allocate working buffers so process() has no heap allocations
+    mPreLimitBuffer.setSize(numChannels, maxBlockSize);
+    mSidechainBuffer.setSize(numChannels, maxBlockSize);
+    mUpPtrs.resize(numChannels);
+    mSidePtrs.resize(numChannels);
+
     mParamsDirty.store(false);
 }
 
@@ -187,18 +193,20 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     const float inputGain = mInputGainLinear.load();
     buffer.applyGain(inputGain);
 
-    // Optionally store pre-limit buffer for delta mode
-    juce::AudioBuffer<float> preLimitBuffer;
+    // Optionally store pre-limit buffer for delta mode (pre-allocated — no heap alloc)
     if (mDeltaMode.load())
     {
-        preLimitBuffer.makeCopyOf(buffer);
+        for (int ch = 0; ch < numChannels; ++ch)
+            mPreLimitBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
     }
 
     // ------------------------------------------------------------------
     // Step 2: Build sidechain copy and run sidechain filter on it
+    //         (copy into pre-allocated buffer — no heap alloc)
     // ------------------------------------------------------------------
-    juce::AudioBuffer<float> sideBuf(buffer);
-    mSidechainFilter.process(sideBuf);
+    for (int ch = 0; ch < numChannels; ++ch)
+        mSidechainBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+    mSidechainFilter.process(mSidechainBuffer);
 
     // ------------------------------------------------------------------
     // Step 3: Oversample up — both main audio and sidechain so the buffers
@@ -207,31 +215,30 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // OOB read that would occur if the original (numSamples-long) sidePtrs
     // were passed to limiters expecting upSamples elements.
     // ------------------------------------------------------------------
-    juce::dsp::AudioBlock<float> upBlock    = mOversampler.upsample(buffer);
-    juce::dsp::AudioBlock<float> upSideBlock = mSidechainOversampler.upsample(sideBuf);
+    juce::dsp::AudioBlock<float> upBlock     = mOversampler.upsample(buffer);
+    juce::dsp::AudioBlock<float> upSideBlock = mSidechainOversampler.upsample(mSidechainBuffer);
 
     const int upSamples  = static_cast<int>(upBlock.getNumSamples());
     const int upChannels = static_cast<int>(upBlock.getNumChannels());
 
-    std::vector<float*>       upPtrs(upChannels);
-    std::vector<const float*> sidePtrs(upChannels);
+    // Populate pre-allocated pointer arrays (no heap alloc)
     for (int ch = 0; ch < upChannels; ++ch)
     {
-        upPtrs[ch]  = upBlock.getChannelPointer(ch);
-        sidePtrs[ch] = upSideBlock.getChannelPointer(ch);
+        mUpPtrs[ch]  = upBlock.getChannelPointer(ch);
+        mSidePtrs[ch] = upSideBlock.getChannelPointer(ch);
     }
 
     // ------------------------------------------------------------------
     // Step 4: TransientLimiter (Stage 1)
     // ------------------------------------------------------------------
-    mTransientLimiter.process(upPtrs.data(), upChannels, upSamples,
-                               sidePtrs.data());
+    mTransientLimiter.process(mUpPtrs.data(), upChannels, upSamples,
+                               mSidePtrs.data());
 
     // ------------------------------------------------------------------
     // Step 5: LevelingLimiter (Stage 2)
     // ------------------------------------------------------------------
-    mLevelingLimiter.process(upPtrs.data(), upChannels, upSamples,
-                              sidePtrs.data());
+    mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples,
+                              mSidePtrs.data());
 
     // ------------------------------------------------------------------
     // Step 6: Oversample down
@@ -275,11 +282,11 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // ------------------------------------------------------------------
     // Step 10: Delta mode — output what the limiter removed
     // ------------------------------------------------------------------
-    if (mDeltaMode.load() && preLimitBuffer.getNumSamples() == numSamples)
+    if (mDeltaMode.load())
     {
         for (int ch = 0; ch < numChannels; ++ch)
         {
-            const float* pre  = preLimitBuffer.getReadPointer(ch);
+            const float* pre  = mPreLimitBuffer.getReadPointer(ch);
             float*       post = buffer.getWritePointer(ch);
             for (int i = 0; i < numSamples; ++i)
                 post[i] = pre[i] - post[i];
