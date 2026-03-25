@@ -67,6 +67,40 @@ juce::StringArray PresetManager::getPresetNames() const
     return names;
 }
 
+bool PresetManager::loadNextPreset(juce::AudioProcessorValueTreeState& apvts)
+{
+    auto names = getPresetNames();
+    if (names.isEmpty())
+        return false;
+
+    int index = names.indexOf(currentPresetName);
+    if (index < 0)
+        index = 0;
+    else
+        index = (index + 1) % names.size();
+
+    // Advance the cursor unconditionally so getCurrentPresetName() is correct
+    // even if the load fails (shouldn't happen for healthy presets).
+    currentPresetName = names[index];
+    return loadPreset(currentPresetName, apvts);
+}
+
+bool PresetManager::loadPreviousPreset(juce::AudioProcessorValueTreeState& apvts)
+{
+    auto names = getPresetNames();
+    if (names.isEmpty())
+        return false;
+
+    int index = names.indexOf(currentPresetName);
+    if (index < 0)
+        index = 0;
+    else
+        index = (index - 1 + names.size()) % names.size();
+
+    currentPresetName = names[index];
+    return loadPreset(currentPresetName, apvts);
+}
+
 void PresetManager::nextPreset()
 {
     auto names = getPresetNames();

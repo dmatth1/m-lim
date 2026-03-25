@@ -133,25 +133,25 @@ TEST_CASE("test_next_previous", "[PresetManager]")
     // After saving "C" the current preset should be "C"
     REQUIRE(pm.getCurrentPresetName() == "C");
 
-    // nextPreset wraps: C -> A (sorted order: A, B, C)
-    pm.nextPreset();
+    // loadNextPreset wraps: C -> A (sorted order: A, B, C)
+    REQUIRE(pm.loadNextPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "A");
 
-    pm.nextPreset();
+    REQUIRE(pm.loadNextPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "B");
 
-    pm.nextPreset();
+    REQUIRE(pm.loadNextPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "C");
 
-    // previousPreset wraps back
-    pm.previousPreset();
+    // loadPreviousPreset wraps back
+    REQUIRE(pm.loadPreviousPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "B");
 
-    pm.previousPreset();
+    REQUIRE(pm.loadPreviousPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "A");
 
     // Wrap around going backwards: A -> C
-    pm.previousPreset();
+    REQUIRE(pm.loadPreviousPreset(proc.apvts) == true);
     REQUIRE(pm.getCurrentPresetName() == "C");
 }
 
@@ -256,14 +256,80 @@ TEST_CASE("test_empty_preset_list_navigate_no_crash", "[PresetManager]")
     PresetManager pm;
     pm.setPresetDirectory(tmp.dir);
 
-    // No presets have been saved — navigation must not crash
+    // No presets have been saved — navigation must not crash and returns false
     REQUIRE(pm.getPresetNames().isEmpty());
-    REQUIRE_NOTHROW(pm.nextPreset());
-    REQUIRE_NOTHROW(pm.previousPreset());
-    REQUIRE_NOTHROW(pm.nextPreset());
+    REQUIRE(pm.loadNextPreset(proc.apvts) == false);
+    REQUIRE(pm.loadPreviousPreset(proc.apvts) == false);
+    REQUIRE(pm.loadNextPreset(proc.apvts) == false);
 
     // Current preset name remains empty (or at least consistent)
     REQUIRE_NOTHROW(pm.getCurrentPresetName());
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_load_next_advances_and_loads", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    auto* ceilParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("ceiling"));
+    REQUIRE(gainParam != nullptr);
+    REQUIRE(ceilParam != nullptr);
+
+    // Save preset "Alpha" with gain = -6
+    *gainParam = -6.0f;
+    *ceilParam = -1.0f;
+    pm.savePreset("Alpha", proc.apvts);
+
+    // Save preset "Beta" with gain = -12
+    *gainParam = -12.0f;
+    *ceilParam = -2.0f;
+    pm.savePreset("Beta", proc.apvts);
+
+    // After saving "Beta", currentPresetName == "Beta"
+    REQUIRE(pm.getCurrentPresetName() == "Beta");
+
+    // loadNextPreset should: advance Beta -> Alpha (wrap) AND load Alpha's values
+    bool ok = pm.loadNextPreset(proc.apvts);
+    REQUIRE(ok == true);
+
+    // Name must have advanced
+    REQUIRE(pm.getCurrentPresetName() == "Alpha");
+
+    // APVTS state must reflect Alpha's saved values — not Beta's
+    REQUIRE(gainParam->get() == Catch::Approx(-6.0f).epsilon(0.01f));
+    REQUIRE(ceilParam->get() == Catch::Approx(-1.0f).epsilon(0.01f));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_load_previous_advances_and_loads", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(proc.apvts.getParameter("gain"));
+    REQUIRE(gainParam != nullptr);
+
+    // Save two presets: "X" (gain = -3) and "Y" (gain = -9)
+    *gainParam = -3.0f;
+    pm.savePreset("X", proc.apvts);
+    *gainParam = -9.0f;
+    pm.savePreset("Y", proc.apvts);
+
+    // Navigate to "X" first (loadNext wraps Y -> X)
+    pm.loadNextPreset(proc.apvts);
+    REQUIRE(pm.getCurrentPresetName() == "X");
+
+    // loadPreviousPreset: X -> Y (wrap) and should load Y's gain = -9
+    bool ok = pm.loadPreviousPreset(proc.apvts);
+    REQUIRE(ok == true);
+    REQUIRE(pm.getCurrentPresetName() == "Y");
+    REQUIRE(gainParam->get() == Catch::Approx(-9.0f).epsilon(0.01f));
 }
 
 // ────────────────────────────────────────────────────────────────────────────

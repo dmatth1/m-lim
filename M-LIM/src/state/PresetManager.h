@@ -24,11 +24,23 @@ public:
     /** Returns a sorted list of all available preset names (filename without extension). */
     juce::StringArray getPresetNames() const;
 
-    /** Advances to the next preset in the sorted list, wrapping around. */
-    void nextPreset();
+    /**
+     * Advances to the next preset in the sorted list (wrapping around) AND
+     * loads it into the APVTS.  Prefer this over calling nextPreset() +
+     * loadPreset() separately — it scans the filesystem only once.
+     *
+     * @return true if the new preset was found and loaded successfully.
+     */
+    bool loadNextPreset(juce::AudioProcessorValueTreeState& apvts);
 
-    /** Moves to the previous preset in the sorted list, wrapping around. */
-    void previousPreset();
+    /**
+     * Moves to the previous preset in the sorted list (wrapping around) AND
+     * loads it into the APVTS.  Prefer this over calling previousPreset() +
+     * loadPreset() separately — it scans the filesystem only once.
+     *
+     * @return true if the new preset was found and loaded successfully.
+     */
+    bool loadPreviousPreset(juce::AudioProcessorValueTreeState& apvts);
 
     /** Returns the name of the currently active preset, or an empty string. */
     juce::String getCurrentPresetName() const;
@@ -39,6 +51,14 @@ public:
 private:
     juce::File presetDirectory;
     juce::String currentPresetName;
+
+    /**
+     * Advances the preset cursor to the next/previous name in the sorted list.
+     * Does NOT load the preset into APVTS.  Use loadNextPreset() /
+     * loadPreviousPreset() from external code.
+     */
+    void nextPreset();
+    void previousPreset();
 
     /** Returns the File for a preset name (root directory only for saves). */
     juce::File presetFileForName(const juce::String& name) const;

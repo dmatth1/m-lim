@@ -125,12 +125,12 @@ TEST_CASE("test_next_previous_wraps_or_clamps", "[PresetManagerErrors]")
     // After saving C, currentPreset == "C" (last saved)
 
     // Advance past the last preset — should wrap to first, not crash
-    pm.nextPreset();  // C -> A (wraps)
+    pm.loadNextPreset(proc.apvts);  // C -> A (wraps)
     REQUIRE_FALSE(pm.getCurrentPresetName().isEmpty());
 
     // Advance again several times — must never crash
     for (int i = 0; i < 10; ++i)
-        REQUIRE_NOTHROW(pm.nextPreset());
+        REQUIRE_NOTHROW(pm.loadNextPreset(proc.apvts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,16 +146,16 @@ TEST_CASE("test_previous_at_start", "[PresetManagerErrors]")
 
     // Move to the first preset in sorted order
     // Sorted: X, Y — set current to X by navigating there
-    pm.nextPreset();  // Y -> X (wraps)
+    pm.loadNextPreset(proc.apvts);  // Y -> X (wraps)
     REQUIRE(pm.getCurrentPresetName() == "X");
 
     // Go backwards from the first preset — should wrap to last, not crash
-    pm.previousPreset();  // X -> Y (wraps)
+    pm.loadPreviousPreset(proc.apvts);  // X -> Y (wraps)
     REQUIRE(pm.getCurrentPresetName() == "Y");
 
     // Call many times — must never crash
     for (int i = 0; i < 10; ++i)
-        REQUIRE_NOTHROW(pm.previousPreset());
+        REQUIRE_NOTHROW(pm.loadPreviousPreset(proc.apvts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
