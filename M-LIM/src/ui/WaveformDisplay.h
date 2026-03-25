@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <array>
 #include <vector>
 #include "../dsp/MeterData.h"
 
@@ -25,6 +26,8 @@ class WaveformDisplay : public juce::Component,
 public:
     /** Display mode matching the "displayMode" APVTS parameter. */
     enum class DisplayMode { Fast = 0, Slow, SlowDown, Infinite, Off };
+
+    static constexpr int kHistorySize = 1024;   // columns of history kept
 
     WaveformDisplay();
     ~WaveformDisplay() override;
@@ -57,8 +60,6 @@ private:
     /** Returns the hit rectangle for the mode selector label. */
     juce::Rectangle<float> modeSelectorBounds() const noexcept;
     // ── History ring buffer ───────────────────────────────────────────────
-    static constexpr int kHistorySize = 1024;   // columns of history kept
-
     struct Frame
     {
         float inputLevel   = 0.0f;   // normalised 0-1 (peak of L+R)
@@ -97,6 +98,8 @@ private:
 
     static constexpr float kScaleWidth = 30.0f;   // pixels reserved for dB scale
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
+
+    mutable std::array<float, kHistorySize> mGrScratch_ {};   // scratch buffer for drawPeakMarkers
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WaveformDisplay)
 };

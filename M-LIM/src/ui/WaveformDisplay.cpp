@@ -410,8 +410,8 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
     int total = std::min (frameCount_, kHistorySize);
     float colW = area.getWidth() / static_cast<float> (total);
 
-    // Build flat arrays for peak detection
-    std::vector<float> gr (static_cast<std::size_t> (total));
+    // Build flat arrays for peak detection (reuse pre-allocated scratch buffer)
+    auto& gr = mGrScratch_;
     forEachFrame ([&] (int col, const Frame& f, int /*totalCols*/)
     {
         gr[static_cast<std::size_t> (col)] = f.gainReduction;
