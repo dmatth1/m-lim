@@ -1242,6 +1242,117 @@ TEST_CASE("test_lookahead_zero_no_latency", "[TransientLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_release_linear_domain_parity
+//   Verify that the linear-domain release approximation matches the dB-domain
+//   reference within 0.5 dB for the first 300 samples after a large peak.
+//   Both methods use the same per-sample IIR coefficient (mReleaseCoeff);
+//   the difference is whether the state variable is in dB or linear.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_release_linear_domain_parity", "[TransientLimiter]")
+{
+    // Setup: mono, 1-sample blocks for per-sample tracking
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, 1, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.releaseShape     = 0.5f;    // 255 ms at 44100 Hz — slow release keeps parity tight
+    params.kneeWidth        = 0.0f;    // hard knee for predictable gain
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    // Per-sample release coefficient (mirrors TransientLimiter.cpp formula)
+    const float kReleaseMinMs = 10.0f;
+    const float kReleaseMaxMs = 500.0f;
+    const float releaseMs = kReleaseMinMs + 0.5f * (kReleaseMaxMs - kReleaseMinMs);  // 255 ms
+    const float alpha = std::exp(-1.0f / (releaseMs * 0.001f * (float)kSampleRate));
+
+    // Engage instant-attack gain reduction: feed one +12 dBFS sample
+    {
+        std::vector<std::vector<float>> buf(1, std::vector<float>(1, 4.0f));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    // Record the measured GR after the attack (should be ≈ -12 dB)
+    const float grAfterAttack = limiter.getGainReduction();
+    REQUIRE(grAfterAttack < -6.0f);  // meaningful GR was applied
+
+    // Reference: dB-domain IIR starting from the same measured gain
+    // gDb_new = gDb * alpha  (target = 0 dB, so targetDb term vanishes)
+    float gDbRef = grAfterAttack;
+
+    // Compare for the first 300 samples (< 7 ms) where parity is < 0.5 dB
+    const int kCheckSamples = 300;
+    for (int n = 0; n < kCheckSamples; ++n)
+    {
+        // Production limiter: one silence sample → linear-domain release
+        std::vector<std::vector<float>> buf(1, std::vector<float>(1, 0.0f));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, 1);
+        const float prodGR = limiter.getGainReduction();
+
+        // Reference: dB-domain release (target = 0 dB → gDb_new = gDb * alpha)
+        gDbRef *= alpha;
+
+        // Linear and dB domain must agree to within 0.5 dB
+        REQUIRE(std::abs(prodGR - gDbRef) < 0.5f);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_release_recovery_speed
+//   After a sustained +12 dBFS signal drives GR below -6 dB, processing
+//   3 * releaseMs * sampleRate samples of silence must recover GR to above
+//   -1 dB (linear-domain 3-time-constant recovery criterion).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_release_recovery_speed", "[TransientLimiter]")
+{
+    // releaseShape=0.5 → releaseMs = 255 ms at 44100 Hz
+    const float kReleaseMinMs = 10.0f;
+    const float kReleaseMaxMs = 500.0f;
+    const float releaseMs = kReleaseMinMs + 0.5f * (kReleaseMaxMs - kReleaseMinMs);  // 255 ms
+    const int   recovery3T = static_cast<int>(3.0f * releaseMs * 0.001f * (float)kSampleRate);
+
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.releaseShape     = 0.5f;
+    params.kneeWidth        = 0.0f;    // hard knee — instant full GR
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    // Drive gain well below threshold to establish deep GR
+    {
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 4.0f));  // +12 dBFS
+        auto ptrs = makePtrs(buf);
+        for (int b = 0; b < 5; ++b)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), 4.0f);
+            limiter.process(ptrs.data(), 1, kBlockSize);
+        }
+        REQUIRE(limiter.getGainReduction() < -6.0f);  // GR must be active and deep
+    }
+
+    // Release phase: process 3T samples of silence
+    int remaining = recovery3T;
+    while (remaining > 0)
+    {
+        const int n = std::min(remaining, kBlockSize);
+        std::vector<std::vector<float>> buf(1, std::vector<float>(n, 0.0f));
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 1, n);
+        remaining -= n;
+    }
+
+    // After 3 time constants, linear-domain recovery brings gain to ≈ g0*e^-3 + (1-e^-3)
+    // Starting from g0=0.25: g(3T) ≈ 0.963, GR ≈ -0.33 dB → well above -1 dB
+    REQUIRE(limiter.getGainReduction() > -1.0f);
+}
+
+// ---------------------------------------------------------------------------
 // test_lookahead_zero_still_limits
 //   With setLookahead(0.0f), a constant +6 dBFS block must be limited to
 //   ≤ 1.0 + margin within the first few warm-up blocks (no latency means
