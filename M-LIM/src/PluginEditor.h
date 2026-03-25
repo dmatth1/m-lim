@@ -2,18 +2,64 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
+#include "ui/LookAndFeel.h"
+#include "ui/TopBar.h"
+#include "ui/WaveformDisplay.h"
+#include "ui/LevelMeter.h"
+#include "ui/GainReductionMeter.h"
+#include "ui/LoudnessPanel.h"
+#include "ui/ControlStrip.h"
 
-class MLIMAudioProcessorEditor : public juce::AudioProcessorEditor
+class MLIMAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                  public juce::Timer
 {
 public:
     explicit MLIMAudioProcessorEditor (MLIMAudioProcessor& p);
     ~MLIMAudioProcessorEditor() override;
 
-    void paint (juce::Graphics& g) override;
-    void resized() override;
+    void paint   (juce::Graphics& g) override;
+    void resized () override;
+    void timerCallback () override;
 
 private:
     MLIMAudioProcessor& audioProcessor;
+
+    MLIMLookAndFeel lookAndFeel_;
+
+    TopBar              topBar_;
+    WaveformDisplay     waveformDisplay_;
+    LevelMeter          inputMeter_;
+    LevelMeter          outputMeter_;
+    GainReductionMeter  grMeter_;
+    LoudnessPanel       loudnessPanel_;
+    ControlStrip        controlStrip_;
+
+    // Peak hold state (2-second hold, then fall)
+    float inputPeakL_  = -96.0f;
+    float inputPeakR_  = -96.0f;
+    float outputPeakL_ = -96.0f;
+    float outputPeakR_ = -96.0f;
+    int   inputPeakHoldFramesL_  = 0;
+    int   inputPeakHoldFramesR_  = 0;
+    int   outputPeakHoldFramesL_ = 0;
+    int   outputPeakHoldFramesR_ = 0;
+
+    static constexpr int kDefaultWidth   = 900;
+    static constexpr int kDefaultHeight  = 500;
+    static constexpr int kTopBarH        = 30;
+    static constexpr int kControlStripH  = 120;
+    static constexpr int kInputMeterW    = 20;
+    static constexpr int kGRMeterW       = 25;
+    static constexpr int kOutputMeterW   = 20;
+    static constexpr int kLoudnessPanelW = 140;
+    static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
+
+    juce::ComponentBoundsConstrainer constrainer_;
+
+    void wireCallbacks();
+    void updatePeakHold (float newL, float newR,
+                         float& peakL, float& peakR,
+                         int& framesL, int& framesR) noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MLIMAudioProcessorEditor)
 };
