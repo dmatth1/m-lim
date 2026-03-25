@@ -156,7 +156,10 @@ void MLIMAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
     if (xmlState != nullptr)
         if (xmlState->hasTagName (apvts.state.getType()))
+        {
             apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+            updateLatency();
+        }
 }
 
 // ---------------------------------------------------------------------------
