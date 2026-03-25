@@ -71,4 +71,13 @@ private:
     juce::dsp::IIR::Filter<float> mLP[kMaxChannels];
     juce::dsp::IIR::Filter<float> mTiltLS[kMaxChannels]; // low shelf
     juce::dsp::IIR::Filter<float> mTiltHS[kMaxChannels]; // high shelf
+
+    // Pre-allocated coefficient objects (one per filter slot per channel).
+    // Allocated once in prepare() and reused every updateCoefficients() call
+    // so no heap allocation occurs on the audio thread.
+    using CoeffPtr = juce::dsp::IIR::Coefficients<float>::Ptr;
+    CoeffPtr mHPCoeffs[kMaxChannels];
+    CoeffPtr mLPCoeffs[kMaxChannels];
+    CoeffPtr mLSCoeffs[kMaxChannels];
+    CoeffPtr mHSCoeffs[kMaxChannels];
 };

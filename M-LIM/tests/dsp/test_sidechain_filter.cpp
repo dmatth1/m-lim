@@ -376,3 +376,97 @@ TEST_CASE("test_parameter_change_during_process", "[SidechainFilter]")
     // 5 kHz HP attenuates 100 Hz by at least 20 dB (well below cutoff).
     REQUIRE(attenuationDb < -20.0);
 }
+
+// ---------------------------------------------------------------------------
+// test_inplace_coefficients_correctness
+// Verifies that after the RT-safe coefficient update path (in-place writes to
+// pre-allocated Coefficients objects), the filter output is consistent with
+// the expected filter behaviour:
+//   - HP at 1 kHz strongly attenuates 100 Hz (at least 12 dB).
+//   - LP at 5 kHz strongly attenuates 10 kHz (at least 12 dB).
+//   - Repeated calls to setHighPassFreq/setLowPassFreq/setTilt followed by
+//     process() do not crash and all outputs remain finite.
+// This exercises updateCoefficients() via the in-place write path (called
+// after prepare() has pre-allocated the Coefficients objects).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_inplace_coefficients_correctness", "[SidechainFilter]")
+{
+    static constexpr int kBlock     = 256;
+    static constexpr int kSettle    = 8192;
+    static constexpr int kMeasure   = 4096;
+    static constexpr int kTotal     = kSettle + kMeasure;
+
+    // -- 1. HP correctness at 1 kHz: 100 Hz should be attenuated >= 12 dB --
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kTotal);
+        f.setHighPassFreq(1000.0f);   // trigger updateCoefficients() on next process()
+
+        auto buf = makeSine(100.0, 1.0, kTotal, kSampleRate);
+        f.process(buf);
+
+        juce::AudioBuffer<float> measure(1, kMeasure);
+        measure.copyFrom(0, 0, buf, 0, kSettle, kMeasure);
+
+        const double rmsOut = rms(measure);
+        const double rmsIn  = 1.0 / std::sqrt(2.0);
+        const double atten  = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+        REQUIRE(atten < -12.0);
+    }
+
+    // -- 2. LP correctness at 5 kHz: 10 kHz should be attenuated >= 12 dB --
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kTotal);
+        f.setLowPassFreq(5000.0f);
+
+        auto buf = makeSine(10000.0, 1.0, kTotal, kSampleRate);
+        f.process(buf);
+
+        juce::AudioBuffer<float> measure(1, kMeasure);
+        measure.copyFrom(0, 0, buf, 0, kSettle, kMeasure);
+
+        const double rmsOut = rms(measure);
+        const double rmsIn  = 1.0 / std::sqrt(2.0);
+        const double atten  = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+        REQUIRE(atten < -12.0);
+    }
+
+    // -- 3. Multiple rapid parameter changes: no crash, all output finite --
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, kBlock);
+
+        juce::AudioBuffer<float> buf(1, kBlock);
+        bool allFinite = true;
+
+        const float hpValues[]  = { 20.0f, 100.0f, 500.0f, 1000.0f, 2000.0f };
+        const float lpValues[]  = { 20000.0f, 15000.0f, 10000.0f, 5000.0f };
+        const float tiltValues[] = { 0.0f, 3.0f, -3.0f, 6.0f, -6.0f };
+
+        int combo = 0;
+        for (float hp : hpValues)
+        for (float lp : lpValues)
+        for (float tilt : tiltValues)
+        {
+            f.setHighPassFreq(hp);
+            f.setLowPassFreq(lp);
+            f.setTilt(tilt);
+
+            float* data = buf.getWritePointer(0);
+            for (int i = 0; i < kBlock; ++i)
+                data[i] = static_cast<float>(
+                    std::sin(kTwoPi * 1000.0 * (combo * kBlock + i) / kSampleRate));
+
+            f.process(buf);
+
+            const float* out = buf.getReadPointer(0);
+            for (int i = 0; i < kBlock; ++i)
+                if (!std::isfinite(out[i])) allFinite = false;
+
+            ++combo;
+        }
+
+        REQUIRE(allFinite);
+    }
+}
