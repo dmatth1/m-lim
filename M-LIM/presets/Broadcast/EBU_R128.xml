@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLIMState presetName="EBU_R128">
+  <PARAMETERS inputGain="0.0" outputCeiling="-1.0" lookahead="8.0"
+              attack="0.5" release="80.0" algorithm="0"
+              oversample="4" truePeak="1" stereoLink="1"
+              dither="1" channelLink="1"/>
+</MLIMState>

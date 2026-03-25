@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLIMState presetName="Bus_Glue">
+  <PARAMETERS inputGain="2.0" outputCeiling="-0.3" lookahead="5.0"
+              attack="0.5" release="40.0" algorithm="1"
+              oversample="2" truePeak="1" stereoLink="1"
+              dither="0" channelLink="1"/>
+</MLIMState>

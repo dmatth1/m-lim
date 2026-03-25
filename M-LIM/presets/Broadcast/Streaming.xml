@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLIMState presetName="Streaming">
+  <PARAMETERS inputGain="0.0" outputCeiling="-1.5" lookahead="6.0"
+              attack="0.5" release="60.0" algorithm="0"
+              oversample="2" truePeak="1" stereoLink="1"
+              dither="0" channelLink="1"/>
+</MLIMState>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLIMState presetName="Loud_Master">
+  <PARAMETERS inputGain="6.0" outputCeiling="-0.1" lookahead="3.0"
+              attack="0.1" release="20.0" algorithm="3"
+              oversample="4" truePeak="1" stereoLink="1"
+              dither="1" channelLink="1"/>
+</MLIMState>

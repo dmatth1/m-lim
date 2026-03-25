@@ -17,6 +17,7 @@ set(MLIM_TEST_CASES
     dsp/test_limiter_engine_modes.cpp
     dsp/test_lockfree_fifo.cpp
     state/test_undo_manager.cpp
+    state/test_preset_manager.cpp
 )
 
 # Catch2 test executable — DSP sources come from MLIMLib
@@ -36,6 +37,7 @@ target_include_directories(MLIMTests
 target_compile_definitions(MLIMTests
     PRIVATE
         CATCH_AMALGAMATED_CUSTOM_MAIN
+        MLIM_PRESETS_DIR="${CMAKE_SOURCE_DIR}/presets"
 )
 
 target_link_libraries(MLIMTests

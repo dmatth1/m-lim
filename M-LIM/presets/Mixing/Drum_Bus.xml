@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLIMState presetName="Drum_Bus">
+  <PARAMETERS inputGain="3.0" outputCeiling="-0.5" lookahead="1.0"
+              attack="0.1" release="15.0" algorithm="2"
+              oversample="2" truePeak="0" stereoLink="0"
+              dither="0" channelLink="0"/>
+</MLIMState>
