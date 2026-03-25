@@ -81,6 +81,8 @@ void MLIMAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
 void MLIMAudioProcessor::releaseResources()
 {
+    MeterData md;
+    while (mProcessorMeterFIFO.pop(md)) {}
 }
 
 bool MLIMAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
