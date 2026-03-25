@@ -393,7 +393,8 @@ void LimiterEngine::setChannelLinkRelease(float pct)
 
 void LimiterEngine::setOversamplingFactor(int factor)
 {
-    mOversamplingFactor.store(std::max(0, std::min(5, factor)));
+    mOversamplingFactor.store(std::max(Oversampler::kMinOversamplingFactor,
+                                       std::min(Oversampler::kMaxOversamplingFactor, factor)));
     mParamsDirty.store(true);
 }
 

@@ -16,6 +16,11 @@
 class Oversampler
 {
 public:
+    /** Valid range of oversampling factor indices passed to setFactor().
+     *  0 = 1x (off), 1 = 2x, 2 = 4x, 3 = 8x, 4 = 16x, 5 = 32x. */
+    static constexpr int kMinOversamplingFactor = 0;
+    static constexpr int kMaxOversamplingFactor = 5;
+
     Oversampler() = default;
     ~Oversampler() = default;
 
