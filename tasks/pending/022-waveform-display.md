@@ -14,7 +14,7 @@ MeterDataInterface
 Create: `M-LIM/src/ui/WaveformDisplay.h` — class declaration
 Create: `M-LIM/src/ui/WaveformDisplay.cpp` — implementation
 Read: `M-LIM/src/ui/Colours.h` — color constants
-Read: `M-LIM/src/dsp/LimiterEngine.h` — MeterData struct
+Read: `M-LIM/src/dsp/MeterData.h` — MeterData struct (standalone header, no heavy DSP includes needed)
 Read: `SPEC.md` — WaveformDisplayInterface
 
 ## Acceptance Criteria

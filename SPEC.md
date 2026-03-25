@@ -150,6 +150,10 @@ M-LIM/
   - `"bypass"` — bool, default false
   - `"unityGainMode"` — bool, default false
   - `"delta"` — bool, default false
+  - `"sidechainHPFreq"` — float, 20 to 2000 Hz, default 20 (off)
+  - `"sidechainLPFreq"` — float, 2000 to 20000 Hz, default 20000 (off)
+  - `"sidechainTilt"` — float, -6 to +6 dB, default 0
+  - `"displayMode"` — choice, 0-4 (Fast/Slow/SlowDown/Infinite/Off), default 0
 
 ### LimiterEngineInterface
 - File: `src/dsp/LimiterEngine.h`
@@ -261,7 +265,7 @@ M-LIM/
 - `void resetIntegrated()`
 
 ### MeterDataInterface
-- File: `src/PluginProcessor.h` (shared struct)
+- File: `src/dsp/MeterData.h` (standalone header — shared between DSP and UI)
 - `struct MeterData`:
   - `float inputLevelL, inputLevelR` — input peak levels
   - `float outputLevelL, outputLevelR` — output peak levels
@@ -299,6 +303,15 @@ M-LIM/
 - `void setPeakHold(float leftDB, float rightDB)`
 - `void paint(juce::Graphics& g) override`
 - Vertical stereo bar meter with blue/yellow/red zones
+
+### GainReductionMeterInterface
+- File: `src/ui/GainReductionMeter.h`
+- `class GainReductionMeter : public juce::Component`
+- `void setGainReduction(float dB)` — current GR value
+- `void setPeakGR(float dB)` — peak hold GR value
+- `void paint(juce::Graphics& g) override`
+- Vertical bar meter showing gain reduction with peak hold indicator and numeric dB label
+- Grows downward from 0 dB (red fill)
 
 ### LoudnessPanelInterface
 - File: `src/ui/LoudnessPanel.h`

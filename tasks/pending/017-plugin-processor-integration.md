@@ -37,7 +37,9 @@ Create: `M-LIM/tests/integration/test_plugin_processor.cpp` — integration test
 - In processBlock: read all parameter values from APVTS atomics, update limiterEngine setters, call limiterEngine.process(), push MeterData to FIFO
 - Parameter reading: use `apvts.getRawParameterValue("paramId")->load()` for real-time safe access
 - State save/load: serialize APVTS state tree to/from MemoryBlock using XML
-- Latency: call setLatencySamples(limiterEngine.getLatencySamples()) in prepareToPlay and when oversampling changes
+- Latency: call setLatencySamples(limiterEngine.getLatencySamples()) in prepareToPlay and whenever lookahead OR oversampling changes (see tasks 033, 034)
+- IMPORTANT: Do NOT call limiterEngine.setOversamplingFactor() directly from processBlock — oversampling factor changes require memory allocation. Use a deferred mechanism (see task 033)
+- NOTE: LoudnessMeter wiring is handled separately in task 032
 - Bypass: when bypass param is true, pass audio through but still meter
 
 ## Dependencies

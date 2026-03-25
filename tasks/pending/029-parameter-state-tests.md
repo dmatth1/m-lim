@@ -31,7 +31,7 @@ Read: `M-LIM/src/PluginProcessor.h` — processor with APVTS
 
 ## Technical Details
 - Create a standalone APVTS instance for testing (no need for full processor)
-- Test each parameter ID exists: inputGain, outputCeiling, algorithm, lookahead, attack, release, channelLinkTransients, channelLinkRelease, truePeakEnabled, oversamplingFactor, dcFilterEnabled, ditherEnabled, ditherBitDepth, ditherNoiseShaping, bypass, unityGainMode, delta
+- Test each parameter ID exists: inputGain, outputCeiling, algorithm, lookahead, attack, release, channelLinkTransients, channelLinkRelease, truePeakEnabled, oversamplingFactor, dcFilterEnabled, ditherEnabled, ditherBitDepth, ditherNoiseShaping, bypass, unityGainMode, delta, sidechainHPFreq, sidechainLPFreq, sidechainTilt, displayMode
 - Verify AudioProcessor can be instantiated and destroyed without crash
 - Test state save/load produces identical parameter values
 

@@ -17,7 +17,8 @@ DCFilterInterface
 DitherInterface
 
 ## Relevant Files
-Create: `M-LIM/src/dsp/LimiterEngine.h` — class declaration + MeterData struct + LockFreeFIFO
+Create: `M-LIM/src/dsp/MeterData.h` — MeterData struct + LockFreeFIFO (standalone header, see SPEC.md)
+Create: `M-LIM/src/dsp/LimiterEngine.h` — class declaration, includes MeterData.h
 Create: `M-LIM/src/dsp/LimiterEngine.cpp` — implementation
 Create: `M-LIM/tests/dsp/test_limiter_engine.cpp` — unit tests
 Read: `M-LIM/src/dsp/TransientLimiter.h` — Stage 1 interface
