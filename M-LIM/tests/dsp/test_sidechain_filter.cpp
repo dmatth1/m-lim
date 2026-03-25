@@ -139,6 +139,163 @@ TEST_CASE("test_flat_passes_signal", "[SidechainFilter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_negative_tilt_boosts_lows
+// With tilt = -6 dB, low frequencies should be louder than high frequencies
+// (opposite of positive tilt).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_negative_tilt_boosts_lows", "[SidechainFilter]")
+{
+    const int totalSamples = kSettleSamples + kMeasureSamples;
+
+    auto runAtFreq = [&](double freq) -> double
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, totalSamples);
+        f.setTilt(-6.0f); // negative tilt: boost lows, cut highs
+        auto buf = makeSine(freq, 1.0, totalSamples, kSampleRate);
+        f.process(buf);
+
+        juce::AudioBuffer<float> measureBuf(1, kMeasureSamples);
+        measureBuf.copyFrom(0, 0, buf, 0, kSettleSamples, kMeasureSamples);
+        return rms(measureBuf);
+    };
+
+    const double rmsLow  = runAtFreq(100.0);    // well below 1 kHz pivot
+    const double rmsHigh = runAtFreq(10000.0);  // well above 1 kHz pivot
+
+    // Negative tilt: low frequencies should be louder than high frequencies.
+    REQUIRE(rmsLow > rmsHigh);
+}
+
+// ---------------------------------------------------------------------------
+// test_extreme_params_no_crash
+// HP=20 Hz, LP=20000 Hz (full bandwidth) — 100 blocks of sine → no crash,
+// all output samples finite.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_extreme_params_no_crash", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize = 512;
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kBlockSize);
+    filter.setHighPassFreq(20.0f);
+    filter.setLowPassFreq(20000.0f);
+    filter.setTilt(0.0f);
+
+    juce::AudioBuffer<float> buf(1, kBlockSize);
+    bool allFinite = true;
+
+    for (int block = 0; block < 100; ++block)
+    {
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 440.0 * i / kSampleRate));
+
+        filter.process(buf);
+
+        const float* out = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            if (!std::isfinite(out[i])) allFinite = false;
+    }
+
+    REQUIRE(allFinite);
+}
+
+// ---------------------------------------------------------------------------
+// test_hp_above_lp_no_crash
+// HP=10000 Hz, LP=100 Hz (inverted — invalid but possible via param interaction).
+// Must not crash, must not produce NaN/Inf.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_hp_above_lp_no_crash", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize = 512;
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kBlockSize);
+    filter.setHighPassFreq(10000.0f);
+    filter.setLowPassFreq(100.0f);
+
+    juce::AudioBuffer<float> buf(1, kBlockSize);
+    float* data = buf.getWritePointer(0);
+    for (int i = 0; i < kBlockSize; ++i)
+        data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+    // Must not throw
+    REQUIRE_NOTHROW(filter.process(buf));
+
+    // Output must be finite
+    const float* out = buf.getReadPointer(0);
+    for (int i = 0; i < kBlockSize; ++i)
+        REQUIRE(std::isfinite(out[i]));
+}
+
+// ---------------------------------------------------------------------------
+// test_reprepare_different_sample_rates
+// prepare(44100), process sine, prepare(96000), process sine → output finite
+// both times. Verifies that re-prepare clears filter state correctly.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reprepare_different_sample_rates", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize = 1024;
+
+    SidechainFilter filter;
+
+    auto runWithSampleRate = [&](double sr) -> bool
+    {
+        filter.prepare(sr, kBlockSize);
+        filter.setHighPassFreq(100.0f);
+        filter.setLowPassFreq(15000.0f);
+
+        juce::AudioBuffer<float> buf(1, kBlockSize);
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / sr));
+
+        filter.process(buf);
+
+        const float* out = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            if (!std::isfinite(out[i])) return false;
+        return true;
+    };
+
+    REQUIRE(runWithSampleRate(44100.0));
+    REQUIRE(runWithSampleRate(96000.0));
+}
+
+// ---------------------------------------------------------------------------
+// test_hp_slope_at_least_6db_per_octave
+// At HP=1000 Hz: RMS at 500 Hz (half-octave below) is at least 6 dB below
+// RMS at 2000 Hz (one octave above). Checks that the HP filter rolls off
+// at the correct rate.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_hp_slope_at_least_6db_per_octave", "[SidechainFilter]")
+{
+    const int totalSamples = kSettleSamples + kMeasureSamples;
+
+    auto measureRmsAt = [&](double freq) -> double
+    {
+        SidechainFilter f;
+        f.prepare(kSampleRate, totalSamples);
+        f.setHighPassFreq(1000.0f); // HP cutoff at 1 kHz
+        auto buf = makeSine(freq, 1.0, totalSamples, kSampleRate);
+        f.process(buf);
+
+        juce::AudioBuffer<float> measureBuf(1, kMeasureSamples);
+        measureBuf.copyFrom(0, 0, buf, 0, kSettleSamples, kMeasureSamples);
+        return rms(measureBuf);
+    };
+
+    const double rms500  = measureRmsAt(500.0);   // one octave below cutoff
+    const double rms2000 = measureRmsAt(2000.0);  // one octave above cutoff
+
+    // HP filter: signal below cutoff attenuated, above should pass.
+    // RMS at 500 Hz (stopped) should be at least 6 dB below 2000 Hz (passed).
+    const double ratio_dB = 20.0 * std::log10(rms2000 / (rms500 + 1e-12));
+    REQUIRE(ratio_dB > 6.0);
+}
+
+// ---------------------------------------------------------------------------
 // test_parameter_change_during_process
 // Calls setHighPassFreq() from a second thread while process() runs on the
 // main thread. Verifies no crash and that the parameter change eventually
