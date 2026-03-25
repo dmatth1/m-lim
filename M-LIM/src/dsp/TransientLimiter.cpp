@@ -1,4 +1,5 @@
 #include "TransientLimiter.h"
+#include "DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <algorithm>
@@ -7,20 +8,6 @@
 static constexpr float kMaxLookaheadMs = 5.0f;
 static constexpr float kMinGain        = 1e-6f;   // -120 dB floor
 static constexpr float kEpsilon        = 1e-9f;
-
-// ---------------------------------------------------------------------------
-// dB helpers — release smoothing operates in dB domain so gain reduction
-// decreases linearly in dB per unit time (exponential decay in linear domain).
-// ---------------------------------------------------------------------------
-static inline float gainToDecibels(float linearGain)
-{
-    return 20.0f * std::log10(std::max(linearGain, kMinGain));
-}
-
-static inline float decibelsToGain(float dB)
-{
-    return std::pow(10.0f, dB * (1.0f / 20.0f));
-}
 
 // ---------------------------------------------------------------------------
 // prepare

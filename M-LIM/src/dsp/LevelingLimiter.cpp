@@ -1,4 +1,5 @@
 #include "LevelingLimiter.h"
+#include "DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <algorithm>
@@ -7,22 +8,6 @@ static constexpr float kMinGaindB          = -120.0f; // dB floor for gain state
 static constexpr float kMinGain            = 1e-6f;   // linear equivalent of kMinGaindB
 static constexpr float kEpsilon            = 1e-9f;
 static constexpr float kAdaptiveSmoothMs   = 500.0f;  // time constant for adaptive release detection
-
-// ---------------------------------------------------------------------------
-// dB helpers — the envelope follower operates in the dB domain so that
-// attack/release coefficients produce correct exponential dB curves.
-// Smoothing in linear domain would give wrong (non-exponential) envelope
-// shapes and audible pumping artifacts.
-// ---------------------------------------------------------------------------
-static inline float gainToDecibels(float linearGain)
-{
-    return 20.0f * std::log10(std::max(linearGain, kMinGain));
-}
-
-static inline float decibelsToGain(float dB)
-{
-    return std::pow(10.0f, dB * (1.0f / 20.0f));
-}
 
 // ---------------------------------------------------------------------------
 // prepare
