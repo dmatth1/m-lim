@@ -1,62 +1,8 @@
-#include "catch2/catch_amalgamated.hpp"
+#include "state_test_helpers.h"
 #include "state/PresetManager.h"
 
-// Minimal AudioProcessor to host APVTS in unit tests.
-class ErrorTestProcessor : public juce::AudioProcessor
-{
-public:
-    ErrorTestProcessor()
-        : AudioProcessor(BusesProperties()
-              .withInput("Input",   juce::AudioChannelSet::stereo())
-              .withOutput("Output", juce::AudioChannelSet::stereo())),
-          apvts(*this, nullptr, "State", createLayout())
-    {}
-
-    static juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
-    {
-        juce::AudioProcessorValueTreeState::ParameterLayout layout;
-        layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "gain", "Gain", -60.0f, 12.0f, 0.0f));
-        layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "ceiling", "Ceiling", -30.0f, 0.0f, -0.1f));
-        return layout;
-    }
-
-    juce::AudioProcessorValueTreeState apvts;
-
-    const juce::String getName() const override { return "ErrorTestProcessor"; }
-    void prepareToPlay(double, int) override {}
-    void releaseResources() override {}
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override {}
-    double getTailLengthSeconds() const override { return 0.0; }
-    bool acceptsMidi() const override { return false; }
-    bool producesMidi() const override { return false; }
-    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
-    bool hasEditor() const override { return false; }
-    int getNumPrograms() override { return 1; }
-    int getCurrentProgram() override { return 0; }
-    void setCurrentProgram(int) override {}
-    const juce::String getProgramName(int) override { return {}; }
-    void changeProgramName(int, const juce::String&) override {}
-    void getStateInformation(juce::MemoryBlock&) override {}
-    void setStateInformation(const void*, int) override {}
-};
-
-// RAII temporary directory for test presets.
-struct TempDir
-{
-    juce::File dir;
-
-    TempDir()
-    {
-        dir = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                  .getChildFile("MLIMPresetErrorTest_"
-                      + juce::String(juce::Random::getSystemRandom().nextInt64()));
-        dir.createDirectory();
-    }
-
-    ~TempDir() { dir.deleteRecursively(); }
-};
+using ErrorTestProcessor = StateTestProcessor;
+using TempDir = TempPresetDir;
 
 // ─────────────────────────────────────────────────────────────────────────────
 TEST_CASE("test_load_nonexistent_preset", "[PresetManagerErrors]")
