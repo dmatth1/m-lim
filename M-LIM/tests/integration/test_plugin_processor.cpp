@@ -460,6 +460,108 @@ TEST_CASE("test_set_state_garbage_no_crash", "[PluginProcessor]")
 }
 
 // ============================================================================
+// test_smaller_block_sizes_no_crash
+// After prepareToPlay(44100, 512), call processBlock() with blocks of 1, 16,
+// 64, 128, and 256 samples. Output must be finite and not crash.
+// ============================================================================
+TEST_CASE("test_smaller_block_sizes_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (44100.0, 512);
+
+    juce::MidiBuffer midi;
+    for (int blockSize : {1, 16, 64, 128, 256})
+    {
+        juce::AudioBuffer<float> buf (2, blockSize);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < blockSize; ++i)
+                buf.setSample (ch, i, 2.0f * std::sin (6.28f * 440.0f * i / 44100.0f));
+
+        REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < blockSize; ++i)
+                REQUIRE (std::isfinite (buf.getSample (ch, i)));
+    }
+}
+
+// ============================================================================
+// test_mixed_block_sizes_bounded
+// Alternate between 512 and 64-sample blocks across 50 total process calls.
+// Output must remain finite and never exceed the output ceiling.
+// ============================================================================
+TEST_CASE("test_mixed_block_sizes_bounded", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (44100.0, 512);
+
+    // Default ceiling is -0.1 dBFS ≈ 0.9886 linear; use 1% tolerance for ringing
+    const float ceilingDb     = -0.1f;
+    const float ceilingLinear = std::pow (10.0f, ceilingDb / 20.0f);
+    const float tolerance     = 0.01f;
+
+    juce::MidiBuffer midi;
+
+    for (int call = 0; call < 50; ++call)
+    {
+        const int blockSize = (call % 2 == 0) ? 512 : 64;
+        juce::AudioBuffer<float> buf (2, blockSize);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < blockSize; ++i)
+                buf.setSample (ch, i, 2.0f * std::sin (6.28f * 440.0f * i / 44100.0f));
+
+        REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+        // Skip the first few calls to allow the limiter to engage
+        if (call > 10)
+        {
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < blockSize; ++i)
+                {
+                    REQUIRE (std::isfinite (buf.getSample (ch, i)));
+                    REQUIRE (std::abs (buf.getSample (ch, i)) <= ceilingLinear + tolerance);
+                }
+        }
+    }
+}
+
+// ============================================================================
+// test_single_sample_block
+// processBlock() with a 1-sample buffer must not crash and output must be
+// finite and bounded by the ceiling.
+// ============================================================================
+TEST_CASE("test_single_sample_block", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (44100.0, 512);
+
+    const float ceilingDb     = -0.1f;
+    const float ceilingLinear = std::pow (10.0f, ceilingDb / 20.0f);
+    const float tolerance     = 0.01f;
+
+    juce::MidiBuffer midi;
+
+    // Process 100 single-sample blocks to allow limiter to engage
+    for (int call = 0; call < 100; ++call)
+    {
+        juce::AudioBuffer<float> buf (2, 1);
+        buf.setSample (0, 0, 2.0f);
+        buf.setSample (1, 0, 2.0f);
+
+        REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+        REQUIRE (std::isfinite (buf.getSample (0, 0)));
+        REQUIRE (std::isfinite (buf.getSample (1, 0)));
+
+        if (call > 10)
+        {
+            REQUIRE (std::abs (buf.getSample (0, 0)) <= ceilingLinear + tolerance);
+            REQUIRE (std::abs (buf.getSample (1, 0)) <= ceilingLinear + tolerance);
+        }
+    }
+}
+
+// ============================================================================
 // test_accepts_midi_false
 // A limiter plugin must not accept MIDI input.
 // ============================================================================
