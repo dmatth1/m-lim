@@ -18,6 +18,7 @@ add_executable(MLIMTests
     catch2/catch_amalgamated.cpp
     ${MLIM_TEST_SOURCES}
     ${MLIM_TEST_CASES}
+    dsp/test_limiter_algorithm.cpp
 )
 
 target_include_directories(MLIMTests
