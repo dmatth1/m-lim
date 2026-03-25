@@ -82,20 +82,22 @@ void MLIMAudioProcessorEditor::paint (juce::Graphics& g)
 
 void MLIMAudioProcessorEditor::resized()
 {
+    // Pro-L 2 layout (left to right): input meter | waveform | GR meter | output meter | loudness panel
     auto bounds = getLocalBounds();
 
-    topBar_.setBounds (bounds.removeFromTop (kTopBarH));
+    // Full-width strips at top and bottom
+    topBar_.setBounds       (bounds.removeFromTop    (kTopBarH));
     controlStrip_.setBounds (bounds.removeFromBottom (kControlStripH));
 
-    // Left: input level meter
+    // Input level meter on the LEFT edge
     inputMeter_.setBounds (bounds.removeFromLeft (kInputMeterW));
 
-    // Right side (right to left): loudness panel, output meter, GR meter
+    // Right edge: loudness panel (outermost), then output meter, then GR meter adjacent to waveform
     loudnessPanel_.setBounds (bounds.removeFromRight (kLoudnessPanelW));
     outputMeter_.setBounds   (bounds.removeFromRight (kOutputMeterW));
     grMeter_.setBounds       (bounds.removeFromRight (kGRMeterW));
 
-    // Centre: waveform display
+    // Waveform display fills the remaining centre (~70-75% of total width)
     waveformDisplay_.setBounds (bounds);
 }
 
