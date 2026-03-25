@@ -698,6 +698,58 @@ TEST_CASE("test_mono_metering_mirrors_L_to_R", "[LimiterEngine]")
 }
 
 // ============================================================================
+// Mono true peak mirroring: R detector processes channel 0 (same as L),
+// so truePeakR must equal truePeakL.
+// ============================================================================
+TEST_CASE("test_mono_true_peak_mirrors_L_to_R", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);   // mono
+    engine.setOutputCeiling(0.0f);
+    engine.setTruePeakEnabled(true);
+
+    MeterData md{};
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, kBlockSize, 1);
+        engine.process(buf);
+
+        MeterData tmp;
+        while (engine.getMeterFIFO().pop(tmp))
+            md = tmp;
+    }
+
+    INFO("truePeakL: " << md.truePeakL << "  truePeakR: " << md.truePeakR);
+    REQUIRE(md.truePeakR == Catch::Approx(md.truePeakL).margin(1e-6f));
+}
+
+// ============================================================================
+// Mono true peak non-zero: confirms true peak detection computes non-zero
+// values in mono mode (not just two zeroes being equal).
+// ============================================================================
+TEST_CASE("test_mono_true_peak_reports_nonzero", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);   // mono
+    engine.setOutputCeiling(0.0f);
+    engine.setTruePeakEnabled(true);
+
+    MeterData md{};
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, kBlockSize, 1);
+        engine.process(buf);
+
+        MeterData tmp;
+        while (engine.getMeterFIFO().pop(tmp))
+            md = tmp;
+    }
+
+    INFO("truePeakL: " << md.truePeakL);
+    REQUIRE(md.truePeakL > 0.0f);
+}
+
+// ============================================================================
 // test_no_deferred_flag_when_factor_unchanged
 // After prepare() with default oversampling (factor=0), processing a block
 // must NOT set the deferred oversampling flag.
