@@ -58,8 +58,10 @@ public:
     {
         int write = mWritePos.load(std::memory_order_acquire);
         int read  = mReadPos.load(std::memory_order_acquire);
-        return ((write + 1) & mMask) == (read & mMask);
+        return ((write + 1) & mMask) == read;
     }
+
+    // Invariant: mWritePos and mReadPos are always stored pre-masked to [0, mMask].
 
     /**
      * Push an item onto the FIFO. Returns false if full (item is dropped).
@@ -69,10 +71,10 @@ public:
     {
         const int write = mWritePos.load(std::memory_order_relaxed);
         const int next  = (write + 1) & mMask;
-        if (next == (mReadPos.load(std::memory_order_acquire) & mMask))
+        if (next == mReadPos.load(std::memory_order_acquire))
             return false;  // full
 
-        mBuffer[static_cast<std::size_t>(write & mMask)] = item;
+        mBuffer[static_cast<std::size_t>(write)] = item;  // write is pre-masked
         mWritePos.store(next, std::memory_order_release);
         return true;
     }
@@ -84,10 +86,10 @@ public:
     bool pop(T& item) noexcept
     {
         const int read = mReadPos.load(std::memory_order_relaxed);
-        if (read == (mWritePos.load(std::memory_order_acquire) & mMask))
+        if (read == mWritePos.load(std::memory_order_acquire))
             return false;  // empty
 
-        item = mBuffer[static_cast<std::size_t>(read)];
+        item = mBuffer[static_cast<std::size_t>(read)];  // read is pre-masked
         mReadPos.store((read + 1) & mMask, std::memory_order_release);
         return true;
     }
