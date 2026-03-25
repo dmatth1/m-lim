@@ -63,9 +63,9 @@ private:
     static constexpr int kDefaultHeight  = 500;
     static constexpr int kTopBarH        = 30;
     static constexpr int kControlStripH  = 120;
-    static constexpr int kInputMeterW    = 20;
+    static constexpr int kInputMeterW    = 30;
     static constexpr int kGRMeterW       = 25;
-    static constexpr int kOutputMeterW   = 20;
+    static constexpr int kOutputMeterW   = 30;
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
     static constexpr int kGainSliderW    = 20;  // waveform-edge input gain slider width
