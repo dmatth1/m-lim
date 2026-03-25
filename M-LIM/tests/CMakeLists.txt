@@ -20,6 +20,7 @@ set(MLIM_TEST_CASES
     state/test_undo_manager.cpp
     state/test_preset_manager.cpp
     state/test_preset_manager_errors.cpp
+    state/test_ab_state.cpp
 )
 
 # Catch2 test executable — DSP sources come from MLIMLib
