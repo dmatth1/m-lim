@@ -40,7 +40,7 @@ namespace MLIMColours
     const juce::Colour textSecondary    { 0xff9E9E9E };
 
     // Meter colours
-    const juce::Colour meterSafe        { 0xff8896AC };  // pale steel grey-blue
+    const juce::Colour meterSafe        { 0xff4D88CC };  // medium cyan-blue (matches Pro-L 2 reference level bar colour)
     const juce::Colour meterWarning     { 0xffFFD54F };  // yellow
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
 
