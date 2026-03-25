@@ -5,6 +5,7 @@ set(MLIM_TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/DCFilter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/Dither.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/SidechainFilter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/Oversampler.cpp
 )
 
 # Collect test source files (populated by each test task)
@@ -12,6 +13,7 @@ set(MLIM_TEST_CASES
     dsp/test_dc_filter.cpp
     dsp/test_dither.cpp
     dsp/test_sidechain_filter.cpp
+    dsp/test_oversampler.cpp
 )
 
 # Catch2 test executable
