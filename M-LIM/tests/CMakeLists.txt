@@ -10,6 +10,7 @@ set(MLIM_TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/TransientLimiter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/LevelingLimiter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/TruePeakDetector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dsp/LimiterEngine.cpp
 )
 
 # Collect test source files (populated by each test task)
@@ -25,6 +26,7 @@ set(MLIM_TEST_CASES
     dsp/test_loudness_meter_accuracy.cpp
     dsp/test_dsp_edge_cases.cpp
     integration/test_dsp_components.cpp
+    dsp/test_limiter_engine.cpp
 )
 
 # Catch2 test executable
