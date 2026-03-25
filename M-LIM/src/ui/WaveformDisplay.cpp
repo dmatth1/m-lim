@@ -302,9 +302,6 @@ void WaveformDisplay::drawOutputFill (juce::Graphics& g,
 {
     if (frameCount_ == 0) return;
 
-    int total = std::min (frameCount_, kHistorySize);
-    float colW = area.getWidth() / static_cast<float> (total);
-
     juce::Path path;
     bool first = true;
 
@@ -314,7 +311,6 @@ void WaveformDisplay::drawOutputFill (juce::Graphics& g,
         float y = levelToY (f.outputLevel, area);
         if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
         path.lineTo (x, y);
-        (void) colW;
     });
 
     path.lineTo (area.getRight(), area.getBottom());
@@ -329,8 +325,6 @@ void WaveformDisplay::drawInputFill (juce::Graphics& g,
 {
     if (frameCount_ == 0) return;
 
-    int total = std::min (frameCount_, kHistorySize);
-
     juce::Path path;
     bool first = true;
 
@@ -340,7 +334,6 @@ void WaveformDisplay::drawInputFill (juce::Graphics& g,
         float y = levelToY (f.inputLevel, area);
         if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
         path.lineTo (x, y);
-        (void) total;
     });
 
     path.lineTo (area.getRight(), area.getBottom());
@@ -354,8 +347,6 @@ void WaveformDisplay::drawGainReduction (juce::Graphics& g,
                                           const juce::Rectangle<float>& area) const
 {
     if (frameCount_ == 0) return;
-
-    int total = std::min (frameCount_, kHistorySize);
 
     juce::Path path;
     bool first = true;
@@ -372,7 +363,6 @@ void WaveformDisplay::drawGainReduction (juce::Graphics& g,
             first = false;
         }
         path.lineTo (x, y);
-        (void) total;
     });
 
     // Close along the top edge
@@ -388,8 +378,6 @@ void WaveformDisplay::drawOutputEnvelope (juce::Graphics& g,
 {
     if (frameCount_ == 0) return;
 
-    int total = std::min (frameCount_, kHistorySize);
-
     juce::Path path;
     bool first = true;
 
@@ -399,7 +387,6 @@ void WaveformDisplay::drawOutputEnvelope (juce::Graphics& g,
         float y = levelToY (f.outputLevel, area);
         if (first) { path.startNewSubPath (x, y); first = false; }
         else        path.lineTo (x, y);
-        (void) total;
     });
 
     g.setColour (MLIMColours::outputEnvelope);
