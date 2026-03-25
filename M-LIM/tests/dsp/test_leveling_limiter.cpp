@@ -248,6 +248,171 @@ TEST_CASE("test_adaptive_release", "[LevelingLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_release_is_exponential_in_dB
+//   After driving GR to -12 dB and feeding silence, the gain recovery must
+//   follow an exponential curve in dB: successive 100-sample intervals
+//   must multiply the remaining GR by the same factor (geometric progression).
+//   We check that the ratio GR[i+100]/GR[i] is consistent across 5 intervals,
+//   with 10% tolerance.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_release_is_exponential_in_dB", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);       // instant attack
+    limiter.setRelease(500.0f);    // slow release so we can measure multiple intervals
+    limiter.setChannelLink(0.0f);
+
+    // Drive to approximately -12 dB GR with a +12 dBFS signal
+    const float loudSignal = 4.0f;  // +12 dBFS
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, loudSignal));
+    auto ptrs = makePtrs(buf);
+    for (int i = 0; i < 50; ++i)
+    {
+        fillConstant(buf, loudSignal);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+    }
+
+    // Verify GR is significantly engaged before releasing
+    REQUIRE(limiter.getGainReduction() < -3.0f);
+
+    // Now release sample-by-sample, recording GR every 100 samples
+    const int numIntervals = 6;
+    const int intervalSamples = 100;
+    float grMeasurements[numIntervals + 1];
+    grMeasurements[0] = limiter.getGainReduction();
+
+    for (int interval = 0; interval < numIntervals; ++interval)
+    {
+        // Process 100 samples of silence
+        for (int s = 0; s < intervalSamples; ++s)
+        {
+            buf[0][0] = 0.0f;
+            limiter.process(ptrs.data(), 1, 1);
+        }
+        grMeasurements[interval + 1] = limiter.getGainReduction();
+    }
+
+    // Compute ratios of consecutive GR readings (should be approximately constant)
+    // Only check interior intervals — skip first (attack transient) and last (near 0)
+    std::vector<float> ratios;
+    for (int i = 1; i < numIntervals - 1; ++i)
+    {
+        if (grMeasurements[i] < -0.1f)  // avoid division by near-zero
+        {
+            ratios.push_back(grMeasurements[i + 1] / grMeasurements[i]);
+        }
+    }
+
+    REQUIRE(ratios.size() >= 3);
+
+    // Compute mean ratio
+    float meanRatio = 0.0f;
+    for (float r : ratios) meanRatio += r;
+    meanRatio /= static_cast<float>(ratios.size());
+
+    // Each ratio should be within 10% of the mean (exponential = constant ratio)
+    for (float r : ratios)
+        REQUIRE(std::abs(r - meanRatio) / meanRatio < 0.10f);
+}
+
+// ---------------------------------------------------------------------------
+// test_release_time_constant_correct
+//   With 100 ms release at 44100 Hz the time constant τ = 4410 samples.
+//   After exactly τ samples of silence following full engagement, the
+//   remaining GR must be 1/e of the starting GR (within ±5% tolerance).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_release_time_constant_correct", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);    // instant attack
+    limiter.setRelease(100.0f); // 100 ms → τ = 4410 samples
+    limiter.setChannelLink(0.0f);
+
+    // Drive to approximately -12 dB GR and record starting GR
+    const float loudSignal = 4.0f;  // +12 dBFS
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, loudSignal));
+    auto ptrs = makePtrs(buf);
+    for (int i = 0; i < 50; ++i)
+    {
+        fillConstant(buf, loudSignal);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+    }
+
+    const float grStart = limiter.getGainReduction();
+    REQUIRE(grStart < -3.0f);
+
+    // Release for exactly one time constant: τ = 100ms * 44100 = 4410 samples
+    const int tauSamples = static_cast<int>(100.0f * 0.001f * kSampleRate);  // 4410
+    for (int s = 0; s < tauSamples; ++s)
+    {
+        buf[0][0] = 0.0f;
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    const float grAfterTau = limiter.getGainReduction();
+
+    // After one τ, remaining GR should be grStart * (1/e) ≈ grStart * 0.3679
+    // grStart is negative (e.g. -12 dB), grAfterTau should be closer to 0
+    const float expected = grStart / static_cast<float>(M_E);  // grStart * 0.3679
+    const float tolerance = std::abs(expected) * 0.05f;         // ±5%
+    REQUIRE(grAfterTau >= expected - tolerance);
+    REQUIRE(grAfterTau <= expected + tolerance);
+}
+
+// ---------------------------------------------------------------------------
+// test_attack_time_constant_correct
+//   With 10 ms attack at 44100 Hz the time constant τ = 441 samples.
+//   After exactly τ samples of a loud signal, 63.2% of the required
+//   gain reduction must be applied (within ±5% tolerance).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_attack_time_constant_correct", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(10.0f);   // 10 ms → τ = 441 samples
+    limiter.setRelease(5000.0f);
+    limiter.setChannelLink(0.0f);
+
+    // Use a constant +12 dBFS signal — target gain = -12 dB
+    // Starting from unity (0 dB GR), after τ = 441 samples,
+    // 63.2% of 12 dB = 7.58 dB of reduction should be applied.
+    const float loudSignal = 4.0f;  // +12 dBFS
+    const float targetGRdB = -12.0f;  // required GR in dB
+
+    std::vector<std::vector<float>> buf(1, std::vector<float>(1, loudSignal));
+    auto ptrs = makePtrs(buf);
+
+    const int tauSamples = static_cast<int>(10.0f * 0.001f * kSampleRate);  // 441
+    for (int s = 0; s < tauSamples; ++s)
+    {
+        buf[0][0] = loudSignal;
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    const float grAfterTau = limiter.getGainReduction();
+
+    // After τ, 63.2% of -12 dB should be applied → GR ≈ -7.58 dB
+    const float expectedGR = targetGRdB * (1.0f - 1.0f / static_cast<float>(M_E));
+    const float tolerance  = std::abs(expectedGR) * 0.05f;  // ±5%
+    REQUIRE(grAfterTau <= expectedGR + tolerance);
+    REQUIRE(grAfterTau >= expectedGR - tolerance);
+}
+
+// ---------------------------------------------------------------------------
 // test_custom_threshold_minus_1dBFS
 //   setThreshold(0.891) must hold output ≤ 0.891 + tiny margin.
 //   LevelingLimiter uses a slow envelope, so 30+ warm-up blocks are needed.

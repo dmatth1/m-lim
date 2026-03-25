@@ -156,14 +156,16 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
 
             if (target < g)
             {
-                // Attack: more reduction needed — approach target in linear domain.
-                // attackCoeff = 0 → instant attack.
-                g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
+                // Attack: more reduction needed — smooth in dB domain so the
+                // envelope shape is exponential-in-dB, matching Stage 1.
+                const float gDb      = gainToDecibels(g);
+                const float targetDb = gainToDecibels(target);
+                const float smoothedDb = gDb + (targetDb - gDb) * (1.0f - mAttackCoeff);
+                g = decibelsToGain(smoothedDb);
             }
             else
             {
-                // Release: recovering toward 1.0 (unity gain) in linear domain.
-                // g = g * c + 1.0 * (1 - c)
+                // Release: recovering toward 0 dB (unity gain) in dB domain.
                 float effectiveReleaseCoeff = mReleaseCoeff;
 
                 if (mParams.adaptiveRelease)
@@ -182,8 +184,10 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
                     }
                 }
 
-                // Exponential recovery toward 1.0 in linear domain
-                g = g * effectiveReleaseCoeff + (1.0f - effectiveReleaseCoeff);
+                // Exponential recovery toward 0 dB in dB domain — target = 0 dB (unity)
+                const float gDb      = gainToDecibels(g);
+                const float smoothedDb = gDb + (0.0f - gDb) * (1.0f - effectiveReleaseCoeff);
+                g = decibelsToGain(smoothedDb);
             }
 
             g = std::max(g, kMinGain);
