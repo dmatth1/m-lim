@@ -1,8 +1,9 @@
 #include "RotaryKnob.h"
 #include "Colours.h"
 
-static constexpr float kRotaryStartAngle = juce::MathConstants<float>::pi * 1.25f;
-static constexpr float kRotaryEndAngle   = juce::MathConstants<float>::pi * 2.75f;
+// 270-degree arc: 7:30 position to 4:30 position (Pro-L 2 style)
+static constexpr float kRotaryStartAngle = juce::MathConstants<float>::pi * 1.25f;  // -135° from 12 o'clock
+static constexpr float kRotaryEndAngle   = juce::MathConstants<float>::pi * 2.75f;  // +135° from 12 o'clock
 
 RotaryKnob::RotaryKnob()
 {

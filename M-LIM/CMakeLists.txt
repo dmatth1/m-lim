@@ -63,6 +63,8 @@ target_link_libraries(MLIMLib
         juce::juce_recommended_warning_flags
 )
 
+set_target_properties(MLIMLib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 juce_add_plugin(MLIM
     VERSION "1.0.0"
     COMPANY_NAME "MLIMaudio"
