@@ -226,3 +226,105 @@ TEST_CASE("test_full_ab_cycle", "[ABState]")
     REQUIRE(getParam(proc.apvts, "gain")    == Catch::Approx(-3.0f).margin(0.01f));
     REQUIRE(getParam(proc.apvts, "ceiling") == Catch::Approx(-1.0f).margin(0.01f));
 }
+
+// ---------------------------------------------------------------------------
+// test_copy_b_to_a_restores_values
+//   Capture A with one set of values, toggle to B, set different values,
+//   capture B, then call copyBtoA(). Restore state and verify A's parameter
+//   values now match what was in B.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_copy_b_to_a_restores_values", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Establish state A with known values
+    setParam(proc.apvts, "gain",    -6.0f);
+    setParam(proc.apvts, "ceiling", -1.0f);
+    ab.captureState(proc.apvts);   // captures into slot A
+    REQUIRE(ab.isA());
+
+    // Toggle to B and set different values
+    ab.toggle(proc.apvts);
+    REQUIRE(!ab.isA());
+    setParam(proc.apvts, "gain",    -12.0f);
+    setParam(proc.apvts, "ceiling", -3.0f);
+    ab.captureState(proc.apvts);   // captures into slot B
+
+    // Copy B → A
+    ab.copyBtoA();
+
+    // Switch back to A and restore — A should now have B's values
+    ab.toggle(proc.apvts);         // toggles back to A and restores it
+    REQUIRE(ab.isA());
+    REQUIRE(getParam(proc.apvts, "gain")    == Catch::Approx(-12.0f).margin(0.01f));
+    REQUIRE(getParam(proc.apvts, "ceiling") == Catch::Approx(-3.0f).margin(0.01f));
+}
+
+// ---------------------------------------------------------------------------
+// test_copy_b_to_a_when_b_not_captured_no_crash
+//   Call copyBtoA() without ever calling captureState() in slot B.
+//   The method must not throw and must leave parameters with finite values.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_copy_b_to_a_when_b_not_captured_no_crash", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Set known values in slot A only
+    setParam(proc.apvts, "gain",    0.0f);
+    setParam(proc.apvts, "ceiling", -0.1f);
+    ab.captureState(proc.apvts);   // only slot A is captured; B remains empty
+    REQUIRE(ab.isA());
+
+    // copyBtoA() with no B captured — must not crash
+    REQUIRE_NOTHROW(ab.copyBtoA());
+
+    // After the no-op, restore A and verify parameters are still finite
+    ab.restoreState(proc.apvts);
+    REQUIRE(std::isfinite(getParam(proc.apvts, "gain")));
+    REQUIRE(std::isfinite(getParam(proc.apvts, "ceiling")));
+}
+
+// ---------------------------------------------------------------------------
+// test_copy_a_to_b_and_b_to_a_roundtrip
+//   Symmetric round-trip test: capture A, capture B with different values,
+//   copyAtoB() makes B match A, then copyBtoA() makes A match B (which is
+//   now a copy of A) — values must be consistent after both copies.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_copy_a_to_b_and_b_to_a_roundtrip", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Establish slot A
+    setParam(proc.apvts, "gain",    -3.0f);
+    setParam(proc.apvts, "ceiling", -0.5f);
+    ab.captureState(proc.apvts);
+    REQUIRE(ab.isA());
+
+    // Toggle to B and set different values
+    ab.toggle(proc.apvts);
+    REQUIRE(!ab.isA());
+    setParam(proc.apvts, "gain",    -18.0f);
+    setParam(proc.apvts, "ceiling", -6.0f);
+    ab.captureState(proc.apvts);
+
+    // Copy A → B: B should now hold A's original values
+    ab.copyAtoB();
+
+    // Restore B and check it now has A's values
+    ab.restoreState(proc.apvts);
+    REQUIRE(getParam(proc.apvts, "gain")    == Catch::Approx(-3.0f).margin(0.01f));
+    REQUIRE(getParam(proc.apvts, "ceiling") == Catch::Approx(-0.5f).margin(0.01f));
+
+    // Copy B → A: A should now have whatever B holds (which is a copy of A)
+    ab.copyBtoA();
+
+    // Toggle to A and restore — values must still be the original A values
+    ab.toggle(proc.apvts);
+    REQUIRE(ab.isA());
+    ab.restoreState(proc.apvts);
+    REQUIRE(getParam(proc.apvts, "gain")    == Catch::Approx(-3.0f).margin(0.01f));
+    REQUIRE(getParam(proc.apvts, "ceiling") == Catch::Approx(-0.5f).margin(0.01f));
+}
