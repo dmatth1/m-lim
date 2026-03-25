@@ -4,7 +4,7 @@
 
 // dB grid lines drawn on background
 static const float kGridDB[] = { 0.0f, -3.0f, -6.0f, -9.0f, -12.0f,
-                                 -15.0f, -18.0f, -21.0f, -24.0f };
+                                 -15.0f, -18.0f, -21.0f, -24.0f, -27.0f };
 
 // ─────────────────────────────────────────────────────────────────────────────
 WaveformDisplay::WaveformDisplay()
