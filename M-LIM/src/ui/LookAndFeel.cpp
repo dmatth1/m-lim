@@ -65,6 +65,30 @@ void MLIMLookAndFeel::drawRotarySlider (juce::Graphics& g,
     g.fillEllipse (centreX - faceRadius, centreY - faceRadius,
                    faceRadius * 2.0f, faceRadius * 2.0f);
 
+    // Graduation tick marks (behind arcs, above knob face)
+    {
+        const int numTicks = 25;  // 25 ticks = 24 intervals, major every 6th
+        for (int i = 0; i < numTicks; ++i)
+        {
+            const float proportion = static_cast<float> (i) / static_cast<float> (numTicks - 1);
+            const float angle = rotaryStartAngle + proportion * (rotaryEndAngle - rotaryStartAngle);
+
+            const bool isMajor = (i % 6 == 0);
+            const float outerR    = radius * 0.97f;
+            const float innerR    = outerR - (isMajor ? 5.0f : 3.0f);
+            const float thickness = isMajor ? 1.5f : 1.0f;
+            const float alpha     = isMajor ? 0.6f : 0.4f;
+
+            const float sinA = std::sin (angle);
+            const float cosA = std::cos (angle);
+
+            g.setColour (juce::Colour (0xff555555).withAlpha (alpha));
+            g.drawLine (centreX + sinA * innerR, centreY - cosA * innerR,
+                        centreX + sinA * outerR,  centreY - cosA * outerR,
+                        thickness);
+        }
+    }
+
     // Track background arc
     {
         juce::Path trackPath;
