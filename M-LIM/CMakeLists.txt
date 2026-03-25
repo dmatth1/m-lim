@@ -54,6 +54,8 @@ target_compile_definitions(MLIMLib
         JUCE_USE_CURL=0
 )
 
+set_property(TARGET MLIMLib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 target_link_libraries(MLIMLib
     PUBLIC
         juce::juce_audio_processors
