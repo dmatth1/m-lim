@@ -82,9 +82,6 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mDitherL.setNoiseShaping(mDitherNoiseShaping.load());
     mDitherR.setNoiseShaping(mDitherNoiseShaping.load());
 
-    // Allocate sidechain working buffers
-    mSidechainData.assign(numChannels, std::vector<float>(maxBlockSize, 0.0f));
-
     // Pre-allocate working buffers so process() has no heap allocations
     mPreLimitBuffer.setSize(numChannels, maxBlockSize);
     mSidechainBuffer.setSize(numChannels, maxBlockSize);

@@ -162,8 +162,6 @@ private:
     LockFreeFIFO<MeterData> mMeterFIFO { 32 };
 
     // Working buffers (allocated in prepare, used on audio thread)
-    std::vector<std::vector<float>> mSidechainData; // per-channel sidechain copy
-
     // Pre-allocated buffers and pointer arrays — no heap allocs inside process()
     juce::AudioBuffer<float>  mPreLimitBuffer;   // for delta mode snapshot
     juce::AudioBuffer<float>  mSidechainBuffer;  // sidechain copy (replaces local sideBuf)
