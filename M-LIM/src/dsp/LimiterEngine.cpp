@@ -4,6 +4,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include <cmath>
 #include <algorithm>
+#include <cstring>
 
 // ============================================================================
 // Constructor
@@ -352,56 +353,85 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
 // ============================================================================
 // Parameter setters
 // ============================================================================
+
+// Bit-exact float comparison — avoids -Wfloat-equal warnings while catching
+// the common case where an unchanged parameter is written every block.
+static bool floatBitsEqual(float a, float b) noexcept
+{
+    return std::memcmp(&a, &b, sizeof(float)) == 0;
+}
+
 void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
 {
-    mAlgorithm.store(static_cast<int>(algo));
+    const int v = static_cast<int>(algo);
+    if (mAlgorithm.load(std::memory_order_relaxed) == v)
+        return;
+    mAlgorithm.store(v);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setInputGain(float dB)
 {
-    mInputGainLinear.store(std::pow(10.0f, dB / 20.0f));
+    const float newLinear = std::pow(10.0f, dB / 20.0f);
+    if (floatBitsEqual(mInputGainLinear.load(std::memory_order_relaxed), newLinear))
+        return;
+    mInputGainLinear.store(newLinear);
     mParamsDirty.store(true);  // unity-gain ceiling depends on input gain
 }
 
 void LimiterEngine::setOutputCeiling(float dB)
 {
-    mOutputCeilingLinear.store(std::pow(10.0f, dB / 20.0f));
+    const float newLinear = std::pow(10.0f, dB / 20.0f);
+    if (floatBitsEqual(mOutputCeilingLinear.load(std::memory_order_relaxed), newLinear))
+        return;
+    mOutputCeilingLinear.store(newLinear);
     mParamsDirty.store(true);  // limiter thresholds must track ceiling
 }
 
 void LimiterEngine::setLookahead(float ms)
 {
+    if (floatBitsEqual(mLookaheadMs.load(std::memory_order_relaxed), ms))
+        return;
     mLookaheadMs.store(ms);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setAttack(float ms)
 {
+    if (floatBitsEqual(mAttackMs.load(std::memory_order_relaxed), ms))
+        return;
     mAttackMs.store(ms);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setRelease(float ms)
 {
+    if (floatBitsEqual(mReleaseMs.load(std::memory_order_relaxed), ms))
+        return;
     mReleaseMs.store(ms);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setChannelLinkTransients(float pct)
 {
+    if (floatBitsEqual(mChannelLinkTransients.load(std::memory_order_relaxed), pct))
+        return;
     mChannelLinkTransients.store(pct);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setChannelLinkRelease(float pct)
 {
+    if (floatBitsEqual(mChannelLinkRelease.load(std::memory_order_relaxed), pct))
+        return;
     mChannelLinkRelease.store(pct);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setOversamplingFactor(int factor)
 {
+    // No change guard here — setOversamplingFactor has its own deferred change
+    // detection path via mCurrentOversamplingFactor in applyPendingParams().
     mOversamplingFactor.store(std::max(Oversampler::kMinOversamplingFactor,
                                        std::min(Oversampler::kMaxOversamplingFactor, factor)));
     mParamsDirty.store(true);
@@ -424,12 +454,16 @@ void LimiterEngine::setDitherEnabled(bool enabled)
 
 void LimiterEngine::setDitherBitDepth(int bits)
 {
+    if (mDitherBitDepth.load(std::memory_order_relaxed) == bits)
+        return;
     mDitherBitDepth.store(bits);
     mParamsDirty.store(true);
 }
 
 void LimiterEngine::setDitherNoiseShaping(int mode)
 {
+    if (mDitherNoiseShaping.load(std::memory_order_relaxed) == mode)
+        return;
     mDitherNoiseShaping.store(mode);
     mParamsDirty.store(true);
 }
@@ -446,6 +480,8 @@ void LimiterEngine::setDeltaMode(bool delta)
 
 void LimiterEngine::setUnityGain(bool unity)
 {
+    if (mUnityGain.load(std::memory_order_relaxed) == unity)
+        return;
     mUnityGain.store(unity);
     mParamsDirty.store(true);  // ceiling changes when unity-gain mode changes
 }

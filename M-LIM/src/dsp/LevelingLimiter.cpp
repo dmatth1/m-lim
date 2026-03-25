@@ -57,7 +57,10 @@ void LevelingLimiter::setThreshold(float linear)
 // ---------------------------------------------------------------------------
 void LevelingLimiter::setAttack(float ms)
 {
-    mAttackMs = std::clamp(ms, 0.0f, 100.0f);
+    const float clamped = std::clamp(ms, 0.0f, 100.0f);
+    if (clamped == mAttackMs)
+        return;
+    mAttackMs = clamped;
     updateCoefficients();
 }
 
@@ -66,7 +69,10 @@ void LevelingLimiter::setAttack(float ms)
 // ---------------------------------------------------------------------------
 void LevelingLimiter::setRelease(float ms)
 {
-    mReleaseMs = std::clamp(ms, 10.0f, 1000.0f);
+    const float clamped = std::clamp(ms, 10.0f, 1000.0f);
+    if (clamped == mReleaseMs)
+        return;
+    mReleaseMs = clamped;
     updateCoefficients();
 }
 

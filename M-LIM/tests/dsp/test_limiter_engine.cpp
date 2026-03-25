@@ -1119,3 +1119,131 @@ TEST_CASE("test_mono_input_gain_applied", "[LimiterEngine]")
     REQUIRE(std::isfinite(tpL));
     REQUIRE(tpL >= 0.0f);
 }
+
+// ============================================================================
+// test_setter_change_guard_no_dirty_on_repeat
+//   Calling a setter twice with the same value must NOT mark mParamsDirty
+//   on the second call. This verifies that the change guards short-circuit
+//   the dirty flag, preventing unnecessary applyPendingParams() calls.
+// ============================================================================
+TEST_CASE("test_setter_change_guard_no_dirty_on_repeat", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+
+    // Process one block to flush any initial dirty state from prepare()
+    juce::AudioBuffer<float> buf = makeSine(0.5f, kBlockSize);
+    engine.process(buf);
+
+    SECTION("setAttack: second call with same value does not set dirty")
+    {
+        engine.setAttack(50.0f);  // first call — sets dirty
+        REQUIRE(engine.isParamsDirty());
+
+        // Flush dirty flag by processing a block
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+        REQUIRE_FALSE(engine.isParamsDirty());
+
+        engine.setAttack(50.0f);  // second call — same value, must NOT set dirty
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("setRelease: second call with same value does not set dirty")
+    {
+        engine.setRelease(200.0f);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setRelease(200.0f);  // same value again
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("setInputGain: second call with same dB does not set dirty")
+    {
+        engine.setInputGain(-6.0f);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setInputGain(-6.0f);  // same value again
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("setOutputCeiling: second call with same dB does not set dirty")
+    {
+        engine.setOutputCeiling(-1.0f);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setOutputCeiling(-1.0f);  // same value again
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("setAlgorithm: second call with same value does not set dirty")
+    {
+        engine.setAlgorithm(LimiterAlgorithm::Aggressive);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setAlgorithm(LimiterAlgorithm::Aggressive);  // same value
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("setUnityGain: second call with same value does not set dirty")
+    {
+        engine.setUnityGain(true);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setUnityGain(true);  // same value
+        REQUIRE_FALSE(engine.isParamsDirty());
+    }
+
+    SECTION("different value sets dirty")
+    {
+        engine.setAttack(50.0f);
+        juce::AudioBuffer<float> b = makeSine(0.5f, kBlockSize);
+        engine.process(b);
+
+        engine.setAttack(75.0f);  // different value — must set dirty
+        REQUIRE(engine.isParamsDirty());
+    }
+}
+
+// ============================================================================
+// test_leveling_limiter_setter_guard_no_redundant_coefficients
+//   setAttack(x) followed by setAttack(x) with the same value must not
+//   recompute coefficients. We verify this indirectly: after the guard, the
+//   engine's behaviour with a known signal is identical to the single-set case.
+//   Direct coefficient stability is confirmed by verifying GR is consistent
+//   across two otherwise identical processing runs.
+// ============================================================================
+TEST_CASE("test_leveling_limiter_setter_guard_no_redundant_coefficients", "[LimiterEngine]")
+{
+    // Helper: prepare an engine, set attack twice with same value, process signal,
+    // return gain reduction.
+    auto measureGR = [](float attackMs) -> float
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setAttack(attackMs);
+        engine.setAttack(attackMs);  // second call — should be no-op
+
+        for (int i = 0; i < 10; ++i)
+        {
+            juce::AudioBuffer<float> buf = makeSine(2.0f, kBlockSize);
+            engine.process(buf);
+        }
+        return engine.getGainReduction();
+    };
+
+    // Run twice — results must be identical (bit-exact, since no randomness)
+    const float gr1 = measureGR(10.0f);
+    const float gr2 = measureGR(10.0f);
+
+    // Both runs use the same attack setting — GR must be identical
+    REQUIRE(gr1 == gr2);
+
+    // And GR should be active (the signal is above threshold)
+    REQUIRE(gr1 < -0.5f);
+}

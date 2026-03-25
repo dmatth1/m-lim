@@ -96,6 +96,11 @@ public:
      *  Call applyDeferredOversamplingChange() from a non-RT thread to complete it. */
     bool hasDeferredOversamplingChange() const { return mDeferredOversamplingChange.load(); }
 
+    /** Returns true if any parameter setter has marked parameters dirty since the
+     *  last call to applyPendingParams() (i.e., since the last process() call).
+     *  Intended for unit tests that verify change-guard behaviour. */
+    bool isParamsDirty() const { return mParamsDirty.load(); }
+
     // -----------------------------------------------------------------------
     // Metering FIFO — push from audio thread, pop from UI thread
     // -----------------------------------------------------------------------
