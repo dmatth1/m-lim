@@ -36,8 +36,10 @@ None (UI assembly — visual verification)
 ## Technical Details
 - Layout proportions (matching Pro-L 2):
   - TopBar: full width, 30px height at top
-  - WaveformDisplay: ~65% width, fills between top bar and control strip
-  - Right panel (LevelMeters + GainReductionMeter + LoudnessPanel): ~35% width
+  - Input LevelMeter: ~20px wide, LEFT of waveform (Pro-L 2 has input meter on left)
+  - WaveformDisplay: ~70-75% of remaining width, CENTER
+  - GainReductionMeter + Output LevelMeter: ~40-50px wide, RIGHT of waveform
+  - LoudnessPanel: collapsible, adjacent to or overlaying right side
   - ControlStrip: full width, ~120px height at bottom
 - Default window size: 900x500
 - Resizable: yes, with min 600x350, aspect ratio ~1.8:1

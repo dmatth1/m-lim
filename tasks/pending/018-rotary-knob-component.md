@@ -30,7 +30,7 @@ None (visual component — verified by UI parity auditor)
   3. White pointer tick at current angle (knobPointer color)
   4. Label text below knob (textSecondary color)
   5. Value + suffix text below label (textPrimary color)
-- Arc range: 210 degrees (from ~7 o'clock to ~5 o'clock)
+- Arc range: ~270 degrees (from ~7:30 position to ~4:30 position, matching Pro-L 2 knob style)
 - Supports APVTS attachment via juce::AudioProcessorValueTreeState::SliderAttachment
 - setRange, setValue, setLabel, setSuffix methods
 - onValueChange callback for non-APVTS use

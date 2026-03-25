@@ -277,7 +277,9 @@ M-LIM/
 - `void paint(juce::Graphics& g) override`
 - `void resized() override`
 - `void timerCallback() override` — 60fps meter/waveform update
-- Layout: TopBar (presets/AB/undo) | WaveformDisplay + Meters | ControlStrip (knobs)
+- Layout: TopBar (presets/AB/undo) | InputMeter | WaveformDisplay | GRMeter + OutputMeter | ControlStrip (knobs)
+- Input level meter on LEFT of waveform, output level meter + GR meter on RIGHT (Pro-L 2 parity)
+- Waveform display should occupy ~70-75% of horizontal space between meters
 - Default size: 900x500, resizable with aspect ratio constraint
 
 ### WaveformDisplayInterface
