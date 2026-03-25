@@ -26,6 +26,18 @@ void SidechainFilter::prepare(double sampleRate, int /*maxBlockSize*/)
 
 void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
 {
+    // Apply any pending parameter changes before processing.
+    // mCoeffsDirty is written by setters on other threads; we load it here
+    // on the audio thread. Using exchange so we don't miss a change that
+    // arrives between the load and the clear.
+    if (mCoeffsDirty.exchange(false, std::memory_order_acq_rel))
+    {
+        mHPFreq = mPendingHP.load(std::memory_order_relaxed);
+        mLPFreq = mPendingLP.load(std::memory_order_relaxed);
+        mTiltDb = mPendingTilt.load(std::memory_order_relaxed);
+        updateCoefficients();
+    }
+
     juce::ScopedNoDenormals noDenormals;
     const int numChannels = std::min(buffer.getNumChannels(), kMaxChannels);
     const int numSamples  = buffer.getNumSamples();
@@ -47,20 +59,20 @@ void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
 
 void SidechainFilter::setHighPassFreq(float hz)
 {
-    mHPFreq = hz;
-    updateCoefficients();
+    mPendingHP.store(hz, std::memory_order_relaxed);
+    mCoeffsDirty.store(true, std::memory_order_release);
 }
 
 void SidechainFilter::setLowPassFreq(float hz)
 {
-    mLPFreq = hz;
-    updateCoefficients();
+    mPendingLP.store(hz, std::memory_order_relaxed);
+    mCoeffsDirty.store(true, std::memory_order_release);
 }
 
 void SidechainFilter::setTilt(float dB)
 {
-    mTiltDb = dB;
-    updateCoefficients();
+    mPendingTilt.store(dB, std::memory_order_relaxed);
+    mCoeffsDirty.store(true, std::memory_order_release);
 }
 
 void SidechainFilter::updateCoefficients()

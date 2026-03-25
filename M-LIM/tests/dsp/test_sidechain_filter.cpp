@@ -1,7 +1,9 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "dsp/SidechainFilter.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <atomic>
 #include <cmath>
+#include <thread>
 #include <vector>
 
 static constexpr double kSampleRate   = 44100.0;
@@ -134,4 +136,86 @@ TEST_CASE("test_flat_passes_signal", "[SidechainFilter]")
     // Attenuation at 1 kHz should be < 0.1 dB
     const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
     REQUIRE(std::abs(attenuationDb) < 0.1);
+}
+
+// ---------------------------------------------------------------------------
+// test_parameter_change_during_process
+// Calls setHighPassFreq() from a second thread while process() runs on the
+// main thread. Verifies no crash and that the parameter change eventually
+// takes effect (filter reflects the new HP cutoff).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_parameter_change_during_process", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize = 256;
+    static constexpr int kNumBlocks = 200;
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kBlockSize);
+
+    std::atomic<bool> stopWriter  { false };
+    std::atomic<bool> writerReady { false };
+    std::atomic<int>  writeCount  { 0 };
+
+    // Writer thread: hammers setHighPassFreq() and setLowPassFreq() at a high
+    // rate while the audio thread is calling process().
+    std::thread writer([&]()
+    {
+        float hp = 20.0f;
+        float lp = 20000.0f;
+        writerReady.store(true, std::memory_order_release);
+        while (!stopWriter.load(std::memory_order_relaxed))
+        {
+            filter.setHighPassFreq(hp);
+            filter.setLowPassFreq(lp);
+            filter.setTilt(0.0f);
+            hp = (hp >= 500.0f) ? 20.0f : hp + 10.0f;
+            lp = (lp <= 5000.0f) ? 20000.0f : lp - 100.0f;
+            writeCount.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    // Wait for the writer thread to start before running the audio loop.
+    while (!writerReady.load(std::memory_order_acquire)) {}
+
+    // Audio thread: calls process() kNumBlocks times.
+    juce::AudioBuffer<float> buf(1, kBlockSize);
+    for (int block = 0; block < kNumBlocks; ++block)
+    {
+        // Fill with a 1 kHz sine
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+        filter.process(buf); // must not crash
+    }
+
+    stopWriter.store(true, std::memory_order_relaxed);
+    writer.join();
+
+    // Sanity: writer must have run at least once.
+    REQUIRE(writeCount.load() > 0);
+
+    // Now verify the parameter change actually took effect: set a 5 kHz HP
+    // and confirm a 100 Hz tone is strongly attenuated after the next process().
+    filter.setHighPassFreq(5000.0f);
+
+    const int settleSamples  = 8192;
+    const int measureSamples = 4096;
+    juce::AudioBuffer<float> testBuf(1, settleSamples + measureSamples);
+    float* data = testBuf.getWritePointer(0);
+    for (int i = 0; i < settleSamples + measureSamples; ++i)
+        data[i] = static_cast<float>(std::sin(kTwoPi * 100.0 * i / kSampleRate));
+
+    filter.process(testBuf);
+
+    // Measure RMS in the settled portion
+    double sum = 0.0;
+    for (int i = settleSamples; i < settleSamples + measureSamples; ++i)
+        sum += static_cast<double>(data[i]) * data[i];
+    const double rmsOut      = std::sqrt(sum / measureSamples);
+    const double rmsIn       = 1.0 / std::sqrt(2.0);
+    const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn + 1e-12);
+
+    // 5 kHz HP attenuates 100 Hz by at least 20 dB (well below cutoff).
+    REQUIRE(attenuationDb < -20.0);
 }

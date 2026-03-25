@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_dsp/juce_dsp.h>
+#include <atomic>
 
 /**
  * SidechainFilter — shapes the detection signal for the limiter.
@@ -13,6 +14,11 @@
  *   HP = 20 Hz   (far below audible content)
  *   LP = 20000 Hz (at or beyond audible ceiling)
  *   Tilt = 0 dB  (no spectral tilt)
+ *
+ * Thread safety: setHighPassFreq(), setLowPassFreq(), and setTilt() are safe
+ * to call from any thread (including the UI/message thread) while process()
+ * is running on the audio thread. Parameter changes are stored in atomics and
+ * applied at the start of the next process() call on the audio thread.
  */
 class SidechainFilter
 {
@@ -22,31 +28,45 @@ public:
     /** Call before processing begins or when sample rate changes. */
     void prepare(double sampleRate, int maxBlockSize);
 
-    /** Process buffer in-place (operates on all channels, up to 2). */
+    /** Process buffer in-place (operates on all channels, up to 2).
+     *  Applies any pending parameter changes before processing. */
     void process(juce::AudioBuffer<float>& buffer);
 
-    /** High-pass cutoff frequency in Hz. Range: 20–2000 Hz. */
+    /** High-pass cutoff frequency in Hz. Range: 20–2000 Hz.
+     *  Thread-safe: may be called from any thread. */
     void setHighPassFreq(float hz);
 
-    /** Low-pass cutoff frequency in Hz. Range: 2000–20000 Hz. */
+    /** Low-pass cutoff frequency in Hz. Range: 2000–20000 Hz.
+     *  Thread-safe: may be called from any thread. */
     void setLowPassFreq(float hz);
 
     /** Spectral tilt in dB. Range: -6 to +6 dB.
      *  Positive values boost high frequencies relative to low frequencies,
-     *  pivoting around 1 kHz. */
+     *  pivoting around 1 kHz.
+     *  Thread-safe: may be called from any thread. */
     void setTilt(float dB);
 
 private:
+    /** Recalculates filter coefficients from current mHPFreq/mLPFreq/mTiltDb.
+     *  Must be called only from the audio thread (inside process()). */
     void updateCoefficients();
 
     double mSampleRate = 44100.0;
-    float  mHPFreq     = 20.0f;
-    float  mLPFreq     = 20000.0f;
-    float  mTiltDb     = 0.0f;
+
+    // These are only read/written on the audio thread (inside process()).
+    float  mHPFreq  = 20.0f;
+    float  mLPFreq  = 20000.0f;
+    float  mTiltDb  = 0.0f;
+
+    // Pending values written by setters (any thread), consumed by process().
+    std::atomic<float> mPendingHP   { 20.0f };
+    std::atomic<float> mPendingLP   { 20000.0f };
+    std::atomic<float> mPendingTilt { 0.0f };
+    std::atomic<bool>  mCoeffsDirty { false };
 
     static constexpr int kMaxChannels = 2;
 
-    // Per-channel IIR filters
+    // Per-channel IIR filters (accessed only on the audio thread)
     juce::dsp::IIR::Filter<float> mHP[kMaxChannels];
     juce::dsp::IIR::Filter<float> mLP[kMaxChannels];
     juce::dsp::IIR::Filter<float> mTiltLS[kMaxChannels]; // low shelf
