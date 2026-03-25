@@ -38,6 +38,7 @@ add_library(MLIMLib STATIC
     src/dsp/LevelingLimiter.cpp
     src/dsp/TruePeakDetector.cpp
     src/dsp/LimiterEngine.cpp
+    src/state/UndoManager.cpp
 )
 
 target_include_directories(MLIMLib

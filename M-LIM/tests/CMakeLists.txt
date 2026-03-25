@@ -16,6 +16,7 @@ set(MLIM_TEST_CASES
     dsp/test_limiter_engine.cpp
     dsp/test_limiter_engine_modes.cpp
     dsp/test_lockfree_fifo.cpp
+    state/test_undo_manager.cpp
 )
 
 # Catch2 test executable — DSP sources come from MLIMLib
