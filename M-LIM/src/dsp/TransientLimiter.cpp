@@ -113,6 +113,14 @@ float TransientLimiter::getGainReduction() const
 }
 
 // ---------------------------------------------------------------------------
+// getLatencyInSamples
+// ---------------------------------------------------------------------------
+int TransientLimiter::getLatencyInSamples() const
+{
+    return mLookaheadSamples;
+}
+
+// ---------------------------------------------------------------------------
 // computeRequiredGain  (private)
 // ---------------------------------------------------------------------------
 float TransientLimiter::computeRequiredGain(float peakAbs) const

@@ -512,6 +512,124 @@ TEST_CASE("test_sliding_max_peak_detection", "[TransientLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_zero_lookahead_zero_latency
+//   With lookahead set to 0 ms, getLatencyInSamples() must return 0.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_zero_lookahead_zero_latency", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(0.0f);
+    REQUIRE(limiter.getLatencyInSamples() == 0);
+}
+
+// ---------------------------------------------------------------------------
+// test_lookahead_latency_matches_reported
+//   With lookahead=5 ms at 44100 Hz, getLatencyInSamples() must return
+//   approximately 220 samples (±5 samples).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lookahead_latency_matches_reported", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    const float lookaheadMs     = 5.0f;
+    const int   expectedSamples = static_cast<int>(lookaheadMs * 0.001 * kSampleRate); // 220
+    limiter.setLookahead(lookaheadMs);
+
+    const int reported = limiter.getLatencyInSamples();
+    REQUIRE(std::abs(reported - expectedSamples) <= 5);
+}
+
+// ---------------------------------------------------------------------------
+// test_latency_changes_with_lookahead_param
+//   Changing lookahead from 1 ms to 5 ms (max) and re-preparing must
+//   increase the reported latency proportionally.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_latency_changes_with_lookahead_param", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(1.0f);
+    const int latency1ms = limiter.getLatencyInSamples();
+
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(5.0f);
+    const int latency5ms = limiter.getLatencyInSamples();
+
+    // 5 ms lookahead must yield ~5x more latency than 1 ms
+    REQUIRE(latency5ms > latency1ms);
+    // Sanity: non-zero lookahead → non-zero latency
+    REQUIRE(latency1ms > 0);
+    REQUIRE(latency5ms > 0);
+    // Ratio should be approximately 5:1 (allow 10% tolerance)
+    const float ratio = static_cast<float>(latency5ms) / static_cast<float>(latency1ms);
+    REQUIRE(ratio == Catch::Approx(5.0f).epsilon(0.10f));
+}
+
+// ---------------------------------------------------------------------------
+// test_null_sidechain_no_crash
+//   Explicitly passing nullptr as the sidechain pointer must not crash and
+//   must produce finite output over 10 blocks.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_null_sidechain_no_crash", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+    limiter.setLookahead(2.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, 0.5f));
+
+    for (int block = 0; block < 10; ++block)
+    {
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), 0.5f);
+        auto ptrs = makePtrs(buf);
+
+        // Explicit nullptr sidechain — must not crash
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize, nullptr);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+            for (float v : buf[ch])
+                REQUIRE(std::isfinite(v));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_small_block_no_crash
+//   A block size much smaller than the lookahead buffer (16 samples with
+//   5 ms lookahead at 44100 = 220 samples) must not crash and must produce
+//   finite output over 100 blocks.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_small_block_no_crash", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    const float lookaheadMs = 5.0f;  // max supported (kMaxLookaheadMs)
+    const int   smallBlock  = 16;
+
+    limiter.prepare(kSampleRate, smallBlock, kNumChannels);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Aggressive));
+    limiter.setLookahead(lookaheadMs);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(smallBlock));
+
+    for (int block = 0; block < 100; ++block)
+    {
+        const float amp = (block % 2 == 0) ? 2.0f : 0.3f;
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), amp);
+        auto ptrs = makePtrs(buf);
+
+        limiter.process(ptrs.data(), kNumChannels, smallBlock);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+            for (float v : buf[ch])
+                REQUIRE(std::isfinite(v));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_sliding_max_matches_brute_force
 //   Verifies that the O(1) sliding-window-max deque produces the same
 //   per-sample output as a brute-force O(N) rolling-max reference.

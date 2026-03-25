@@ -48,6 +48,11 @@ public:
     /** Returns current gain reduction in dB (0 = no reduction, negative = reducing). */
     float getGainReduction() const;
 
+    /** Returns the lookahead delay introduced by this stage in samples.
+     *  This equals the plugin latency that must be reported to the host via
+     *  AudioProcessor::setLatencySamples(). Returns 0 when lookahead is disabled. */
+    int getLatencyInSamples() const;
+
 private:
     /** Compute the linear gain factor needed to bring peakAbs below threshold,
      *  applying the soft-knee curve from mParams. Returns a value in (0, 1]. */
