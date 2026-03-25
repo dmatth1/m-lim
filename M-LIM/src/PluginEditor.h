@@ -72,8 +72,6 @@ private:
     static constexpr int kGainLabelH     = 14;  // "GAIN" label height
     static constexpr int kGainValueH     = 12;  // value readout height
 
-    juce::ComponentBoundsConstrainer constrainer_;
-
     void wireCallbacks();
     void updatePeakHold (float newL, float newR,
                          float& peakL, float& peakR,
