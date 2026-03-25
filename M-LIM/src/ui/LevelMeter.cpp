@@ -3,10 +3,6 @@
 
 namespace
 {
-    // Scale markings shown on the meter (dBFS) — uniform 3 dB steps
-    constexpr float kScaleMarks[] = { 0.0f, -3.0f, -6.0f, -9.0f, -12.0f,
-                                      -15.0f, -18.0f, -21.0f, -24.0f, -27.0f, -30.0f };
-
     // Width of each channel bar relative to available width
     constexpr float kBarWidthRatio = 0.42f;
     // Gap between the two bars
@@ -175,7 +171,7 @@ void LevelMeter::drawScale (juce::Graphics& g, float barTop, float barH) const
 
     const float scaleX = bounds.getRight() - (float) kScaleWidth;
 
-    for (float mark : kScaleMarks)
+    for (float mark : MLIMColours::kMeterGridDB)
     {
         const float norm = dbToNorm (mark);
         const float y    = barY + barH * (1.0f - norm);

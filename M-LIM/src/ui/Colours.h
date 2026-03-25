@@ -45,4 +45,11 @@ namespace MLIMColours
 
     // Accent
     const juce::Colour accentBlue       { 0xff2196F3 };
+
+    // dBFS grid markings used across meter and waveform displays (3 dB steps, 0 to -30)
+    static constexpr float kMeterGridDB[] = {
+        0.0f, -3.0f, -6.0f, -9.0f, -12.0f,
+        -15.0f, -18.0f, -21.0f, -24.0f, -27.0f, -30.0f
+    };
+    static constexpr int kMeterGridDBCount = 11;
 }

@@ -2,9 +2,9 @@
 #include "Colours.h"
 #include <cmath>
 
-// dB grid lines drawn on background
-static const float kGridDB[] = { 0.0f, -3.0f, -6.0f, -9.0f, -12.0f,
-                                 -15.0f, -18.0f, -21.0f, -24.0f, -27.0f };
+// dB grid lines drawn on background — shared constant from Colours.h
+// WaveformDisplay uses the first 10 entries (0 to -27 dBFS); see MLIMColours::kMeterGridDB
+static constexpr int kWaveformGridDBCount = 10;
 
 // ─────────────────────────────────────────────────────────────────────────────
 WaveformDisplay::WaveformDisplay()
@@ -248,8 +248,9 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
     // Horizontal dB grid lines
     g.setColour (juce::Colour (0xff2E3040));
-    for (float db : kGridDB)
+    for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
+        const float db = MLIMColours::kMeterGridDB[gi];
         // Map dB to GR fraction (0 dB GR = top, kMaxGRdB GR = bottom)
         float frac = (-db) / kMaxGRdB;   // dB is negative for GR scale
         float y = area.getY() + frac * area.getHeight();
@@ -456,8 +457,9 @@ void WaveformDisplay::drawScale (juce::Graphics& g,
     g.setFont (juce::Font (9.0f));
 
     // Reuse the same dB grid values as background
-    for (float db : kGridDB)
+    for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
+        const float db = MLIMColours::kMeterGridDB[gi];
         float frac = (-db) / kMaxGRdB;
         float y = area.getY() + frac * area.getHeight();
         if (y < area.getY() || y > area.getBottom()) continue;
