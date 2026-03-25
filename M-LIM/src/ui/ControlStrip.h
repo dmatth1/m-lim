@@ -12,12 +12,13 @@
  * Bottom control strip containing all main controls:
  *
  *  Top row:    [InputGain] [AlgorithmSelector] [Lookahead] [Attack] [Release]
- *              [ChannelLinkTransients] [ChannelLinkRelease] | [OUTPUT vertical slider]
+ *              [ADVANCED>>] (expands to show Channel Link knobs) | [OUTPUT vertical slider]
  *
  *  Status bar: [MIDI Learn] [● True Peak Limiting] [Oversampling: Xx] [Dither: XX Bits]
  *              ... [TP] [≋] [Loudness] [||] [Short Term] [Out: X.X dBTP]
  *
  * All controls are attached to the AudioProcessorValueTreeState.
+ * The ADVANCED toggle reveals the CHANNEL LINKING section (Transients + Release knobs).
  */
 class ControlStrip : public juce::Component,
                      private juce::ComboBox::Listener
@@ -32,8 +33,14 @@ public:
     /** Update the "Out: X.X dBTP" readout in the status bar. */
     void setOutputLevel (float dBTPValue);
 
+    /** Returns true when the Advanced (channel linking) panel is expanded. */
+    bool isAdvancedExpanded() const noexcept { return isAdvancedExpanded_; }
+
 private:
     juce::AudioProcessorValueTreeState& apvts_;
+
+    // ── Expanded state ─────────────────────────────────────────────────────────
+    bool isAdvancedExpanded_ { false };
 
     // ── Top row: knobs ────────────────────────────────────────────────────────
     RotaryKnob inputGainKnob_;
@@ -48,6 +55,9 @@ private:
     juce::Slider outputCeilingSlider_   { juce::Slider::LinearVertical,
                                          juce::Slider::TextBoxBelow };
     juce::Label  outputCeilingLabel_;
+
+    // ── Advanced toggle button ─────────────────────────────────────────────────
+    juce::TextButton advancedButton_;
 
     // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
     juce::TextButton truePeakButton_    { "TP" };

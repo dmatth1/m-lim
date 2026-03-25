@@ -24,6 +24,9 @@ namespace
     static constexpr int kMeasureModeBtnW  = 76;
     static constexpr int kOutLevelLblW     = 88;
     static constexpr int kStatusGap        = 4;
+
+    // Advanced button width
+    static constexpr int kAdvancedBtnW = 72;
 }
 
 ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
@@ -82,10 +85,29 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (lookaheadKnob_);
     addAndMakeVisible (attackKnob_);
     addAndMakeVisible (releaseKnob_);
-    addAndMakeVisible (channelLinkTransientsKnob_);
-    addAndMakeVisible (channelLinkReleaseKnob_);
+    // Channel linking knobs are hidden by default (revealed by ADVANCED toggle)
+    addChildComponent (channelLinkTransientsKnob_);
+    addChildComponent (channelLinkReleaseKnob_);
     addAndMakeVisible (outputCeilingSlider_);
     addAndMakeVisible (outputCeilingLabel_);
+
+    // ── Advanced toggle button ─────────────────────────────────────────────
+    advancedButton_.setButtonText ("ADVANCED >>");
+    advancedButton_.setClickingTogglesState (true);
+    advancedButton_.setColour (juce::TextButton::buttonColourId,   juce::Colour (0xff242424));
+    advancedButton_.setColour (juce::TextButton::buttonOnColourId, MLIMColours::accentBlue.withAlpha (0.7f));
+    advancedButton_.setColour (juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
+    advancedButton_.setColour (juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
+    addAndMakeVisible (advancedButton_);
+
+    advancedButton_.onClick = [this]
+    {
+        isAdvancedExpanded_ = advancedButton_.getToggleState();
+        advancedButton_.setButtonText (isAdvancedExpanded_ ? "ADVANCED <<" : "ADVANCED >>");
+        channelLinkTransientsKnob_.setVisible (isAdvancedExpanded_);
+        channelLinkReleaseKnob_.setVisible (isAdvancedExpanded_);
+        resized();
+    };
 
     // ── APVTS-bound controls (hidden — kept only for parameter attachments) ─
     addChildComponent (truePeakButton_);
@@ -420,6 +442,27 @@ void ControlStrip::paint (juce::Graphics& g)
     g.setColour (MLIMColours::panelBorder);
     int sepY = kKnobRowH + kPadding;
     g.drawHorizontalLine (sepY, 0.0f, static_cast<float> (getWidth()));
+
+    // Draw CHANNEL LINKING expanded panel overlay when advanced is open
+    if (isAdvancedExpanded_)
+    {
+        // Semi-transparent overlay behind the channel linking knobs
+        auto linkBounds = channelLinkTransientsKnob_.getBounds()
+                              .getUnion (channelLinkReleaseKnob_.getBounds())
+                              .expanded (4, 2);
+        g.setColour (juce::Colour (0x20FFFFFF));
+        g.fillRoundedRectangle (linkBounds.toFloat(), 4.0f);
+        g.setColour (MLIMColours::panelBorder);
+        g.drawRoundedRectangle (linkBounds.toFloat(), 4.0f, 1.0f);
+
+        // "CHANNEL LINKING" label above the panel
+        g.setColour (MLIMColours::textSecondary);
+        g.setFont (juce::Font (juce::FontOptions().withHeight (9.0f).withStyle ("Bold")));
+        g.drawText ("CHANNEL LINKING",
+                    linkBounds.getX(), linkBounds.getY() - 12,
+                    linkBounds.getWidth(), 12,
+                    juce::Justification::centred, false);
+    }
 }
 
 void ControlStrip::resized()
@@ -442,19 +485,36 @@ void ControlStrip::resized()
     // ── Top row: knobs ────────────────────────────────────────────────────
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
-    // InputGain on far left
+    // OutputCeiling is now a vertical slider on the right, not in the knob row
     int knobW = knobRow.getWidth() / (kNumKnobs + 1); // +1 for wider algo selector
+
+    // InputGain on far left
     inputGainKnob_.setBounds (knobRow.removeFromLeft (knobW));
 
     // AlgorithmSelector takes 2 knob-widths
     algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
 
-    // Remaining 5 knobs
-    lookaheadKnob_.setBounds             (knobRow.removeFromLeft (knobW));
-    attackKnob_.setBounds                (knobRow.removeFromLeft (knobW));
-    releaseKnob_.setBounds               (knobRow.removeFromLeft (knobW));
-    channelLinkTransientsKnob_.setBounds (knobRow.removeFromLeft (knobW));
-    channelLinkReleaseKnob_.setBounds    (knobRow.removeFromLeft (knobW));
+    // Basic knobs: Lookahead, Attack, Release
+    lookaheadKnob_.setBounds (knobRow.removeFromLeft (knobW));
+    attackKnob_.setBounds    (knobRow.removeFromLeft (knobW));
+    releaseKnob_.setBounds   (knobRow.removeFromLeft (knobW));
+
+    if (isAdvancedExpanded_)
+    {
+        // Show channel linking knobs in remaining space (before the advanced button)
+        auto channelArea = knobRow.removeFromLeft (knobRow.getWidth() - kAdvancedBtnW - kPadding);
+        int linkKnobW = channelArea.getWidth() / 2;
+        channelLinkTransientsKnob_.setBounds (channelArea.removeFromLeft (linkKnobW));
+        channelLinkReleaseKnob_.setBounds    (channelArea);
+
+        // ADVANCED button in remaining space
+        advancedButton_.setBounds (knobRow);
+    }
+    else
+    {
+        // ADVANCED button takes remaining space
+        advancedButton_.setBounds (knobRow);
+    }
 
     // ── Status bar row ────────────────────────────────────────────────────
     bounds.removeFromTop (kPadding); // gap after separator
