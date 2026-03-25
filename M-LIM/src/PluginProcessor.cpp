@@ -11,7 +11,7 @@ MLIMAudioProcessor::MLIMAudioProcessor()
     : AudioProcessor (BusesProperties()
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                         .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, &undoManager.getJuceUndoManager(), "Parameters", createParameterLayout())
+      apvts (*this, &undoManager, "Parameters", createParameterLayout())
 {
     initParameterPointers();
 

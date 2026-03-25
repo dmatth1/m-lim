@@ -7,8 +7,6 @@
 #include "dsp/MeterData.h"
 #include "state/ABState.h"
 #include "state/PresetManager.h"
-#include "state/UndoManager.h"
-
 class MLIMAudioProcessor : public juce::AudioProcessor,
                            private juce::AudioProcessorValueTreeState::Listener,
                            private juce::AsyncUpdater
@@ -45,11 +43,11 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     // State management — must be constructed before apvts (construction order = declaration order)
-    UndoManager   undoManager;
+    juce::UndoManager undoManager;
     ABState       abState;
     PresetManager presetManager;
 
-    // Depends on undoManager being alive (apvts ctor takes &undoManager.getJuceUndoManager())
+    // Depends on undoManager being alive (apvts ctor takes &undoManager)
     juce::AudioProcessorValueTreeState apvts;
 
     // Meter FIFO — audio thread pushes MeterData (with LUFS), UI thread pops
