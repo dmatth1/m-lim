@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Parameters>
   <PARAM id="inputGain" value="0.0"/>
-  <PARAM id="outputCeiling" value="-0.1"/>
-  <PARAM id="lookahead" value="0.5"/>
+  <PARAM id="outputCeiling" value="-1.0"/>
+  <PARAM id="lookahead" value="2.0"/>
   <PARAM id="attack" value="0.0"/>
-  <PARAM id="release" value="50.0"/>
-  <PARAM id="algorithm" value="1"/>
+  <PARAM id="release" value="200.0"/>
+  <PARAM id="algorithm" value="6"/>
   <PARAM id="oversamplingFactor" value="1"/>
-  <PARAM id="truePeakEnabled" value="0"/>
-  <PARAM id="channelLinkTransients" value="50.0"/>
-  <PARAM id="channelLinkRelease" value="75.0"/>
-  <PARAM id="dcFilterEnabled" value="0"/>
+  <PARAM id="truePeakEnabled" value="1"/>
+  <PARAM id="channelLinkTransients" value="75.0"/>
+  <PARAM id="channelLinkRelease" value="100.0"/>
+  <PARAM id="dcFilterEnabled" value="1"/>
   <PARAM id="ditherEnabled" value="0"/>
   <PARAM id="ditherBitDepth" value="0"/>
   <PARAM id="ditherNoiseShaping" value="0"/>
   <PARAM id="bypass" value="0"/>
   <PARAM id="unityGainMode" value="0"/>
-  <PARAM id="sidechainHPFreq" value="20.0"/>
+  <PARAM id="sidechainHPFreq" value="80.0"/>
   <PARAM id="sidechainLPFreq" value="20000.0"/>
   <PARAM id="sidechainTilt" value="0.0"/>
   <PARAM id="delta" value="0"/>

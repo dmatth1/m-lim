@@ -2,14 +2,14 @@
 <Parameters>
   <PARAM id="inputGain" value="0.0"/>
   <PARAM id="outputCeiling" value="-0.1"/>
-  <PARAM id="lookahead" value="0.5"/>
+  <PARAM id="lookahead" value="0.1"/>
   <PARAM id="attack" value="0.0"/>
-  <PARAM id="release" value="50.0"/>
-  <PARAM id="algorithm" value="1"/>
-  <PARAM id="oversamplingFactor" value="1"/>
-  <PARAM id="truePeakEnabled" value="0"/>
-  <PARAM id="channelLinkTransients" value="50.0"/>
-  <PARAM id="channelLinkRelease" value="75.0"/>
+  <PARAM id="release" value="30.0"/>
+  <PARAM id="algorithm" value="3"/>
+  <PARAM id="oversamplingFactor" value="2"/>
+  <PARAM id="truePeakEnabled" value="1"/>
+  <PARAM id="channelLinkTransients" value="100.0"/>
+  <PARAM id="channelLinkRelease" value="100.0"/>
   <PARAM id="dcFilterEnabled" value="0"/>
   <PARAM id="ditherEnabled" value="0"/>
   <PARAM id="ditherBitDepth" value="0"/>

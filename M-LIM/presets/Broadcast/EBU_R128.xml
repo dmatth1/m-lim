@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<MLIMState presetName="EBU_R128">
-  <PARAMETERS inputGain="0.0" outputCeiling="-1.0" lookahead="8.0"
-              attack="0.5" release="80.0" algorithm="0"
-              oversample="4" truePeak="1" stereoLink="1"
-              dither="1" channelLink="1"/>
-</MLIMState>
+<Parameters>
+  <PARAM id="inputGain" value="0.0"/>
+  <PARAM id="outputCeiling" value="-1.0"/>
+  <PARAM id="lookahead" value="1.0"/>
+  <PARAM id="attack" value="0.0"/>
+  <PARAM id="release" value="100.0"/>
+  <PARAM id="algorithm" value="6"/>
+  <PARAM id="oversamplingFactor" value="2"/>
+  <PARAM id="truePeakEnabled" value="1"/>
+  <PARAM id="channelLinkTransients" value="75.0"/>
+  <PARAM id="channelLinkRelease" value="100.0"/>
+  <PARAM id="dcFilterEnabled" value="0"/>
+  <PARAM id="ditherEnabled" value="1"/>
+  <PARAM id="ditherBitDepth" value="0"/>
+  <PARAM id="ditherNoiseShaping" value="1"/>
+  <PARAM id="bypass" value="0"/>
+  <PARAM id="unityGainMode" value="0"/>
+  <PARAM id="sidechainHPFreq" value="20.0"/>
+  <PARAM id="sidechainLPFreq" value="20000.0"/>
+  <PARAM id="sidechainTilt" value="0.0"/>
+  <PARAM id="delta" value="0"/>
+  <PARAM id="displayMode" value="0"/>
+</Parameters>
