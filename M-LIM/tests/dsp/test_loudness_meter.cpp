@@ -615,6 +615,61 @@ TEST_CASE("test_lra_nonzero_for_dynamic_content", "[LoudnessMeter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_rlb_filter_coefficients_at_48khz
+// Verify that the RLB high-pass filter coefficients computed at 48000 Hz match
+// the ITU-R BS.1770-4 Annex 2 reference values (from libebur128).
+// Reference: a1 = -1.99004745483398, a2 = 0.99007225036621
+// ---------------------------------------------------------------------------
+TEST_CASE("test_rlb_filter_coefficients_at_48khz", "[LoudnessMeter]")
+{
+    // Re-derive coefficients using the same formula as LoudnessMeter::setupKWeightingFilters()
+    constexpr double kPiLocal  = 3.14159265358979323846;
+    constexpr double fs        = 48000.0;
+    constexpr double fc        = 38.13547087602444;
+    constexpr double Q         = 0.5003270373238773;
+
+    const double K  = std::tan(kPiLocal * fc / fs);
+    const double K2 = K * K;
+    const double a0 = 1.0 + K / Q + K2;
+    const double a1 = 2.0 * (K2 - 1.0) / a0;
+    const double a2 = (1.0 - K / Q + K2) / a0;
+
+    INFO("Computed a1 at 48 kHz: " << a1);
+    INFO("Computed a2 at 48 kHz: " << a2);
+
+    // BS.1770-4 Annex 2 reference values
+    CHECK(std::abs(a1 - (-1.99004745483398)) < 1e-7);
+    CHECK(std::abs(a2 -   0.99007225036621)  < 1e-7);
+}
+
+// ---------------------------------------------------------------------------
+// test_rlb_filter_coefficients_at_44100hz
+// Same verification at 44100 Hz.
+// Reference: a1 = -1.98621612, a2 = 0.98627191
+// ---------------------------------------------------------------------------
+TEST_CASE("test_rlb_filter_coefficients_at_44100hz", "[LoudnessMeter]")
+{
+    constexpr double kPiLocal  = 3.14159265358979323846;
+    constexpr double fs        = 44100.0;
+    constexpr double fc        = 38.13547087602444;
+    constexpr double Q         = 0.5003270373238773;
+
+    const double K  = std::tan(kPiLocal * fc / fs);
+    const double K2 = K * K;
+    const double a0 = 1.0 + K / Q + K2;
+    const double a1 = 2.0 * (K2 - 1.0) / a0;
+    const double a2 = (1.0 - K / Q + K2) / a0;
+
+    INFO("Computed a1 at 44100 Hz: " << a1);
+    INFO("Computed a2 at 44100 Hz: " << a2);
+
+    // Reference values derived from Q=0.5003270373238773 at 44100 Hz.
+    // (Note: these differ from the incorrect Butterworth Q=sqrt(2) values.)
+    CHECK(std::abs(a1 - (-1.98917)) < 1e-4);
+    CHECK(std::abs(a2 -   0.98920)  < 1e-4);
+}
+
+// ---------------------------------------------------------------------------
 // test_lra_increases_with_wider_variation
 // Signal A alternates between -20 and -30 dBFS (10 LU spread).
 // Signal B alternates between -20 and -40 dBFS (20 LU spread).

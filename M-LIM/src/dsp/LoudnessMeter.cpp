@@ -91,21 +91,21 @@ void LoudnessMeter::setupKWeightingFilters()
     }
 
     // ------------------------------------------------------------------
-    // Stage 2: RLB high-pass (2nd-order Butterworth, fc ~38.135 Hz)
+    // Stage 2: RLB high-pass (Q from ITU-R BS.1770-4 Annex 2 / libebur128)
     // ------------------------------------------------------------------
     {
         const double fc = kBS1770RLBHighPassFreqHz;
+        const double Q  = 0.5003270373238773; // BS.1770-4 Annex 2
         const double K  = std::tan(kPi * fc / mSampleRate);
         const double K2 = K * K;
-        const double sq2 = std::sqrt(2.0);
-        const double a0 = 1.0 + sq2 * K + K2;
+        const double a0 = 1.0 + K / Q + K2;
 
         Biquad rlb;
         rlb.b0 =  1.0 / a0;
         rlb.b1 = -2.0 / a0;
         rlb.b2 =  1.0 / a0;
         rlb.a1 = 2.0 * (K2 - 1.0) / a0;
-        rlb.a2 = (1.0 - sq2 * K + K2) / a0;
+        rlb.a2 = (1.0 - K / Q + K2) / a0;
 
         for (auto& f : rlbFilters)
             f = rlb;
