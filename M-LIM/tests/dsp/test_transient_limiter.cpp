@@ -1226,3 +1226,98 @@ TEST_CASE("write counter int32 overflow: peak tracking correct across boundary",
     }
     REQUIRE(alwaysLimiting);
 }
+
+// ---------------------------------------------------------------------------
+// test_lookahead_zero_no_latency
+//   setLookahead(0.0f) must result in getLatencyInSamples() == 0.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lookahead_zero_no_latency", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+
+    limiter.setLookahead(0.0f);
+    REQUIRE(limiter.getLatencyInSamples() == 0);
+}
+
+// ---------------------------------------------------------------------------
+// test_lookahead_zero_still_limits
+//   With setLookahead(0.0f), a constant +6 dBFS block must be limited to
+//   ≤ 1.0 + margin within the first few warm-up blocks (no latency means
+//   instant gain reduction; no silent first-sample artefact from delay).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lookahead_zero_still_limits", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;  // hard knee — instant response
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+
+    // Feed several blocks of constant +6 dBFS signal
+    const int kWarmupBlocks = 3;
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+
+    for (int b = 0; b < kWarmupBlocks; ++b)
+    {
+        fillConstant(buf, 2.0f);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    // After warm-up, every sample must be within threshold
+    for (int ch = 0; ch < kNumChannels; ++ch)
+        REQUIRE(blockPeak(buf[ch]) <= 1.0f + 1e-3f);
+
+    // GR must be active
+    REQUIRE(limiter.getGainReduction() < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_lookahead_zero_to_nonzero_transition
+//   Start with setLookahead(0.0f), process several blocks, then switch to
+//   setLookahead(1.0f).  getLatencyInSamples() must update and limiting must
+//   remain correct after the transition (no memory corruption / silent burst).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lookahead_zero_to_nonzero_transition", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth        = 0.0f;
+    params.saturationAmount = 0.0f;
+    limiter.setAlgorithmParams(params);
+
+    // Phase 1: zero lookahead
+    limiter.setLookahead(0.0f);
+    REQUIRE(limiter.getLatencyInSamples() == 0);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+    for (int b = 0; b < 5; ++b)
+    {
+        fillConstant(buf, 2.0f);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    // Phase 2: switch to 1 ms lookahead
+    limiter.setLookahead(1.0f);
+    const int newLatency = limiter.getLatencyInSamples();
+    REQUIRE(newLatency > 0);
+
+    // Continue processing — output must still be within threshold
+    for (int b = 0; b < 5; ++b)
+    {
+        fillConstant(buf, 2.0f);
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+            REQUIRE(blockPeak(buf[ch]) <= 1.0f + 1e-3f);
+    }
+}
