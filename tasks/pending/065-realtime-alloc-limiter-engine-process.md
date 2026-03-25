@@ -1,4 +1,4 @@
-# Task 057: Eliminate Audio-Thread Heap Allocations in LimiterEngine::process()
+# Task 065: Eliminate Audio-Thread Heap Allocations in LimiterEngine::process()
 
 ## Description
 LimiterEngine::process() performs several heap allocations on the audio thread, violating real-time safety. These can cause priority inversion, page faults, and audio glitches in production DAW usage. The following allocations must be moved to prepare():

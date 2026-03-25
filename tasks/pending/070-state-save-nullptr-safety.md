@@ -1,4 +1,4 @@
-# Task 060: Add Null Check in PluginProcessor::getStateInformation()
+# Task 070: Add Null Check in PluginProcessor::getStateInformation()
 
 ## Description
 In `PluginProcessor.cpp` line 69-70, `state.createXml()` can return `nullptr` if the ValueTree is invalid, but the code dereferences it without checking:

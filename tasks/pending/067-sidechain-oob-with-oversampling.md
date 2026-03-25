@@ -1,4 +1,4 @@
-# Task 058: LimiterEngine — Sidechain Buffer Out-of-Bounds Read When Oversampling Enabled
+# Task 067: LimiterEngine — Sidechain Buffer Out-of-Bounds Read When Oversampling Enabled
 
 ## Description
 **Critical bug**: In `LimiterEngine::process()`, the sidechain buffer is created at the original sample rate (`numSamples` long), but is passed to `TransientLimiter::process()` and `LevelingLimiter::process()` which operate at the oversampled rate (`upSamples` = `numSamples * oversamplingFactor`). The limiters will read past the end of the sidechain buffer — undefined behavior that will crash or corrupt memory.

@@ -1,4 +1,4 @@
-# Task 061: TransientLimiter — Sidechain Detection Ignores Lookahead Window
+# Task 071: TransientLimiter — Sidechain Detection Ignores Lookahead Window
 
 ## Description
 In `TransientLimiter::process()`, when sidechain data is provided and lookahead is enabled, the code scans the delay buffer for peaks (lines 204-212) but then immediately overrides the result with just the current sidechain sample (lines 216-219):

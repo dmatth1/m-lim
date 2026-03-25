@@ -1,4 +1,4 @@
-# Task 059: LoudnessMeter — Audio Thread Real-Time Safety Violations
+# Task 068: LoudnessMeter — Audio Thread Real-Time Safety Violations
 
 ## Description
 `LoudnessMeter::updateIntegratedAndLRA()` is called from `processBlock()` on the audio thread every 100ms. It has multiple real-time safety violations that worsen over time:
@@ -11,7 +11,7 @@
 
 4. **Sorting on audio thread**: `std::sort(stLoudness.begin(), stLoudness.end())` at line 273 is O(n log n) on growing data.
 
-5. **Data races**: `mMomentaryLUFS`, `mShortTermLUFS`, `mIntegratedLUFS`, `mLoudnessRange` are written on the audio thread and read from the UI thread via getters, without atomic or mutex protection. Technically undefined behavior in C++ (though benign on most architectures for 32-bit floats).
+5. **Data races**: `mMomentaryLUFS`, `mShortTermLUFS`, `mIntegratedLUFS`, `mLoudnessRange` are written on the audio thread and read from the UI thread via getters, without atomic or mutex protection.
 
 ## Produces
 None
@@ -20,8 +20,8 @@ None
 None
 
 ## Relevant Files
-Modify: `M-LIM/src/dsp/LoudnessMeter.h` — add atomic result fields, restructure storage
-Modify: `M-LIM/src/dsp/LoudnessMeter.cpp` — move integrated/LRA computation off audio thread or use incremental algorithm
+Modify: `M-LIM/src/dsp/LoudnessMeter.h` — add atomic result fields, pre-allocated working buffers, restructure storage
+Modify: `M-LIM/src/dsp/LoudnessMeter.cpp` — use incremental algorithm, pre-allocate vectors in prepare(), cap or optimize history
 
 ## Acceptance Criteria
 - [ ] Run: `cd build && ctest --output-on-failure` → Expected: all tests pass
@@ -30,6 +30,7 @@ Modify: `M-LIM/src/dsp/LoudnessMeter.cpp` — move integrated/LRA computation of
 
 ## Tests
 - Unit: `tests/dsp/test_loudness_meter.cpp::test_long_session_no_alloc` — process >1000 blocks and verify no performance degradation (timing test)
+- Unit: `tests/dsp/test_loudness_meter.cpp::test_integrated_lufs_long_session` — process 30+ minutes of audio, verify integrated LUFS converges and processing time per block stays bounded
 
 ## Technical Details
 **Recommended approach**: Use incremental/running statistics instead of recalculating from scratch:
@@ -38,11 +39,11 @@ Modify: `M-LIM/src/dsp/LoudnessMeter.cpp` — move integrated/LRA computation of
 
 2. **LRA**: Use a histogram-based approach. Bin the short-term LUFS values into 0.1 LU bins (covering -70 to +20 LUFS = 900 bins). Finding the 10th and 95th percentiles from a histogram is O(bins), not O(n log n).
 
-3. **Memory**: Cap `mGatedBlockHistory` to a maximum size or switch to a histogram. For EBU R128, the standard allows time-limited integration.
+3. **Memory**: Cap `mGatedBlockHistory` to a maximum size or switch to running accumulators. For EBU R128, the standard allows time-limited integration.
 
 4. **Data races**: Make result fields `std::atomic<float>` or use `juce::Atomic<float>`.
 
-5. **Alternative**: Move `updateIntegratedAndLRA()` out of the audio thread entirely. Store block powers in a lock-free FIFO, consume on a timer thread.
+5. **Pre-allocate vectors**: Move windowPowers and stLoudness to member variables, reserve capacity in prepare(), clear and reuse each call.
 
 ## Dependencies
 None

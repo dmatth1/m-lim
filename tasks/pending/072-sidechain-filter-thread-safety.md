@@ -1,4 +1,4 @@
-# Task 061: Thread-Safe Parameter Updates for SidechainFilter
+# Task 072: Thread-Safe Parameter Updates for SidechainFilter
 
 ## Description
 SidechainFilter::setHighPassFreq(), setLowPassFreq(), and setTilt() each call updateCoefficients() which recalculates IIR filter coefficients using JUCE's `IIR::Coefficients::makeHighPass()` etc. These methods:

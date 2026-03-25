@@ -1,4 +1,4 @@
-# Task 062: Loudness Target Level Selector
+# Task 073: Loudness Target Level Selector
 
 ## Description
 Pro-L 2 has a loudness target selector that lets users pick standard target levels (-9 LUFS for CD, -14 LUFS for Streaming, -23 LUFS for EBU R128, -24 LUFS for ATSC A/85, or Custom). This target is used to color-code the loudness histogram bars and as a reference line. No existing task covers this dropdown selector or the target level parameter.

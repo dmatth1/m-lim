@@ -1,4 +1,4 @@
-# Task 060: Limiter Threshold Should Track Output Ceiling Instead of Hard Clipping
+# Task 069: Limiter Threshold Should Track Output Ceiling Instead of Hard Clipping
 
 ## Description
 Both `TransientLimiter` and `LevelingLimiter` have their threshold hardcoded to 1.0 (0 dBFS). The output ceiling is applied as a hard clip in `LimiterEngine::process()` step 7:
