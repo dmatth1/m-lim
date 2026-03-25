@@ -139,3 +139,90 @@ TEST_CASE("test_copy_a_to_b", "[ABState]")
     REQUIRE(ab.isA());
     REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(0.0f).margin(0.01f));
 }
+
+TEST_CASE("test_toggle_to_empty_b_no_crash", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Set a known param value, but do NOT capture anything yet
+    setParam(proc.apvts, "gain", -3.0f);
+
+    // Toggle before capturing B — should not crash; B is empty so restore is a no-op
+    ab.toggle(proc.apvts);   // captures current to A, switches to B, restores B (noop)
+    REQUIRE(!ab.isA());
+
+    // Params must still be valid after toggling to an empty slot
+    REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(-3.0f).margin(0.01f));
+}
+
+TEST_CASE("test_a_state_isolated_from_b_modifications", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Capture A with gain=-3
+    setParam(proc.apvts, "gain", -3.0f);
+    ab.captureState(proc.apvts);
+    REQUIRE(ab.isA());
+
+    // Toggle to B; B is empty so params are unchanged
+    ab.toggle(proc.apvts);
+    REQUIRE(!ab.isA());
+
+    // Modify params while on B
+    setParam(proc.apvts, "gain", -12.0f);
+
+    // Toggle back to A — should restore gain=-3, not -12
+    ab.toggle(proc.apvts);
+    REQUIRE(ab.isA());
+    REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(-3.0f).margin(0.01f));
+}
+
+TEST_CASE("test_recapture_a_overwrites_snapshot", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Capture A with gain=0
+    setParam(proc.apvts, "gain", 0.0f);
+    ab.captureState(proc.apvts);   // A = {gain=0}
+
+    // Change param and re-capture A — overwrites the previous A snapshot
+    setParam(proc.apvts, "gain", -6.0f);
+    ab.captureState(proc.apvts);   // A = {gain=-6}
+
+    // Toggle to B (empty, restore is noop), trash the live value, toggle back to A
+    ab.toggle(proc.apvts);
+    setParam(proc.apvts, "gain", -20.0f);
+    ab.toggle(proc.apvts);   // saves B, switches to A, restores A = {gain=-6}
+
+    REQUIRE(ab.isA());
+    REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(-6.0f).margin(0.01f));
+}
+
+TEST_CASE("test_full_ab_cycle", "[ABState]")
+{
+    ABTestProcessor proc;
+    ABState ab;
+
+    // Establish state A with two distinct param values
+    setParam(proc.apvts, "gain", -3.0f);
+    setParam(proc.apvts, "ceiling", -1.0f);
+    ab.captureState(proc.apvts);
+    REQUIRE(ab.isA());
+
+    // Toggle to B
+    ab.toggle(proc.apvts);
+    REQUIRE(!ab.isA());
+
+    // Modify both params while on B
+    setParam(proc.apvts, "gain", -24.0f);
+    setParam(proc.apvts, "ceiling", -6.0f);
+
+    // Toggle back to A — all original A values must be restored exactly
+    ab.toggle(proc.apvts);
+    REQUIRE(ab.isA());
+    REQUIRE(getParam(proc.apvts, "gain")    == Catch::Approx(-3.0f).margin(0.01f));
+    REQUIRE(getParam(proc.apvts, "ceiling") == Catch::Approx(-1.0f).margin(0.01f));
+}
