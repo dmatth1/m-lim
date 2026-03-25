@@ -17,17 +17,23 @@ void Dither::prepare(double sampleRate)
     }
     else if (sampleRate >= 47000.0)
     {
-        // 48 kHz range: slightly adjusted F-weighted coefficients.
-        mCoeff1 = 0.95f;
-        mCoeff2 = -0.95f;
+        // 48 kHz range: near-DC-null second-order noise shaping.
+        // Choose c2 = -(|z|^2) = -0.82 so pole magnitude |z| = sqrt(0.82) ≈ 0.906 < 1 (strictly stable).
+        // c1 = 1 + c2 + ε ≈ 1.80 gives near-DC-null: N(1) = 1 - c1 - c2 = 0.02 (-34 dB attenuation).
+        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.62 (~22 dB above white noise), pushing
+        // quantisation noise energy well above 10 kHz where the ear is less sensitive.
+        mCoeff1 = 1.80f;
+        mCoeff2 = -0.82f;
     }
     else
     {
-        // 44.1 kHz range: stable second-order coefficients.
-        // c2 = -0.95 places poles at |z| = sqrt(0.95) ≈ 0.975 < 1 (strictly stable).
-        // Original c2 = -1.0 placed poles on the unit circle (marginally stable).
-        mCoeff1 = 1.0f;
-        mCoeff2 = -0.95f;
+        // 44.1 kHz range: near-DC-null second-order noise shaping.
+        // Choose c2 = -(|z|^2) = -0.91 so pole magnitude |z| = sqrt(0.91) ≈ 0.954 < 1 (strictly stable).
+        // c1 = 1 + c2 + ε ≈ 1.90 gives near-DC-null: N(1) = 1 - c1 - c2 = 0.01 (-40 dB attenuation).
+        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.81 (~22 dB above white noise), pushing
+        // quantisation noise energy well above 10 kHz where the ear is less sensitive.
+        mCoeff1 = 1.90f;
+        mCoeff2 = -0.91f;
     }
 
     mError1 = 0.0f;

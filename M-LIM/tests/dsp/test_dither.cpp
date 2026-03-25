@@ -319,6 +319,54 @@ TEST_CASE("test_bit_depth_change_quantization_correct_after", "[Dither]")
         REQUIRE(isQuantized(signal2[i], step24, epsilon24));
 }
 
+TEST_CASE("test_second_order_dc_null_44k", "[Dither]")
+{
+    // With a near-DC-null shaping filter, the mean of the quantisation error at DC
+    // approaches zero.  Process constant 0.5f; the mean of the output must match
+    // the input mean to within 0.01 LSB (at 16-bit).
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);
+
+    const int numSamples = 8192;
+    std::vector<float> signal(numSamples, 0.5f);
+    d.process(signal.data(), numSamples);
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const float threshold = 0.01f * step;
+
+    double sum = 0.0;
+    for (int i = 0; i < numSamples; ++i)
+        sum += static_cast<double>(signal[i]);
+    float meanOutput = static_cast<float>(sum / numSamples);
+
+    REQUIRE(std::abs(meanOutput - 0.5f) < threshold);
+}
+
+TEST_CASE("test_second_order_dc_null_48k", "[Dither]")
+{
+    // Same DC-null test at 48 kHz.
+    Dither d;
+    d.prepare(48000.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);
+
+    const int numSamples = 8192;
+    std::vector<float> signal(numSamples, 0.5f);
+    d.process(signal.data(), numSamples);
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const float threshold = 0.01f * step;
+
+    double sum = 0.0;
+    for (int i = 0; i < numSamples; ++i)
+        sum += static_cast<double>(signal[i]);
+    float meanOutput = static_cast<float>(sum / numSamples);
+
+    REQUIRE(std::abs(meanOutput - 0.5f) < threshold);
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
