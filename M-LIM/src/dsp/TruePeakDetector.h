@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <atomic>
 
 /**
  * TruePeakDetector — ITU-R BS.1770-4 compliant inter-sample peak detection.
@@ -65,6 +66,6 @@ private:
     std::array<float, kFirTaps * 2> mLinearBuf{};
     int mLinearPos = 0;
 
-    float mPeak = 0.0f;
+    std::atomic<float> mPeak { 0.0f };
     double mSampleRate = 44100.0;
 };

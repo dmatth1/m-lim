@@ -141,6 +141,31 @@ TEST_CASE("test_simd_matches_scalar", "[TruePeakDetector]")
     }
 }
 
+TEST_CASE("test_getpeak_matches_processsample_and_reset_clears", "[TruePeakDetector]")
+{
+    // Verify that getPeak() reflects the peak set by processSample(),
+    // and that reset() brings getPeak() back to zero.
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    // Initial state: peak is zero
+    REQUIRE(det.getPeak() == 0.0f);
+
+    // Feed a large sample and verify getPeak() returns a positive value
+    float returned = det.processSample(0.8f);
+    REQUIRE(returned > 0.0f);
+    REQUIRE(det.getPeak() > 0.0f);
+
+    // Peak should not exceed the returned sample value by more than some margin
+    // (the FIR can produce slightly different values, but getPeak() must track the max)
+    float peakAfter = det.getPeak();
+    REQUIRE(peakAfter >= returned - 1e-6f);
+
+    // reset() must bring the running peak back to zero
+    det.reset();
+    REQUIRE(det.getPeak() == 0.0f);
+}
+
 TEST_CASE("test_fir_coefficient_integrity", "[TruePeakDetector]")
 {
     // Verify that the transposed kCoeffsByTap table contains identical values

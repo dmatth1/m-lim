@@ -116,8 +116,8 @@ float TruePeakDetector::processSample(float sample)
     }
 #endif
 
-    if (maxAbs > mPeak)
-        mPeak = maxAbs;
+    if (maxAbs > mPeak.load(std::memory_order_relaxed))
+        mPeak.store(maxAbs, std::memory_order_relaxed);
 
     return maxAbs;
 }
@@ -145,8 +145,8 @@ float TruePeakDetector::processSampleScalar(float sample)
             maxAbs = absVal;
     }
 
-    if (maxAbs > mPeak)
-        mPeak = maxAbs;
+    if (maxAbs > mPeak.load(std::memory_order_relaxed))
+        mPeak.store(maxAbs, std::memory_order_relaxed);
 
     return maxAbs;
 }
@@ -160,7 +160,7 @@ void TruePeakDetector::processBlock(const float* input, int numSamples)
 
 float TruePeakDetector::getPeak() const
 {
-    return mPeak;
+    return mPeak.load(std::memory_order_relaxed);
 }
 
 void TruePeakDetector::reset()
@@ -169,5 +169,5 @@ void TruePeakDetector::reset()
     mWritePos = 0;
     mLinearBuf.fill(0.0f);
     mLinearPos = 0;
-    mPeak = 0.0f;
+    mPeak.store(0.0f, std::memory_order_relaxed);
 }
