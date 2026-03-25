@@ -920,3 +920,74 @@ TEST_CASE("test_threshold_change_mid_session", "[TransientLimiter]")
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_sidechain_drives_gr_not_main
+//   When sidechainData is loud (above threshold) but the main audio is quiet,
+//   the TransientLimiter must apply gain reduction to the quiet main audio
+//   because detection runs on the sidechain signal, not the main path.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_drives_gr_not_main", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth = 0.0f;   // hard knee
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);  // no lookahead so we see GR applied to current block
+    limiter.setThreshold(1.0f);
+
+    const float scAmplitude   = 2.0f;  // +6 dB over threshold
+    const float mainAmplitude = 0.5f;  // well below threshold on its own
+
+    // Warm-up blocks: feed loud sidechain + quiet main to engage GR
+    for (int block = 0; block < 20; ++block)
+    {
+        std::vector<std::vector<float>> main(1, std::vector<float>(kBlockSize, mainAmplitude));
+        std::vector<std::vector<float>> sc  (1, std::vector<float>(kBlockSize, scAmplitude));
+
+        float* mainPtrs[1] = { main[0].data() };
+        const float* scPtrs[1] = { sc[0].data() };
+        limiter.process(mainPtrs, 1, kBlockSize, scPtrs);
+
+        if (block >= 10)
+        {
+            // Main should be attenuated even though it was below threshold,
+            // because the loud sidechain triggered GR.
+            REQUIRE(blockPeak(main[0]) < mainAmplitude);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_sidechain_silent_no_gr
+//   When sidechainData is silent but the main audio is loud, the limiter must
+//   NOT apply significant gain reduction — detection runs on the silent
+//   sidechain, so the loud main audio passes through substantially unattenuated.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_silent_no_gr", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.kneeWidth = 0.0f;
+    limiter.setAlgorithmParams(params);
+    limiter.setLookahead(0.0f);
+    limiter.setThreshold(1.0f);
+
+    const float mainAmplitude = 2.0f;  // +6 dB — would normally trigger hard limiting
+
+    std::vector<std::vector<float>> main(1, std::vector<float>(kBlockSize, mainAmplitude));
+    std::vector<std::vector<float>> sc  (1, std::vector<float>(kBlockSize, 0.0f));  // silence
+
+    float* mainPtrs[1] = { main[0].data() };
+    const float* scPtrs[1] = { sc[0].data() };
+
+    // Process one block with silent sidechain + loud main
+    limiter.process(mainPtrs, 1, kBlockSize, scPtrs);
+
+    // The sidechain is silent, so GR should be minimal — main passes substantially through
+    REQUIRE(blockPeak(main[0]) > 1.5f);  // expect minimal attenuation
+}

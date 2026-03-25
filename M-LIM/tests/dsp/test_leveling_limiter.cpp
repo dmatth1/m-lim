@@ -472,6 +472,81 @@ TEST_CASE("test_custom_threshold_minus_6dBFS", "[LevelingLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_sidechain_drives_gr_not_main
+//   When sidechainData is loud (above threshold) but the main audio is quiet,
+//   the LevelingLimiter must apply gain reduction to the quiet main audio
+//   because the envelope follower runs on the sidechain signal.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_drives_gr_not_main", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);    // instant attack
+    limiter.setRelease(500.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    const float scAmplitude   = 2.0f;  // +6 dB over threshold
+    const float mainAmplitude = 0.5f;  // well below threshold on its own
+
+    // Warm-up blocks: loud sidechain + quiet main
+    for (int block = 0; block < 30; ++block)
+    {
+        std::vector<std::vector<float>> main(1, std::vector<float>(kBlockSize, mainAmplitude));
+        std::vector<std::vector<float>> sc  (1, std::vector<float>(kBlockSize, scAmplitude));
+
+        float* mainPtrs[1] = { main[0].data() };
+        const float* scPtrs[1] = { sc[0].data() };
+        limiter.process(mainPtrs, 1, kBlockSize, scPtrs);
+
+        if (block >= 20)
+        {
+            // Main should be attenuated even though it is below threshold,
+            // because the loud sidechain triggered GR.
+            REQUIRE(blockPeak(main[0]) < mainAmplitude);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_sidechain_silent_no_gr
+//   When sidechainData is silent but the main audio is loud, the limiter must
+//   NOT apply significant gain reduction — the envelope follower runs on the
+//   silent sidechain, so the loud main audio passes substantially unattenuated.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_silent_no_gr", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);
+    limiter.setRelease(500.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    const float mainAmplitude = 2.0f;  // +6 dB — would normally trigger limiting
+
+    std::vector<std::vector<float>> main(1, std::vector<float>(kBlockSize, mainAmplitude));
+    std::vector<std::vector<float>> sc  (1, std::vector<float>(kBlockSize, 0.0f));  // silence
+
+    float* mainPtrs[1] = { main[0].data() };
+    const float* scPtrs[1] = { sc[0].data() };
+
+    // Process one block with silent sidechain + loud main
+    limiter.process(mainPtrs, 1, kBlockSize, scPtrs);
+
+    // Sidechain is silent, so GR should be minimal — main passes substantially through
+    REQUIRE(blockPeak(main[0]) > 1.5f);  // expect minimal attenuation
+}
+
+// ---------------------------------------------------------------------------
 // test_threshold_change_mid_session
 //   After changing threshold from 1.0 to 0.5 mid-session, subsequent output
 //   must not exceed 0.5 + margin once the slow envelope settles.
