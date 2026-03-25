@@ -589,6 +589,119 @@ TEST_CASE("test_short_term_lufs_matches_momentary_after_one_block", "[LoudnessMe
 }
 
 // ---------------------------------------------------------------------------
+// test_lra_nonzero_for_dynamic_content
+// Feed loud tone then quiet tone then loud tone (total 60 s) — the short-term
+// windows span both loudness levels, so LRA must be > 1 LU.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_nonzero_for_dynamic_content", "[LoudnessMeter]")
+{
+    LoudnessMeter meter;
+    constexpr double fs = 48000.0;
+    meter.prepare(fs, 2);
+
+    const float loudAmp  = static_cast<float>(std::pow(10.0, -10.0 / 20.0));  // -10 dBFS
+    const float quietAmp = static_cast<float>(std::pow(10.0, -30.0 / 20.0));  // -30 dBFS
+
+    // Alternate: 20 s loud, 20 s quiet, 20 s loud — enough to build histogram
+    feedSine(meter, 1000.0, loudAmp,  fs, 20.0);
+    feedSine(meter, 1000.0, quietAmp, fs, 20.0);
+    feedSine(meter, 1000.0, loudAmp,  fs, 20.0);
+
+    const float lra = meter.getLoudnessRange();
+    INFO("LRA for dynamic content: " << lra << " LU");
+
+    // Two levels separated by ~20 dB should produce LRA clearly above 1 LU
+    CHECK(lra > 1.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_lra_increases_with_wider_variation
+// Signal A alternates between -20 and -30 dBFS (10 LU spread).
+// Signal B alternates between -20 and -40 dBFS (20 LU spread).
+// LRA(B) must exceed LRA(A) — wider loudness variation → larger LRA.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_increases_with_wider_variation", "[LoudnessMeter]")
+{
+    constexpr double fs = 48000.0;
+
+    auto measureLRA = [&](float ampHigh, float ampLow) -> float {
+        LoudnessMeter meter;
+        meter.prepare(fs, 2);
+        // Four alternating 10 s segments = 40 s total
+        for (int i = 0; i < 4; ++i)
+        {
+            feedSine(meter, 1000.0, ampHigh, fs, 10.0);
+            feedSine(meter, 1000.0, ampLow,  fs, 10.0);
+        }
+        return meter.getLoudnessRange();
+    };
+
+    // Signal A: -20 vs -30 dBFS (10 LU variation)
+    const float ampA_high = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+    const float ampA_low  = static_cast<float>(std::pow(10.0, -30.0 / 20.0));
+    const float lraA = measureLRA(ampA_high, ampA_low);
+
+    // Signal B: -20 vs -40 dBFS (20 LU variation)
+    const float ampB_high = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+    const float ampB_low  = static_cast<float>(std::pow(10.0, -40.0 / 20.0));
+    const float lraB = measureLRA(ampB_high, ampB_low);
+
+    INFO("LRA(A) -20/-30 dBFS: " << lraA << " LU");
+    INFO("LRA(B) -20/-40 dBFS: " << lraB << " LU");
+
+    // Wider variation must produce higher LRA
+    CHECK(lraB > lraA);
+}
+
+// ---------------------------------------------------------------------------
+// test_lra_always_nonnegative
+// For any signal type, getLoudnessRange() must be >= 0.  Verified with:
+// silence, constant sine, dynamic (loud+quiet), and after reset.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_always_nonnegative", "[LoudnessMeter]")
+{
+    constexpr double fs = 48000.0;
+
+    // Case 1: silence only
+    {
+        LoudnessMeter meter;
+        meter.prepare(fs, 2);
+        feedSilence(meter, fs, 5.0);
+        CHECK(meter.getLoudnessRange() >= 0.0f);
+    }
+
+    // Case 2: constant tone
+    {
+        LoudnessMeter meter;
+        meter.prepare(fs, 2);
+        const float amp = static_cast<float>(std::pow(10.0, -23.0 / 20.0));
+        feedSine(meter, 1000.0, amp, fs, 10.0);
+        CHECK(meter.getLoudnessRange() >= 0.0f);
+    }
+
+    // Case 3: dynamic signal (loud then quiet)
+    {
+        LoudnessMeter meter;
+        meter.prepare(fs, 2);
+        const float loudAmp  = static_cast<float>(std::pow(10.0, -10.0 / 20.0));
+        const float quietAmp = static_cast<float>(std::pow(10.0, -30.0 / 20.0));
+        feedSine(meter, 1000.0, loudAmp,  fs, 20.0);
+        feedSine(meter, 1000.0, quietAmp, fs, 20.0);
+        CHECK(meter.getLoudnessRange() >= 0.0f);
+    }
+
+    // Case 4: after resetIntegrated()
+    {
+        LoudnessMeter meter;
+        meter.prepare(fs, 2);
+        const float amp = static_cast<float>(std::pow(10.0, -20.0 / 20.0));
+        feedSine(meter, 1000.0, amp, fs, 10.0);
+        meter.resetIntegrated();
+        CHECK(meter.getLoudnessRange() >= 0.0f);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_momentary_lufs_ring_buffer
 // The ring-buffer implementation must produce the same momentary LUFS as the
 // reference deque-based computation.  We verify by comparing the ring buffer
