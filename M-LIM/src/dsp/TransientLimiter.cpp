@@ -107,6 +107,20 @@ int TransientLimiter::getLatencyInSamples() const
 }
 
 // ---------------------------------------------------------------------------
+// resetCounters
+// ---------------------------------------------------------------------------
+void TransientLimiter::resetCounters(int64_t startOffset)
+{
+    for (int ch = 0; ch < mNumChannels; ++ch)
+    {
+        mMainWriteCount[ch] = startOffset;
+        mSCWriteCount[ch]   = startOffset;
+        mMainDeques[ch].reset();
+        mSCDeques[ch].reset();
+    }
+}
+
+// ---------------------------------------------------------------------------
 // computeRequiredGain  (private)
 // ---------------------------------------------------------------------------
 float TransientLimiter::computeRequiredGain(float peakAbs) const
@@ -190,8 +204,8 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
                 // Main path: update monotone deque only (no buffer write yet)
                 const float mainAbs = std::abs(channelData[ch][s]);
 
-                SWDeque& md = mMainDeques[ch];
-                int&     mc = mMainWriteCount[ch];
+                SWDeque&   md = mMainDeques[ch];
+                int64_t&   mc = mMainWriteCount[ch];
                 while (!md.empty() && md.back().value <= mainAbs)
                     md.pop_back();
                 md.push_back({mainAbs, mc});
@@ -209,8 +223,8 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
                 {
                     const float scAbs = std::abs(sidechainData[ch][s]);
 
-                    SWDeque& sd = mSCDeques[ch];
-                    int&     sc = mSCWriteCount[ch];
+                    SWDeque&  sd = mSCDeques[ch];
+                    int64_t&  sc = mSCWriteCount[ch];
                     while (!sd.empty() && sd.back().value <= scAbs)
                         sd.pop_back();
                     sd.push_back({scAbs, sc});

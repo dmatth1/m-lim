@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LimiterAlgorithm.h"
+#include <cstdint>
 #include <vector>
 
 /**
@@ -53,6 +54,10 @@ public:
      *  AudioProcessor::setLatencySamples(). Returns 0 when lookahead is disabled. */
     int getLatencyInSamples() const;
 
+    /** Reset the sliding-window deques and write counters to start at the given
+     *  offset. Used in tests to pre-seed counters near overflow boundaries. */
+    void resetCounters(int64_t startOffset = 0);
+
 private:
     /** Compute the linear gain factor needed to bring peakAbs below threshold,
      *  applying the soft-knee curve from mParams. Returns a value in (0, 1]. */
@@ -84,7 +89,7 @@ private:
     // Maintained as a monotone non-increasing deque: the front is always
     // the window maximum.  A fixed-size circular buffer avoids heap
     // allocations on the audio thread.
-    struct SWDequeEntry { float value; int pos; };
+    struct SWDequeEntry { float value; int64_t pos; };
     struct SWDeque
     {
         std::vector<SWDequeEntry> data; // pre-allocated, capacity = mMaxLookaheadSamples + 1
@@ -124,8 +129,8 @@ private:
 
     std::vector<SWDeque> mMainDeques;      // one per channel — main-path peak detection
     std::vector<SWDeque> mSCDeques;        // one per channel — sidechain-path peak detection
-    std::vector<int>     mMainWriteCount;  // monotone write counter per channel (main)
-    std::vector<int>     mSCWriteCount;    // monotone write counter per channel (sidechain)
+    std::vector<int64_t> mMainWriteCount;  // monotone write counter per channel (main)
+    std::vector<int64_t> mSCWriteCount;   // monotone write counter per channel (sidechain)
 
     float mReleaseCoeff = 0.0f;   // per-sample exponential release coefficient
 

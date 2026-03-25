@@ -1111,3 +1111,118 @@ TEST_CASE("test_above_knee_full_gr", "[TransientLimiter]")
     // GR must be reported (negative dB, clearly non-zero)
     REQUIRE(limiter.getGainReduction() < -1.0f);
 }
+
+// ---------------------------------------------------------------------------
+// INT32 overflow boundary tests (task 161)
+// ---------------------------------------------------------------------------
+
+// Helper: process N blocks of silence to advance the limiter state.
+static void processNSilentSamples(TransientLimiter& lim, int numChannels, int numSamples)
+{
+    constexpr int batchSize = 512;
+    std::vector<std::vector<float>> buf(numChannels, std::vector<float>(batchSize, 0.0f));
+    int remaining = numSamples;
+    while (remaining > 0)
+    {
+        const int n = std::min(remaining, batchSize);
+        for (auto& ch : buf) std::fill(ch.begin(), ch.end(), 0.0f);
+        std::vector<float*> ptrs(numChannels);
+        for (int ch = 0; ch < numChannels; ++ch) ptrs[ch] = buf[ch].data();
+        lim.process(ptrs.data(), numChannels, n);
+        remaining -= n;
+    }
+}
+
+TEST_CASE("write counter int32 overflow: deque still functions after overflow point", "[TransientLimiter][overflow]")
+{
+    // Seed counters just before where int32 would have wrapped.
+    // INT_MAX = 2147483647; place counter at INT_MAX - 10 so we cross the
+    // old boundary within just a few samples.
+    constexpr int64_t kSeedOffset = (int64_t)2147483647 - 10;  // INT_MAX - 10
+
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 0.0f;
+    params.kneeWidth        = 0.0f;  // hard knee for predictable output
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(0.5f);
+    limiter.setLookahead(1.0f);  // 1 ms lookahead so deques are active
+
+    // Seed counters near int32 overflow point and clear deques.
+    limiter.resetCounters(kSeedOffset);
+
+    // Process 30 samples of over-threshold signal across the overflow boundary.
+    // The counter will pass through INT_MAX and into what would have been negative
+    // territory if it were int32.  With int64_t it just keeps incrementing safely.
+    const int kTestSamples = 30;
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kTestSamples, 1.0f));
+
+    // Warm up the delay buffer first (use silence so gain state is reset)
+    processNSilentSamples(limiter, kNumChannels, (int)limiter.getLatencyInSamples() + 2);
+
+    // Reset counters again (silence run advanced them, re-seed at boundary)
+    limiter.resetCounters(kSeedOffset);
+
+    // Process a loud block — counter increments from kSeedOffset across INT_MAX
+    std::vector<float*> ptrs(kNumChannels);
+    for (int ch = 0; ch < kNumChannels; ++ch)
+    {
+        buf[ch].assign(kTestSamples, 1.0f);
+        ptrs[ch] = buf[ch].data();
+    }
+    limiter.process(ptrs.data(), kNumChannels, kTestSamples);
+
+    // After crossing the old int32 overflow boundary the limiter must still report GR
+    REQUIRE(limiter.getGainReduction() < 0.0f);  // non-zero GR means deque is working
+}
+
+TEST_CASE("write counter int32 overflow: peak tracking correct across boundary", "[TransientLimiter][overflow]")
+{
+    // Same setup: seed counters so the first processed sample pushes the counter
+    // past what INT_MAX would have been.
+    constexpr int64_t kSeedOffset = (int64_t)2147483647 - 5;  // INT_MAX - 5
+
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.saturationAmount = 0.0f;
+    params.kneeWidth        = 0.0f;  // hard knee
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(0.5f);
+    limiter.setLookahead(1.0f);
+
+    // Warm the delay buffer with silence so the read pointer starts clean
+    processNSilentSamples(limiter, kNumChannels, (int)limiter.getLatencyInSamples() + 5);
+
+    // Re-seed at boundary
+    limiter.resetCounters(kSeedOffset);
+
+    // Process many blocks of over-threshold signal.  If the deque breaks at
+    // overflow, gain may momentarily drop to 1.0 (no limiting) or produce a
+    // click.  We verify limiting stays consistent across all blocks.
+    constexpr int kBlocks = 20;
+    bool alwaysLimiting = true;
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize, 1.0f));
+    for (int b = 0; b < kBlocks; ++b)
+    {
+        for (auto& ch : buf) std::fill(ch.begin(), ch.end(), 1.0f);
+        std::vector<float*> ptrs2(kNumChannels);
+        for (int ch = 0; ch < kNumChannels; ++ch) ptrs2[ch] = buf[ch].data();
+        limiter.process(ptrs2.data(), kNumChannels, kBlockSize);
+
+        // After the first few warm-up blocks, limiting must be active
+        if (b >= 3 && limiter.getGainReduction() >= 0.0f)
+            alwaysLimiting = false;
+
+        // Output must never exceed threshold significantly
+        for (int ch = 0; ch < kNumChannels; ++ch)
+        {
+            const float peak = blockPeak(buf[ch]);
+            REQUIRE(peak <= 0.5f + 0.05f);  // threshold + 0.05 margin
+        }
+    }
+    REQUIRE(alwaysLimiting);
+}
