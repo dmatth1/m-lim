@@ -77,9 +77,9 @@ TEST_CASE("test_dither_adds_noise", "[Dither]")
     for (float s : signal)
         if (s != 0.0f) ++nonZeroCount;
 
-    // With 4096 samples and TPDF dither of ±1 LSB, roughly half the
-    // samples should land on non-zero quantisation steps.
-    REQUIRE(nonZeroCount > numSamples / 4);
+    // With TPDF dither the expected non-zero rate is ~25% (1 - P(triangular in centre step)).
+    // Use a conservative threshold of 10% to avoid spurious failures from RNG variance.
+    REQUIRE(nonZeroCount > numSamples / 10);
 }
 
 TEST_CASE("test_noise_shaping_modes", "[Dither]")
