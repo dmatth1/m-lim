@@ -243,7 +243,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     g.fillRect (area);
 
     // Horizontal dB grid lines
-    g.setColour (juce::Colour (0xff2A2A2A));
+    g.setColour (juce::Colour (0xff2E3040));
     for (float db : kGridDB)
     {
         // Map dB to GR fraction (0 dB GR = top, kMaxGRdB GR = bottom)

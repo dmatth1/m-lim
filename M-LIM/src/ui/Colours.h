@@ -10,13 +10,13 @@ namespace MLIMColours
     const juce::Colour panelBorder          { 0xff333333 };
 
     // Waveform display gradient colours
-    const juce::Colour displayGradientTop   { 0xff0D0D12 };  // near-black with slight blue tint
-    const juce::Colour displayGradientBottom{ 0xff1A1A2E };  // dark blue-gray
+    const juce::Colour displayGradientTop   { 0xff12121C };  // near-black with slight blue tint
+    const juce::Colour displayGradientBottom{ 0xff1E2030 };  // dark blue-gray
 
     // Waveform colours (with alpha)
-    const juce::Colour inputWaveform    { 0x70202840 };  // very dark navy, alpha ~44% (was bright cyan)
-    const juce::Colour outputWaveform   { 0x60182848 };  // slightly darker navy, alpha ~38%
-    const juce::Colour outputEnvelope   { 0x80B89040 };  // semi-transparent amber/tan envelope line
+    const juce::Colour inputWaveform    { 0xA8607898 };  // medium blue-purple, ~66% alpha
+    const juce::Colour outputWaveform   { 0x804060A0 };  // slightly deeper blue, ~50% alpha
+    const juce::Colour outputEnvelope   { 0xCCDDE8FF };  // near-white with slight blue tint, ~80% alpha
     const juce::Colour gainReduction    { 0xffFF4444 };  // bright red
 
     // Label colours
