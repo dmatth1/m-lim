@@ -547,6 +547,112 @@ TEST_CASE("test_sidechain_silent_no_gr", "[LevelingLimiter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_attack_zero_is_instantaneous
+//   When attackMs == 0 the attack coefficient is 0, meaning the gain envelope
+//   jumps directly to the target on the very first sample.  After processing
+//   a single block of amplitude 2.0 (6 dB above threshold 1.0), the output
+//   peak must already be clamped to <= 1.0 — an overshoot would indicate the
+//   envelope had not fully converged on the first sample.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_attack_zero_is_instantaneous", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);        // instantaneous: mAttackCoeff = 0
+    limiter.setRelease(500.0f);
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    // amplitude 2.0 = +6 dBFS over threshold — required gain is 0.5 (-6 dB)
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, 2.0f));
+    auto ptrs = makePtrs(buf);
+
+    // Process exactly ONE block — with instant attack, GR must engage on sample 0
+    limiter.process(ptrs.data(), 1, kBlockSize);
+
+    // GR must be active after one block
+    REQUIRE(limiter.getGainReduction() < -0.1f);
+
+    // With attack=0, g jumps to targetDb on the first sample via:
+    //   smoothedDb = gDb + (targetDb - gDb) * (1 - 0) = targetDb
+    // so every sample in the block is clamped to threshold
+    REQUIRE(blockPeak(buf[0]) <= 1.0f + 1e-4f);
+}
+
+// ---------------------------------------------------------------------------
+// test_adaptive_release_speedup_threshold
+//   The adaptive release speedup activates only when sustainedGRdB > 0.5 dB.
+//   Two sections straddle this boundary:
+//   1. Low GR (<0.5 dB): adaptive and non-adaptive recover at the same rate.
+//   2. High GR (>0.5 dB): adaptive release measurably outpaces non-adaptive.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_adaptive_release_speedup_threshold", "[LevelingLimiter]")
+{
+    // Helper: sustain a constant signal to build mEnvState, then release silence
+    // and return the remaining GR.
+    auto measureRecovery = [](float amplitude, bool adaptive,
+                               int sustainBlocks, int recoverBlocks) -> float
+    {
+        LevelingLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+        limiter.setAttack(0.0f);
+        limiter.setRelease(200.0f);
+        limiter.setChannelLink(0.0f);
+        limiter.setThreshold(1.0f);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.adaptiveRelease = adaptive;
+        limiter.setAlgorithmParams(params);
+
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize));
+        auto ptrs = makePtrs(buf);
+
+        for (int i = 0; i < sustainBlocks; ++i)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), amplitude);
+            limiter.process(ptrs.data(), 1, kBlockSize);
+        }
+        for (int i = 0; i < recoverBlocks; ++i)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), 0.0f);
+            limiter.process(ptrs.data(), 1, kBlockSize);
+        }
+        return limiter.getGainReduction();
+    };
+
+    SECTION("low GR (below 0.5 dB threshold): adaptive does NOT speed up release")
+    {
+        // 10^(0.4/20) ≈ 1.047 → required GR ≈ -0.4 dB, below the 0.5 dB speedup threshold
+        const float lowAmplitude = std::pow(10.0f, 0.4f / 20.0f);
+
+        // Use 200 blocks so mEnvState settles (~99% of steady-state value)
+        const float grAdaptive    = measureRecovery(lowAmplitude, true,  200, 10);
+        const float grNonAdaptive = measureRecovery(lowAmplitude, false, 200, 10);
+
+        // sustainedGRdB ≈ 0.4 dB < 0.5 dB → effectiveReleaseCoeff == mReleaseCoeff
+        // in both cases, so recovery rates must be identical
+        REQUIRE(std::abs(grAdaptive - grNonAdaptive) < 0.01f);
+    }
+
+    SECTION("high GR (above 0.5 dB threshold): adaptive release speeds up recovery")
+    {
+        // amplitude 2.0 → required GR ≈ -6 dB, well above the 0.5 dB speedup threshold
+        const float highAmplitude = 2.0f;
+
+        const float grAdaptive    = measureRecovery(highAmplitude, true,  200, 10);
+        const float grNonAdaptive = measureRecovery(highAmplitude, false, 200, 10);
+
+        // Adaptive should recover more (less negative GR) than non-adaptive because
+        // sustainedGRdB ≈ 6 dB > 0.5 dB activates the coeff^2 compounding speedup
+        REQUIRE(grAdaptive > grNonAdaptive);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // test_threshold_change_mid_session
 //   After changing threshold from 1.0 to 0.5 mid-session, subsequent output
 //   must not exceed 0.5 + margin once the slow envelope settles.
