@@ -149,11 +149,26 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     g.drawRect (bar, 1.0f);
 }
 
-void LevelMeter::drawScale (juce::Graphics& g) const
+void LevelMeter::drawPeakLabel (juce::Graphics& g,
+                                const juce::Rectangle<float>& labelArea,
+                                float peakDB) const
+{
+    juce::String text = (peakDB <= kMinDB + 0.5f)
+                      ? "---"
+                      : juce::String (peakDB, 1);
+
+    juce::Colour col = (peakDB >= kDangerDB) ? MLIMColours::meterDanger
+                     : (peakDB >= kWarnDB)   ? MLIMColours::meterWarning
+                                             : MLIMColours::textSecondary;
+    g.setFont (juce::Font (9.0f));
+    g.setColour (col);
+    g.drawText (text, labelArea, juce::Justification::centred, false);
+}
+
+void LevelMeter::drawScale (juce::Graphics& g, float barTop, float barH) const
 {
     const auto bounds = getLocalBounds().toFloat();
-    const float barH  = bounds.getHeight();
-    const float barY  = bounds.getY();
+    const float barY  = barTop;
 
     g.setFont (juce::Font (9.0f));
     g.setColour (MLIMColours::textSecondary);
@@ -202,10 +217,16 @@ void LevelMeter::paint (juce::Graphics& g)
     const float barW = availW * kBarWidthRatio;
     const float gap  = availW * kGapRatio;
 
+    // Reserve peak label strip at the top of each bar
     auto barL = juce::Rectangle<float> (x, y, barW, h);
     auto barR = juce::Rectangle<float> (x + barW + gap, y, barW, h);
 
+    auto peakLabelL = barL.removeFromTop (kPeakLabelH);
+    auto peakLabelR = barR.removeFromTop (kPeakLabelH);
+
+    drawPeakLabel (g, peakLabelL, peakL_);
+    drawPeakLabel (g, peakLabelR, peakR_);
     drawChannel (g, barL, levelL_, peakL_, clipL_);
     drawChannel (g, barR, levelR_, peakR_, clipR_);
-    drawScale (g);
+    drawScale (g, barL.getY(), barL.getHeight());
 }

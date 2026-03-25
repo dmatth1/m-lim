@@ -38,6 +38,9 @@ private:
     static constexpr float kMinDB = -60.0f;
     static constexpr float kMaxDB =   0.0f;
 
+    // Height reserved at the top of each bar for the numeric peak label
+    static constexpr float kPeakLabelH = 14.0f;
+
     // dB thresholds for colour zones
     static constexpr float kWarnDB   = -3.0f;
     static constexpr float kDangerDB = -0.5f;
@@ -59,8 +62,13 @@ private:
                       float peakDB,
                       bool  clipped) const;
 
+    /** Draw a numeric peak-hold label above a bar. */
+    void drawPeakLabel (juce::Graphics& g,
+                        const juce::Rectangle<float>& labelArea,
+                        float peakDB) const;
+
     /** Draw dB scale labels on the right edge of the component. */
-    void drawScale (juce::Graphics& g) const;
+    void drawScale (juce::Graphics& g, float barTop, float barH) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LevelMeter)
 };
