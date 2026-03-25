@@ -174,4 +174,7 @@ private:
     void applyPendingParams();
     void buildMeterData(const juce::AudioBuffer<float>& inputBefore,
                         const juce::AudioBuffer<float>& output);
+
+    static float peakLevel(const juce::AudioBuffer<float>& buf,
+                            int channel, int numSamples) noexcept;
 };

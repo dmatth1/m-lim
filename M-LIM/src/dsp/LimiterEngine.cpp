@@ -142,6 +142,18 @@ void LimiterEngine::applyPendingParams()
 }
 
 // ============================================================================
+// peakLevel — peak-scan helper (no instance state)
+// ============================================================================
+float LimiterEngine::peakLevel(const juce::AudioBuffer<float>& buf,
+                                int channel, int numSamples) noexcept
+{
+    float level = 0.0f;
+    for (int s = 0; s < numSamples; ++s)
+        level = std::max(level, std::abs(buf.getSample(channel, s)));
+    return level;
+}
+
+// ============================================================================
 // process — main DSP chain
 // ============================================================================
 void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
@@ -159,15 +171,8 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     // ------------------------------------------------------------------
     // Snapshot input levels for metering
     // ------------------------------------------------------------------
-    float inLevelL = 0.0f, inLevelR = 0.0f;
-    for (int i = 0; i < numSamples; ++i)
-    {
-        inLevelL = std::max(inLevelL, std::abs(buffer.getSample(0, i)));
-        if (numChannels > 1)
-            inLevelR = std::max(inLevelR, std::abs(buffer.getSample(1, i)));
-        else
-            inLevelR = inLevelL;
-    }
+    float inLevelL = peakLevel(buffer, 0, numSamples);
+    float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
 
     // ------------------------------------------------------------------
     // Bypass mode: pass through unchanged, still update meters
@@ -175,14 +180,8 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     if (mBypass.load())
     {
         mGRdB.store(0.0f);
-        float outL = 0.0f, outR = 0.0f;
-        for (int i = 0; i < numSamples; ++i)
-        {
-            outL = std::max(outL, std::abs(buffer.getSample(0, i)));
-            if (numChannels > 1)
-                outR = std::max(outR, std::abs(buffer.getSample(1, i)));
-        }
-        if (numChannels <= 1) outR = outL;
+        float outL = peakLevel(buffer, 0, numSamples);
+        float outR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outL;
         mTruePkL.store(outL);
         mTruePkR.store(outR);
         return;
@@ -256,8 +255,8 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     for (int ch = 0; ch < numChannels; ++ch)
     {
         float* data = buffer.getWritePointer(ch);
-        for (int i = 0; i < numSamples; ++i)
-            data[i] = std::max(-ceiling, std::min(ceiling, data[i]));
+        for (int s = 0; s < numSamples; ++s)
+            data[s] = std::max(-ceiling, std::min(ceiling, data[s]));
     }
 
     // ------------------------------------------------------------------
@@ -289,22 +288,16 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
         {
             const float* pre  = mPreLimitBuffer.getReadPointer(ch);
             float*       post = buffer.getWritePointer(ch);
-            for (int i = 0; i < numSamples; ++i)
-                post[i] = pre[i] - post[i];
+            for (int s = 0; s < numSamples; ++s)
+                post[s] = pre[s] - post[s];
         }
     }
 
     // ------------------------------------------------------------------
     // Step 11: Meter — measure output and true peak
     // ------------------------------------------------------------------
-    float outLevelL = 0.0f, outLevelR = 0.0f;
-    for (int i = 0; i < numSamples; ++i)
-    {
-        outLevelL = std::max(outLevelL, std::abs(buffer.getSample(0, i)));
-        if (numChannels > 1)
-            outLevelR = std::max(outLevelR, std::abs(buffer.getSample(1, i)));
-    }
-    if (numChannels <= 1) outLevelR = outLevelL;
+    float outLevelL = peakLevel(buffer, 0, numSamples);
+    float outLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outLevelL;
 
     // True peak detection
     if (mTruePeakEnabled.load())
