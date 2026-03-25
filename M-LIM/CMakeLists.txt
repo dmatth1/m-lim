@@ -96,6 +96,7 @@ target_sources(MLIM
         src/ui/WaveformDisplay.cpp
         src/ui/LoudnessPanel.cpp
         src/ui/GainReductionMeter.cpp
+        src/ui/TopBar.cpp
 )
 
 target_compile_definitions(MLIM
