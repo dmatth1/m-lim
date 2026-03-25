@@ -35,7 +35,12 @@ const juce::String MLIMAudioProcessor::getName() const { return JucePlugin_Name;
 bool MLIMAudioProcessor::acceptsMidi() const  { return false; }
 bool MLIMAudioProcessor::producesMidi() const { return false; }
 bool MLIMAudioProcessor::isMidiEffect() const { return false; }
-double MLIMAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+double MLIMAudioProcessor::getTailLengthSeconds() const
+{
+    if (pLookahead != nullptr)
+        return static_cast<double> (pLookahead->load()) * 0.001;
+    return 0.0;
+}
 
 int MLIMAudioProcessor::getNumPrograms()                              { return 1; }
 int MLIMAudioProcessor::getCurrentProgram()                           { return 0; }

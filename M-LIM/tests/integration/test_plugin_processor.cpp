@@ -249,6 +249,23 @@ TEST_CASE("test_latency_reported", "[PluginProcessor]")
 }
 
 // ============================================================================
+// test_tail_length_reflects_lookahead
+// getTailLengthSeconds() must return a value >= the current lookahead time so
+// the host sends extra silent blocks to drain the lookahead buffer.
+// ============================================================================
+TEST_CASE("test_tail_length_reflects_lookahead", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Set lookahead to 2 ms
+    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
+        param->setValueNotifyingHost (param->convertTo0to1 (2.0f));
+
+    REQUIRE (proc.getTailLengthSeconds() >= 0.002);
+}
+
+// ============================================================================
 // test_latency_updates_with_lookahead
 // Changing the lookahead parameter must update getLatencySamples() to reflect
 // the new lookahead time. The host needs accurate latency for delay compensation.
