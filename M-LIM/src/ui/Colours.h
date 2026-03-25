@@ -38,6 +38,10 @@ namespace MLIMColours
     const juce::Colour meterWarning     { 0xffFFD54F };  // yellow
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
 
+    // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
+    const juce::Colour controlStripTop    { 0xff3A3D4A };  // medium blue-gray (top)
+    const juce::Colour controlStripBottom { 0xff2A2D3A };  // darker blue-gray (bottom)
+
     // Accent
     const juce::Colour accentBlue       { 0xff2196F3 };
 }

@@ -195,7 +195,16 @@ void ControlStrip::styleToggleButton (juce::TextButton& btn)
 
 void ControlStrip::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff1A1A1A));
+    auto bounds = getLocalBounds();
+
+    // Blue-gray gradient background (matches Pro-L 2's control strip aesthetic)
+    juce::ColourGradient bg (MLIMColours::controlStripTop,
+                             0.0f, 0.0f,
+                             MLIMColours::controlStripBottom,
+                             0.0f, static_cast<float> (bounds.getHeight()),
+                             false);
+    g.setGradientFill (bg);
+    g.fillRect (bounds);
 
     // Separator line between knob row and button row
     g.setColour (MLIMColours::panelBorder);
