@@ -101,29 +101,10 @@ void MLIMAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Push all parameter values to the engine (real-time safe atomic reads)
-    if (pInputGain)             limiterEngine.setInputGain            (pInputGain->load());
-    if (pOutputCeiling)         limiterEngine.setOutputCeiling        (pOutputCeiling->load());
-    if (pAlgorithm)             limiterEngine.setAlgorithm            (static_cast<LimiterAlgorithm> (static_cast<int> (pAlgorithm->load())));
-    if (pLookahead)             limiterEngine.setLookahead            (pLookahead->load());
-    if (pAttack)                limiterEngine.setAttack               (pAttack->load());
-    if (pRelease)               limiterEngine.setRelease              (pRelease->load());
-    if (pChannelLinkTransients) limiterEngine.setChannelLinkTransients(pChannelLinkTransients->load());
-    if (pChannelLinkRelease)    limiterEngine.setChannelLinkRelease   (pChannelLinkRelease->load());
-    if (pTruePeakEnabled)       limiterEngine.setTruePeakEnabled      (pTruePeakEnabled->load() >= 0.5f);
-    if (pDCFilterEnabled)       limiterEngine.setDCFilterEnabled      (pDCFilterEnabled->load() >= 0.5f);
-    if (pDitherEnabled)         limiterEngine.setDitherEnabled        (pDitherEnabled->load() >= 0.5f);
-    if (pDitherBitDepth)        limiterEngine.setDitherBitDepth       (static_cast<int> (pDitherBitDepth->load()) + 1);
-    if (pDitherNoiseShaping)    limiterEngine.setDitherNoiseShaping   (static_cast<int> (pDitherNoiseShaping->load()));
-    if (pBypass)                limiterEngine.setBypass               (pBypass->load() >= 0.5f);
-    if (pUnityGainMode)         limiterEngine.setUnityGain            (pUnityGainMode->load() >= 0.5f);
-    if (pSidechainHPFreq)       limiterEngine.setSidechainHPFreq      (pSidechainHPFreq->load());
-    if (pSidechainLPFreq)       limiterEngine.setSidechainLPFreq      (pSidechainLPFreq->load());
-    if (pSidechainTilt)         limiterEngine.setSidechainTilt        (pSidechainTilt->load());
-    if (pDelta)                 limiterEngine.setDeltaMode            (pDelta->load() >= 0.5f);
-
+    // Push all parameter values to the engine (real-time safe atomic reads).
     // NOTE: oversamplingFactor changes are deferred — do NOT call setOversamplingFactor
     // here (it allocates memory). Changes are handled via parameterChanged + prepareToPlay.
+    pushAllParametersToEngine();
 
     limiterEngine.process (buffer);
 
