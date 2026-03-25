@@ -1,4 +1,4 @@
-# Task 141: Fix 1-Sample Latency Discrepancy Between TransientLimiter and getLatencySamples()
+# Task 162: Fix 1-Sample Latency Discrepancy Between TransientLimiter and getLatencySamples()
 
 ## Description
 `LimiterEngine::getLatencySamples()` and `TransientLimiter::setLookahead()` compute the

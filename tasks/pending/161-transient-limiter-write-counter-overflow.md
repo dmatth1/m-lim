@@ -1,4 +1,4 @@
-# Task 140: Fix TransientLimiter Sliding-Window Deque Write Counter Integer Overflow
+# Task 161: Fix TransientLimiter Sliding-Window Deque Write Counter Integer Overflow
 
 ## Description
 The sliding-window maximum deques in `TransientLimiter` use an `int` write counter

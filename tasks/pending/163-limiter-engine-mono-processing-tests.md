@@ -1,4 +1,4 @@
-# Task 141: LimiterEngine and PluginProcessor — No Tests for Mono (1-Channel) Processing
+# Task 163: LimiterEngine and PluginProcessor — No Tests for Mono (1-Channel) Processing
 
 ## Description
 `LimiterEngine::prepare()` accepts any `numChannels` value, and the DSP chain is designed

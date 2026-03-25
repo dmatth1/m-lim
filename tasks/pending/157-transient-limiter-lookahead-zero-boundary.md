@@ -1,4 +1,4 @@
-# Task 139: TransientLimiter — Missing Tests for Lookahead=0 Boundary Case
+# Task 157: TransientLimiter — Missing Tests for Lookahead=0 Boundary Case
 
 ## Description
 `TransientLimiter::setLookahead(0.0f)` should result in `getLatencyInSamples()` returning 0 and

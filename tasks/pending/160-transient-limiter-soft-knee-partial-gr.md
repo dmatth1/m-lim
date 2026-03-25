@@ -1,4 +1,4 @@
-# Task 140: TransientLimiter — Missing Tests for Soft Knee Partial Gain Reduction
+# Task 160: TransientLimiter — Missing Tests for Soft Knee Partial Gain Reduction
 
 ## Description
 `TransientLimiter::computeRequiredGain()` implements a soft-knee curve: signals between

@@ -1,4 +1,4 @@
-# Task 142: LoudnessMeter — Missing Tests for reset() and Silence-Only Behaviour
+# Task 164: LoudnessMeter — Missing Tests for reset() and Silence-Only Behaviour
 
 ## Description
 `LoudnessMeter` accumulates integrated LUFS over time. Two important behaviours have no

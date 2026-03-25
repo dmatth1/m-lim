@@ -1,4 +1,4 @@
-# Task 139: Fix Level Meter Scale Labels Overflowing Component Bounds
+# Task 150: Fix Level Meter Scale Labels Overflowing Component Bounds
 
 ## Description
 The input and output level meters are 20px wide (`kInputMeterW = 20`, `kOutputMeterW = 20` in `PluginEditor.h`), but `LevelMeter.cpp` reserves `kScaleWidth = 22` pixels for scale labels. This means `availW = 20 - 22 = -2`, resulting in:

@@ -1,4 +1,4 @@
-# Task 139: Remove kMinLinear duplicate in LimiterEngine.cpp
+# Task 154: Remove kMinLinear duplicate in LimiterEngine.cpp
 
 ## Description
 `LimiterEngine.cpp` defines `static constexpr float kMinLinear = 1e-6f;  // -120 dB floor` at line 7.

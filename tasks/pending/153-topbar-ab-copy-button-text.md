@@ -1,4 +1,4 @@
-# Task 142: Fix TopBar "A→B" Button Unicode Rendering
+# Task 153: Fix TopBar "A→B" Button Unicode Rendering
 
 ## Description
 The A/B copy button in `TopBar.h` is initialized with the Unicode arrow character:

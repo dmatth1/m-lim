@@ -1,4 +1,4 @@
-# Task 140: Improve Knob Value Arc Visibility
+# Task 151: Improve Knob Value Arc Visibility
 
 ## Description
 The rotary knob value arc color `knobArc = 0xff5C6A84` (steel grey-blue) is too close in luminance to the track background `panelBorder = 0xff333333`. The arc is barely distinguishable from the unfilled track arc, making it hard to see the current knob position without careful inspection.

@@ -1,4 +1,4 @@
-# Task 145: LimiterEngine — No Test That Bypass Mode Still Populates MeterFIFO
+# Task 165: LimiterEngine — No Test That Bypass Mode Still Populates MeterFIFO
 
 ## Description
 `LimiterEngine::setBypass(true)` passes audio through unchanged and skips all DSP

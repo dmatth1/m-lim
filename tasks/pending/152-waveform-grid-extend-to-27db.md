@@ -1,4 +1,4 @@
-# Task 141: Extend Waveform dB Grid Lines to -27 dB
+# Task 152: Extend Waveform dB Grid Lines to -27 dB
 
 ## Description
 The waveform display grid lines are defined in `kGridDB[]` as:

@@ -1,4 +1,4 @@
-# Task 139: Fix LoudnessMeter RLB High-Pass Filter Q Value (BS.1770-4 Non-Compliance)
+# Task 155: Fix LoudnessMeter RLB High-Pass Filter Q Value (BS.1770-4 Non-Compliance)
 
 ## Description
 The RLB (Revised Low-frequency B-weighting) high-pass filter in `LoudnessMeter.cpp` uses

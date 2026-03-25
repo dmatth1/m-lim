@@ -1,4 +1,4 @@
-# Task 140: LimiterEngine bypass mode does not push MeterData — UI meters freeze
+# Task 158: LimiterEngine bypass mode does not push MeterData — UI meters freeze
 
 ## Description
 In `LimiterEngine::process()`, the bypass branch returns early without pushing any

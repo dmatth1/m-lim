@@ -1,4 +1,4 @@
-# Task 140: Name the BS.1770-4 filter frequency constants in LoudnessMeter.cpp
+# Task 159: Name the BS.1770-4 filter frequency constants in LoudnessMeter.cpp
 
 ## Description
 `LoudnessMeter.cpp` uses two magic number frequency values for the ITU-R BS.1770-4 K-weighting

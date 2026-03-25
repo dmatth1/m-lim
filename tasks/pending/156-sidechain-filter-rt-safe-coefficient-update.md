@@ -1,4 +1,4 @@
-# Task 139: SidechainFilter coefficient update allocates heap on audio thread
+# Task 156: SidechainFilter coefficient update allocates heap on audio thread
 
 ## Description
 `SidechainFilter::updateCoefficients()` (called from `process()` on the audio thread when
