@@ -1,4 +1,4 @@
-# Task 171: WaveformDisplay — Scale Labels Format and Ceiling Label Spacing
+# Task 191: WaveformDisplay — Scale Labels Format and Ceiling Label Spacing
 
 ## Description
 Two minor formatting issues in `WaveformDisplay`'s dB scale labels, identified by comparing the running plugin screenshot against the reference:
@@ -49,4 +49,4 @@ juce::String label = juce::String (ceilingDB_, 1) + " dB";
 Also consider adding the "dB" suffix to scale labels in `drawScale()` to match the reference format (where grid marks show "-3 dB", "-6 dB" etc.), but this is secondary — only add if the reference clearly confirms this (check v1-0040.png carefully).
 
 ## Dependencies
-None
+Requires task 185 (both modify WaveformDisplay.cpp — dead code removal lands first)

@@ -1,4 +1,4 @@
-# Task 167: LimiterEngine Setters Lack Change Guards — mParamsDirty Set Every Block
+# Task 182: LimiterEngine Setters Lack Change Guards — mParamsDirty Set Every Block
 
 ## Description
 `PluginProcessor::pushAllParametersToEngine()` is called every `processBlock()`, invoking
@@ -76,4 +76,4 @@ Read:   `M-LIM/src/PluginProcessor.cpp` — `pushAllParametersToEngine()` call p
   path via `mCurrentOversamplingFactor` in `applyPendingParams()`
 
 ## Dependencies
-None
+Requires task 178 (both modify LevelingLimiter.cpp — transcendental fix lands first)

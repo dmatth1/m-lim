@@ -1,4 +1,4 @@
-# Task 168: Remove Dead Code `(void)` Suppressions in WaveformDisplay
+# Task 185: Remove Dead Code `(void)` Suppressions in WaveformDisplay
 
 ## Description
 `WaveformDisplay.cpp` contains four draw methods that declare a local variable, never use it, and silence the resulting compiler warning with explicit `(void)` casts:

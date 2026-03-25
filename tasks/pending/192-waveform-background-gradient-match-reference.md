@@ -1,4 +1,4 @@
-# Task 172: WaveformDisplay — Background Gradient Colours Don't Match Reference
+# Task 192: WaveformDisplay — Background Gradient Colours Don't Match Reference
 
 ## Description
 The waveform display background gradient uses:

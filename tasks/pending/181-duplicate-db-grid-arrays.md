@@ -1,4 +1,4 @@
-# Task 167: Deduplicate dB Grid Scale Arrays
+# Task 181: Deduplicate dB Grid Scale Arrays
 
 ## Description
 The dBFS scale markings are defined independently in two UI files:
@@ -43,4 +43,4 @@ static constexpr int kMeterGridDBCount = 11;
 WaveformDisplay currently only uses 10 of these (stops at -27). If the waveform intentionally stops at -27 (because its max GR is 30 dB but -27 is the last label before the floor), keep a local `static constexpr int kWaveformGridDBCount = 10;` that slices the shared array. Document the intent with a comment.
 
 ## Dependencies
-None
+Requires task 185 (both modify WaveformDisplay.cpp — dead code removal lands first)

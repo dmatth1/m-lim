@@ -1,4 +1,4 @@
-# Task 167: LoudnessPanel — Histogram Bars Below Target Should Be Steel Blue Not Near-White
+# Task 183: LoudnessPanel — Histogram Bars Below Target Should Be Steel Blue Not Near-White
 
 ## Description
 In `LoudnessPanel::histogramBarColour()`, levels well below the target LUFS threshold are rendered as `MLIMColours::textPrimary.withAlpha(0.75f)` — effectively a near-white/light-gray colour. The reference Pro-L 2 UI clearly shows these bars as a **steel blue** colour matching the level meter safe zone.

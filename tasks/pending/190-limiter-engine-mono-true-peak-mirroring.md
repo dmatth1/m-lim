@@ -1,4 +1,4 @@
-# Task 171: Verify True Peak Field Mirroring in LimiterEngine Mono Mode
+# Task 190: Verify True Peak Field Mirroring in LimiterEngine Mono Mode
 
 ## Description
 `test_mono_metering_mirrors_L_to_R` (LimiterEngine test, line 677) verifies that `inputLevelR`

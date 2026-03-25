@@ -39,4 +39,4 @@ Scan each file for `juce::Colour(0x` literals. For each one:
 Do not change any colour values — this is a naming/organisation task only. The visual result must be pixel-identical before and after.
 
 ## Dependencies
-None
+Requires task 192 (both modify Colours.h — gradient fix should land first)

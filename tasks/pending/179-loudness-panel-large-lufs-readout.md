@@ -1,4 +1,4 @@
-# Task 166: LoudnessPanel — Add Large-Format LUFS Numeric Readout
+# Task 179: LoudnessPanel — Add Large-Format LUFS Numeric Readout
 
 ## Description
 The reference Pro-L 2 loudness panel shows a prominent large-format LUFS number (e.g. "-13.2") at the bottom of the panel, accompanied by a "LUFS" unit label and a mode selector button ("Short Term", "Momentary", or "Integrated"). This is the most visually dominant element of the loudness panel — the user's primary at-a-glance reading.
@@ -57,4 +57,4 @@ juce::Colour valColour = (shortTerm_ < targetLUFS_)
 ```
 
 ## Dependencies
-None
+Requires task 183 (both modify LoudnessPanel.cpp)

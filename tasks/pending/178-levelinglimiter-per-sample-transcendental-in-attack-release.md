@@ -1,4 +1,4 @@
-# Task 166: LevelingLimiter::process() Per-Sample Transcendental Calls in Attack/Release Paths
+# Task 178: LevelingLimiter::process() Per-Sample Transcendental Calls in Attack/Release Paths
 
 ## Description
 `LevelingLimiter::process()` calls `gainToDecibels()` (`std::log10`) and `decibelsToGain()`

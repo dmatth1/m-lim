@@ -1,4 +1,4 @@
-# Task 169: Add LevelingLimiter Attack=0 Boundary Test
+# Task 186: Add LevelingLimiter Attack=0 Boundary Test
 
 ## Description
 In `LevelingLimiter::updateCoefficients()` (LevelingLimiter.cpp), when `mAttackMs == 0` the

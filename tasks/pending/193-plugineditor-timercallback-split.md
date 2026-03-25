@@ -1,4 +1,4 @@
-# Task 173: Split PluginEditor::timerCallback() into Private Helper Methods
+# Task 193: Split PluginEditor::timerCallback() into Private Helper Methods
 
 ## Description
 `MLIMAudioProcessorEditor::timerCallback()` (`PluginEditor.cpp` lines 186–235) does seven distinct things in 50 lines:

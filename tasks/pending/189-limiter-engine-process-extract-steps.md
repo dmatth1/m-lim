@@ -1,4 +1,4 @@
-# Task 170: Extract LimiterEngine::process() Steps into Private Methods
+# Task 189: Extract LimiterEngine::process() Steps into Private Methods
 
 ## Description
 `LimiterEngine::process()` (`LimiterEngine.cpp` lines 159–314) is a 155-line function that executes 11 sequential DSP steps inline, each already annotated with a comment block:
@@ -64,4 +64,4 @@ Keep `applyPendingParams()` and `snapAndPushMeterData()` (already extracted). Th
 **Constraint:** All existing member variables (`mUpPtrs`, `mSidePtrs`, `mSidechainBuffer`, etc.) remain members; no new heap allocations. Audio-thread safety must not regress.
 
 ## Dependencies
-None
+Requires task 182 (both modify LimiterEngine.cpp — setter guards land first)

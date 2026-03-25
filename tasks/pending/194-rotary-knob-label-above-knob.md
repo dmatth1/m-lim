@@ -1,4 +1,4 @@
-# Task 174: RotaryKnob — Draw Label Above the Knob Face, Value Below
+# Task 194: RotaryKnob — Draw Label Above the Knob Face, Value Below
 
 ## Description
 In the reference Pro-L 2 (`v1-0035.png`, `prol2-features.jpg`, `prol2-intro.jpg`), all rotary knobs in the control strip show:

@@ -1,4 +1,4 @@
-# Task 170: LevelMeter — Add Peak Hold Numeric Labels at Top of Meter
+# Task 188: LevelMeter — Add Peak Hold Numeric Labels at Top of Meter
 
 ## Description
 The reference Pro-L 2 shows small numeric peak-hold readouts at the **very top** of the input and output level meter columns. These floating peak labels (e.g., "-1.0", "-6.5") give the user a precise numeric reading of the peak hold value alongside the visual bar indicator.

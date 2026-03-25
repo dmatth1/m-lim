@@ -1,4 +1,4 @@
-# Task 168: Test PluginProcessor::setStateInformation() Rejects Wrong Root Tag
+# Task 184: Test PluginProcessor::setStateInformation() Rejects Wrong Root Tag
 
 ## Description
 `PluginProcessor::setStateInformation()` at PluginProcessor.cpp:153-158 has a tag-name guard:

@@ -1,4 +1,4 @@
-# Task 169: TopBar — Undo/Redo Buttons Use Arrow Symbols Instead of Text Labels
+# Task 187: TopBar — Undo/Redo Buttons Use Arrow Symbols Instead of Text Labels
 
 ## Description
 The `TopBar` declares undo/redo as text-labelled buttons:
