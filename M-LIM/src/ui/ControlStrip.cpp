@@ -8,7 +8,11 @@ namespace
     static constexpr int kPadding   = 4;
 
     // Knob column width (equal slices in the top row)
-    static constexpr int kNumKnobs  = 8;   // inputGain + 5 knobs + outputCeiling + algo (treated as wide)
+    static constexpr int kNumKnobs  = 7;   // inputGain + 5 knobs + algo (treated as wide); outputCeiling is separate vertical slider
+    // Width reserved for the output ceiling vertical slider on the far right
+    static constexpr int kOutputSliderW = 40;
+    // Label height above the output ceiling slider
+    static constexpr int kOutputLabelH  = 14;
 
     // Status bar element widths
     static constexpr int kMidiLearnW       = 76;
@@ -50,9 +54,22 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     channelLinkReleaseKnob_.setSuffix ("%");
     channelLinkReleaseKnob_.setRange (0.0f, 100.0f, 0.1f);
 
-    outputCeilingKnob_.setLabel ("Ceiling");
-    outputCeilingKnob_.setSuffix ("dBTP");
-    outputCeilingKnob_.setRange (-30.0f, 0.0f, 0.01f);
+    // Output Ceiling vertical slider setup
+    outputCeilingSlider_.setRange (-30.0, 0.0, 0.01);
+    outputCeilingSlider_.setValue (-0.1, juce::dontSendNotification);
+    outputCeilingSlider_.setTextValueSuffix (" dBTP");
+    outputCeilingSlider_.setNumDecimalPlacesToDisplay (2);
+    outputCeilingSlider_.setColour (juce::Slider::trackColourId,      MLIMColours::panelBorder);
+    outputCeilingSlider_.setColour (juce::Slider::thumbColourId,      MLIMColours::textPrimary);
+    outputCeilingSlider_.setColour (juce::Slider::backgroundColourId, MLIMColours::displayBackground);
+    outputCeilingSlider_.setColour (juce::Slider::textBoxTextColourId,        MLIMColours::textPrimary);
+    outputCeilingSlider_.setColour (juce::Slider::textBoxBackgroundColourId,  MLIMColours::displayBackground);
+    outputCeilingSlider_.setColour (juce::Slider::textBoxOutlineColourId,     MLIMColours::panelBorder);
+
+    outputCeilingLabel_.setText ("OUTPUT", juce::dontSendNotification);
+    outputCeilingLabel_.setJustificationType (juce::Justification::centred);
+    outputCeilingLabel_.setFont (juce::Font (10.0f, juce::Font::bold));
+    outputCeilingLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
 
     // ── Setup buttons, combo boxes, and status bar ─────────────────────────
     setupButtons();
@@ -67,7 +84,8 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (releaseKnob_);
     addAndMakeVisible (channelLinkTransientsKnob_);
     addAndMakeVisible (channelLinkReleaseKnob_);
-    addAndMakeVisible (outputCeilingKnob_);
+    addAndMakeVisible (outputCeilingSlider_);
+    addAndMakeVisible (outputCeilingLabel_);
 
     // ── APVTS-bound controls (hidden — kept only for parameter attachments) ─
     addChildComponent (truePeakButton_);
@@ -336,7 +354,7 @@ void ControlStrip::createAttachments()
         apvts_, ParamID::channelLinkRelease, channelLinkReleaseKnob_.getSlider());
 
     outputCeilingAttach_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts_, ParamID::outputCeiling, outputCeilingKnob_.getSlider());
+        apvts_, ParamID::outputCeiling, outputCeilingSlider_);
 
     truePeakAttach_   = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         apvts_, ParamID::truePeakEnabled, truePeakButton_);
@@ -408,6 +426,19 @@ void ControlStrip::resized()
 {
     auto bounds = getLocalBounds().reduced (kPadding);
 
+    // ── Output Ceiling vertical slider: reserve right column spanning both rows ──
+    const int totalH = kKnobRowH + kPadding + kBtnRowH; // full height of both rows
+    auto rightCol = bounds.removeFromRight (kOutputSliderW);
+
+    // Label at the top of the right column
+    auto labelArea = rightCol.removeFromTop (kOutputLabelH);
+    outputCeilingLabel_.setBounds (labelArea);
+
+    // Slider takes remaining height of right column
+    outputCeilingSlider_.setTextBoxStyle (juce::Slider::TextBoxBelow, false,
+                                          kOutputSliderW, 16);
+    outputCeilingSlider_.setBounds (rightCol.withHeight (totalH - kOutputLabelH));
+
     // ── Top row: knobs ────────────────────────────────────────────────────
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
@@ -424,9 +455,6 @@ void ControlStrip::resized()
     releaseKnob_.setBounds               (knobRow.removeFromLeft (knobW));
     channelLinkTransientsKnob_.setBounds (knobRow.removeFromLeft (knobW));
     channelLinkReleaseKnob_.setBounds    (knobRow.removeFromLeft (knobW));
-
-    // OutputCeiling on far right — takes remaining space
-    outputCeilingKnob_.setBounds (knobRow);
 
     // ── Status bar row ────────────────────────────────────────────────────
     bounds.removeFromTop (kPadding); // gap after separator

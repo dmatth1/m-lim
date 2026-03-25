@@ -12,7 +12,7 @@
  * Bottom control strip containing all main controls:
  *
  *  Top row:    [InputGain] [AlgorithmSelector] [Lookahead] [Attack] [Release]
- *              [ChannelLinkTransients] [ChannelLinkRelease] [OutputCeiling]
+ *              [ChannelLinkTransients] [ChannelLinkRelease] | [OUTPUT vertical slider]
  *
  *  Status bar: [MIDI Learn] [● True Peak Limiting] [Oversampling: Xx] [Dither: XX Bits]
  *              ... [TP] [≋] [Loudness] [||] [Short Term] [Out: X.X dBTP]
@@ -43,7 +43,11 @@ private:
     RotaryKnob releaseKnob_;
     RotaryKnob channelLinkTransientsKnob_;
     RotaryKnob channelLinkReleaseKnob_;
-    RotaryKnob outputCeilingKnob_;
+
+    // Output Ceiling vertical slider (spans both rows on far right)
+    juce::Slider outputCeilingSlider_   { juce::Slider::LinearVertical,
+                                         juce::Slider::TextBoxBelow };
+    juce::Label  outputCeilingLabel_;
 
     // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
     juce::TextButton truePeakButton_    { "TP" };
