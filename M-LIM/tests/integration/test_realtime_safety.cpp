@@ -16,6 +16,7 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "PluginProcessor.h"
+#include "Parameters.h"
 #include "dsp/LimiterEngine.h"
 #include "dsp/Oversampler.h"
 
@@ -153,6 +154,71 @@ TEST_CASE("test_limiterengine_process_no_alloc", "[RealtimeSafety]")
     }
 
     REQUIRE(allocCount == 0);
+}
+
+// ============================================================================
+// test_all_features_no_alloc
+//
+// Verifies zero heap allocations in processBlock() when all optional features
+// are active simultaneously: TruePeak, 2x oversampling, DC filter, and Dither.
+// Parameters are set before prepareToPlay() so no deferred reallocation occurs
+// inside the measured region.
+// ============================================================================
+TEST_CASE("test_all_features_no_alloc", "[RealtimeSafety]")
+{
+    MLIMAudioProcessor proc;
+
+    // Enable all optional features before prepareToPlay so that the
+    // internal buffers are sized correctly when prepare() runs.
+    // Use setValueNotifyingHost() outside the measured region.
+    auto* paramTruePeak  = proc.apvts.getParameter(ParamID::truePeakEnabled);
+    auto* paramDCFilter  = proc.apvts.getParameter(ParamID::dcFilterEnabled);
+    auto* paramDither    = proc.apvts.getParameter(ParamID::ditherEnabled);
+    auto* paramOversampl = proc.apvts.getParameter(ParamID::oversamplingFactor);
+
+    REQUIRE(paramTruePeak  != nullptr);
+    REQUIRE(paramDCFilter  != nullptr);
+    REQUIRE(paramDither    != nullptr);
+    REQUIRE(paramOversampl != nullptr);
+
+    // factor=1 → 2x oversampling. oversamplingFactor is a choice parameter
+    // with 6 values (0..5); normalised value for index 1 = 1/5 = 0.2.
+    paramTruePeak ->setValueNotifyingHost(1.0f);
+    paramDCFilter ->setValueNotifyingHost(1.0f);
+    paramDither   ->setValueNotifyingHost(1.0f);
+    paramOversampl->setValueNotifyingHost(0.2f);
+
+    // prepareToPlay forces the deferred oversampling reallocation synchronously.
+    proc.prepareToPlay(kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+    juce::MidiBuffer         midiBuffer;
+
+    // -6 dBFS amplitude to exercise limiting path
+    const float amplitude = 0.5f;
+
+    // Warm up — not measured
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer, amplitude);
+        proc.processBlock(buffer, midiBuffer);
+    }
+
+    // Measured: each block must produce zero allocations
+    for (int block = 0; block < 100; ++block)
+    {
+        fillTone(buffer, amplitude);
+
+        int allocsThisBlock;
+        {
+            AllocGuard guard;
+            proc.processBlock(buffer, midiBuffer);
+            allocsThisBlock = guard.count();
+        }
+
+        INFO("Block " << block << " allocated " << allocsThisBlock << " time(s)");
+        REQUIRE(allocsThisBlock == 0);
+    }
 }
 
 // ============================================================================
