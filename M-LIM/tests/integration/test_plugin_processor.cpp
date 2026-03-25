@@ -247,3 +247,34 @@ TEST_CASE("test_latency_reported", "[PluginProcessor]")
 
     REQUIRE (proc.getLatencySamples() > 0);
 }
+
+// ============================================================================
+// test_latency_updates_with_lookahead
+// Changing the lookahead parameter must update getLatencySamples() to reflect
+// the new lookahead time. The host needs accurate latency for delay compensation.
+// ============================================================================
+TEST_CASE("test_latency_updates_with_lookahead", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Set lookahead to 5 ms — parameterChanged fires synchronously and
+    // calls updateLatency(), so getLatencySamples() should reflect this.
+    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
+        param->setValueNotifyingHost (param->convertTo0to1 (5.0f));
+
+    const int expected5ms = static_cast<int> (5.0 * kSampleRate / 1000.0); // 220 @ 44100
+    const int latency5ms  = proc.getLatencySamples();
+
+    // Allow ±1 sample rounding in the integer conversion
+    REQUIRE (latency5ms >= expected5ms - 1);
+
+    // Change to 0 ms lookahead
+    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
+        param->setValueNotifyingHost (param->convertTo0to1 (0.0f));
+
+    const int latency0ms = proc.getLatencySamples();
+
+    // Latency at 0 ms must be less than at 5 ms
+    REQUIRE (latency0ms < latency5ms);
+}
