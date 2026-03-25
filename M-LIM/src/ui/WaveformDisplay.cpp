@@ -53,9 +53,14 @@ void WaveformDisplay::resized() {}
 
 float WaveformDisplay::levelToY (float linear, const juce::Rectangle<float>& area) const noexcept
 {
-    // linear 1.0 → top of area, 0.0 → bottom
-    float clamped = juce::jlimit (0.0f, 1.0f, linear);
-    return area.getBottom() - clamped * area.getHeight();
+    // Convert linear amplitude to dBFS, then map to Y using the same scale as the grid:
+    // 0 dBFS → top of area, -kMaxGRdB → bottom (consistent with drawBackground grid lines)
+    float dBFS = (linear > 1e-6f)
+        ? 20.0f * std::log10 (juce::jlimit (1e-6f, 1.0f, linear))
+        : -kMaxGRdB;
+    dBFS = juce::jlimit (-kMaxGRdB, 0.0f, dBFS);
+    float frac = (-dBFS) / kMaxGRdB;   // 0 = top (0 dBFS), 1 = bottom (-kMaxGRdB)
+    return area.getY() + frac * area.getHeight();
 }
 
 float WaveformDisplay::grToHeight (float grDB, const juce::Rectangle<float>& area) const noexcept
@@ -240,8 +245,13 @@ void WaveformDisplay::drawPeakMarkers (juce::Graphics& g,
             float grDB = gr[static_cast<std::size_t> (i)];
             juce::String label = juce::String (grDB, 1) + "dB";
 
-            auto labelBounds = juce::Rectangle<float> (x - 20.0f, y + 2.0f, 40.0f, 12.0f);
-            g.drawText (label, labelBounds, juce::Justification::centred, false);
+            float labelW = g.getCurrentFont().getStringWidthFloat (label) + 8.0f;
+            auto bgRect = juce::Rectangle<float> (x - labelW * 0.5f, y + 2.0f, labelW, 14.0f);
+            g.setColour (MLIMColours::peakLabel.withAlpha (0.85f));
+            g.fillRoundedRectangle (bgRect, 3.0f);
+            g.setColour (juce::Colour (0xff1A1A1A));
+            g.setFont (juce::Font (9.0f));
+            g.drawText (label, bgRect, juce::Justification::centred, false);
         }
     }
 }
