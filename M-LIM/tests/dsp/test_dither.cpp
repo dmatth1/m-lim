@@ -367,6 +367,25 @@ TEST_CASE("test_second_order_dc_null_48k", "[Dither]")
     REQUIRE(std::abs(meanOutput - 0.5f) < threshold);
 }
 
+TEST_CASE("test_process_without_prepare_finite_output", "[Dither]")
+{
+    // Verify that calling process() on a freshly-constructed Dither (without
+    // calling prepare()) produces finite output.  This exercises the zero-
+    // initialisation of mError1 and mError2 in the constructor; if they held
+    // undefined values the output could contain NaN or Inf.
+    Dither dither;  // no prepare() call
+
+    const int numSamples = 64;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / 44100.0f);
+
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(std::isfinite(signal[i]));
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
