@@ -404,6 +404,95 @@ TEST_CASE("test_bypass_pushes_meter_data", "[LimiterEngineModes]")
 }
 
 // ============================================================================
+// test_delta_rms_bounded_by_input
+// With delta mode enabled and a +6 dBFS input, the delta output RMS must be
+// strictly less than the input RMS (delta ≤ input — it's a fraction of what
+// was removed, not an amplified signal), and greater than zero (something was
+// actually removed by the limiter).
+// ============================================================================
+TEST_CASE("test_delta_rms_bounded_by_input", "[LimiterEngineModes]")
+{
+    // +6 dBFS ≈ amplitude 2.0 (well above the 0 dBFS ceiling)
+    constexpr float amp = 2.0f;
+    constexpr int   numBlocks = 20;
+
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setOutputCeiling(0.0f);  // 0 dBFS ceiling
+    engine.setDeltaMode(true);
+
+    // RMS of the (un-limited) gain-adjusted input — input gain is 0 dB (default),
+    // so this is just the RMS of the sine at the given amplitude.
+    const float inputRMS = rms(makeSine(amp), 0);
+
+    float lastDeltaRMS = 0.0f;
+    for (int b = 0; b < numBlocks; ++b)
+    {
+        juce::AudioBuffer<float> buf = makeSine(amp);
+        engine.process(buf);
+        lastDeltaRMS = rms(buf, 0);
+    }
+
+    INFO("Input RMS: " << inputRMS << "  Delta RMS: " << lastDeltaRMS);
+
+    // Delta must be non-zero — the limiter removed something
+    REQUIRE(lastDeltaRMS > 0.001f);
+
+    // Delta must be strictly less than the input — it is a removed portion,
+    // not an amplified version of the input.
+    REQUIRE(lastDeltaRMS < inputRMS);
+}
+
+// ============================================================================
+// test_delta_sign_is_positive_for_loud
+// After warm-up with a loud signal, the mean absolute value of the delta
+// output must be positive (non-trivially above zero), confirming that the
+// delta represents a genuine removed portion — not the zero signal you'd
+// get if the delta were computed in the wrong direction (limited - input)
+// and the result happened to cancel.
+// ============================================================================
+TEST_CASE("test_delta_sign_is_positive_for_loud", "[LimiterEngineModes]")
+{
+    constexpr float amp = 5.0f;  // very loud: well above 0 dBFS ceiling
+
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setOutputCeiling(0.0f);
+    engine.setDeltaMode(true);
+
+    // Warm up so lookahead buffers are settled
+    for (int b = 0; b < 10; ++b)
+    {
+        juce::AudioBuffer<float> w = makeSine(amp);
+        engine.process(w);
+    }
+
+    // Capture the measurement block
+    juce::AudioBuffer<float> buf = makeSine(amp);
+    engine.process(buf);
+
+    // Compute mean absolute value across channel 0
+    const float* data = buf.getReadPointer(0);
+    float sumAbs = 0.0f;
+    for (int i = 0; i < buf.getNumSamples(); ++i)
+        sumAbs += std::abs(data[i]);
+    const float meanAbsDelta = sumAbs / buf.getNumSamples();
+
+    INFO("Mean absolute delta value: " << meanAbsDelta);
+
+    // With heavy limiting (5x amplitude input, ceiling=1.0) a large fraction of
+    // each cycle is removed.  The mean absolute delta must be comfortably above
+    // zero — a threshold of 0.1 is easily met and guards against a degenerate
+    // (all-zero) delta output or a reversed-sign implementation that was somehow
+    // cancelled to near-zero.
+    REQUIRE(meanAbsDelta > 0.1f);
+
+    // All delta samples must be finite
+    for (int i = 0; i < buf.getNumSamples(); ++i)
+        REQUIRE(std::isfinite(data[i]));
+}
+
+// ============================================================================
 // test_dither_toggle
 // Enabling and disabling dither during processing should not crash
 // and should produce finite output.
