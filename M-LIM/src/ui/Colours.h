@@ -10,8 +10,8 @@ namespace MLIMColours
     const juce::Colour panelBorder          { 0xff333333 };
 
     // Waveform display gradient colours
-    const juce::Colour displayGradientTop   { 0xff12121C };  // near-black with slight blue tint
-    const juce::Colour displayGradientBottom{ 0xff1E2030 };  // dark blue-gray
+    const juce::Colour displayGradientTop   { 0xff141828 };  // dark navy
+    const juce::Colour displayGradientBottom{ 0xff1E2438 };  // medium dark blue
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform    { 0xA8607898 };  // medium blue-purple, ~66% alpha
