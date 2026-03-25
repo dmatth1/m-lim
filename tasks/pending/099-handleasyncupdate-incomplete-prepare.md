@@ -1,4 +1,4 @@
-# Task 078: handleAsyncUpdate Missing loudnessMeter.prepare() and pushAllParametersToEngine()
+# Task 099: handleAsyncUpdate Missing loudnessMeter.prepare() and pushAllParametersToEngine()
 
 ## Description
 `MLIMAudioProcessor::handleAsyncUpdate()` (`PluginProcessor.cpp` lines 175-199) performs a

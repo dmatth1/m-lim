@@ -1,4 +1,4 @@
-# Task 076: Add Clip Indicator to LevelMeter
+# Task 092: Add Clip Indicator to LevelMeter
 
 ## Description
 Pro-L 2 shows a **small red/orange square block** at the very top of each level meter bar whenever the signal has clipped (reached or exceeded 0 dBFS). This clip indicator stays lit (latched) until clicked to reset. The current `LevelMeter` implementation has no clip indicator — once a signal clips there is no visual record of it.

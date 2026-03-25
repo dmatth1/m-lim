@@ -1,4 +1,4 @@
-# Task 074: TransientLimiter — Lookahead Latency Reported 1 Sample Too High
+# Task 087: TransientLimiter — Lookahead Latency Reported 1 Sample Too High
 
 ## Description
 

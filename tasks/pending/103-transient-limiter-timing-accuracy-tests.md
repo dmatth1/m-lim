@@ -1,4 +1,4 @@
-# Task 079: TransientLimiter Gain Reduction Timing and Lookahead Accuracy Tests
+# Task 103: TransientLimiter Gain Reduction Timing and Lookahead Accuracy Tests
 
 ## Description
 `test_transient_limiter.cpp` verifies that limiting happens but does not verify *when* it happens relative to the peak, nor does it verify that the reported latency matches the actual gain reduction onset. Missing coverage:

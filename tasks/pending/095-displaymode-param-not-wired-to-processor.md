@@ -1,4 +1,4 @@
-# Task 077: displayMode APVTS Parameter Is Registered But Never Applied
+# Task 095: displayMode APVTS Parameter Is Registered But Never Applied
 
 ## Description
 `Parameters.h` declares `ParamID::displayMode` and `createParameterLayout()`

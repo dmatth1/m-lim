@@ -1,4 +1,4 @@
-# Task 077: TruePeakDetector — SIMD Vectorize 4-Phase FIR Hot Path
+# Task 097: TruePeakDetector — SIMD Vectorize 4-Phase FIR Hot Path
 
 ## Description
 

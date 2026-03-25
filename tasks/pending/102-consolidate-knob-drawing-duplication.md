@@ -1,4 +1,4 @@
-# Task 079: Consolidate Duplicated Knob Drawing Code
+# Task 102: Consolidate Duplicated Knob Drawing Code
 
 ## Description
 Knob rendering logic is implemented twice in two different places, producing
@@ -65,6 +65,19 @@ no other file uses a raw `juce::Slider` with `RotaryHorizontalVerticalDrag` styl
 outside of `RotaryKnob`. If any such slider exists, it will fall back to the
 JUCE default LookAndFeel_V4 rotary rendering (acceptable) or should be converted
 to use `RotaryKnob` instead.
+
+**faceRadius reconciliation (REQUIRED):** The two implementations differ in face size:
+- `LookAndFeel::drawRotarySlider` uses `faceRadius = radius * 0.85f`
+- `RotaryKnob::paint()` uses `faceRadius = radius * 0.78f`
+
+When consolidating (keeping RotaryKnob::paint), ensure `RotaryKnob::paint()` uses
+`radius * 0.78f`. The 0.78f ratio leaves visible graduation marks around the edge,
+matching Pro-L 2 proportions.
+
+**Note on downstream tasks:** Tasks 084 and 104 both modify `LookAndFeel.cpp` to
+update `drawRotarySlider`. If this task (102) runs first, those tasks MUST skip the
+`LookAndFeel.cpp` changes (the method will no longer exist) and instead apply the
+colour/gradient changes to `RotaryKnob.cpp`'s `paint()` method.
 
 Note: Do NOT start this task until task 044 (fix-knob-arc-range) is complete,
 as 044 may alter both files and this task will need to start from the post-044 state.

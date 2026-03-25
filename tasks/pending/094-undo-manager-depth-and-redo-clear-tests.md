@@ -1,4 +1,4 @@
-# Task 076: UndoManager Depth, Redo-Clear, and Multi-Step Tests
+# Task 094: UndoManager Depth, Redo-Clear, and Multi-Step Tests
 
 ## Description
 `test_undo_manager.cpp` has only 3 test cases covering single-step undo/redo and the canUndo/canRedo flags. Missing coverage:

@@ -1,4 +1,4 @@
-# Task 075: LevelMeter Colour Zones and Scale Marks Don't Match Reference
+# Task 088: LevelMeter Colour Zones and Scale Marks Don't Match Reference
 
 ## Description
 Two separate issues with the already-implemented `LevelMeter` component:

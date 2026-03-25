@@ -1,4 +1,4 @@
-# Task 080: Knob Arc and Slider Accent Colour Doesn't Match Pro-L 2
+# Task 104: Knob Arc and Slider Accent Colour Doesn't Match Pro-L 2
 
 ## Description
 `MLIMColours::knobArc` (`0xff4FC3F7` — bright cyan/ice blue) is used for:
@@ -61,6 +61,11 @@ comboBox.setColour(juce::ComboBox::textColourId, MLIMColours::textPrimary); // w
 - In `drawRotarySlider`: for the value arc, keep using `knobArc` but it is now the subtle blue-grey
 
 **Note:** Task 044 (active — fixes arc angular range) also modifies `LookAndFeel.cpp`. Coordinate with or merge after task 044 completes to avoid conflict.
+
+**Note on task 102 interaction:** If task 102 (consolidate-knob-drawing) has run,
+`drawRotarySlider` no longer exists in `LookAndFeel.cpp`. In that case, skip modifying
+`drawRotarySlider` in LookAndFeel; instead update the knob arc colour in `RotaryKnob::paint()`.
+The `drawLinearSlider` change in LookAndFeel.cpp is still required regardless.
 
 ## Dependencies
 Requires task 003 (Colours.h), Requires task 019 (AlgorithmSelector)

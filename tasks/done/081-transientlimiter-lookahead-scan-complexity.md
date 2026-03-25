@@ -1,4 +1,4 @@
-# Task 081: TransientLimiter Lookahead Scan Is O(lookahead) Per Sample
+# Task 106: TransientLimiter Lookahead Scan Is O(lookahead) Per Sample
 
 ## Description
 `TransientLimiter::process()` scans the entire lookahead delay buffer on every

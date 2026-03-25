@@ -1,4 +1,4 @@
-# Task 077: Plugin Processor State Save/Load Completeness Tests
+# Task 096: Plugin Processor State Save/Load Completeness Tests
 
 ## Description
 `test_plugin_processor.cpp` only tests 3 of 20+ parameters in the state save/load round-trip. If any other parameter silently fails to serialize, there is no test catching it. Also missing: bus layout support test, tail length test, and corrupted state safety.

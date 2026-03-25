@@ -1,4 +1,4 @@
-# Task 077: Waveform Display Fill Colours Must Be Dark Navy Not Cyan
+# Task 098: Waveform Display Fill Colours Must Be Dark Navy Not Cyan
 
 ## Description
 Task 022 (WaveformDisplay) specifies the input waveform fill as "light cyan, semi-transparent" and uses `MLIMColours::inputWaveform` which is currently defined as `0x994FC3F7` (60%-opaque bright cyan). This is **wrong**.

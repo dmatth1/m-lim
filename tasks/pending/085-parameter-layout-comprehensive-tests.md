@@ -1,4 +1,4 @@
-# Task 074: Comprehensive Parameter Layout Tests
+# Task 085: Comprehensive Parameter Layout Tests
 
 ## Description
 The current `test_parameter_state.cpp` only verifies 4 parameters (3 sidechain + displayMode out of 20+ total). Workers need tests that verify every parameter registered in `createParameterLayout()` is accessible, has correct range/default, and is correctly typed.

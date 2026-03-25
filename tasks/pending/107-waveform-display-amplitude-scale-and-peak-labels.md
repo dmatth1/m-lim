@@ -1,4 +1,4 @@
-# Task 081: WaveformDisplay Amplitude Mapping and Peak Label Rendering
+# Task 107: WaveformDisplay Amplitude Mapping and Peak Label Rendering
 
 ## Description
 Two separate issues in the already-implemented `WaveformDisplay` component:

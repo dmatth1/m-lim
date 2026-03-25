@@ -1,4 +1,4 @@
-# Task 078: SidechainFilter Verification — Negative Tilt, Extreme Params, HP>LP Safety
+# Task 101: SidechainFilter Verification — Negative Tilt, Extreme Params, HP>LP Safety
 
 ## Description
 `test_sidechain_filter.cpp` tests the "happy path" (positive tilt, normal HP/LP values) but is missing:

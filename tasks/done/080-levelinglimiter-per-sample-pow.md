@@ -1,4 +1,4 @@
-# Task 080: LevelingLimiter::process() Calls std::pow Per Sample in Hot Path
+# Task 105: LevelingLimiter::process() Calls std::pow Per Sample in Hot Path
 
 ## Description
 `LevelingLimiter::process()` calls `decibelsToGain(mGainState[ch])` on every

@@ -1,4 +1,4 @@
-# Task 075: Oversampler All Factors and Output Validity Tests
+# Task 090: Oversampler All Factors and Output Validity Tests
 
 ## Description
 `test_oversampler.cpp` only explicitly tests factor 1 (2x) and mentions factor 2 (4x) in the deferred test. Factors 3 (8x), 4 (16x), and 5 (32x) have no test coverage. Additionally there are no tests that the output samples are finite/valid after upsample+downsample cycles.

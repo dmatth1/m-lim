@@ -1,4 +1,4 @@
-# Task 074: Knob Face Color and 3D Gradient for Pro-L 2 Parity
+# Task 084: Knob Face Color and 3D Gradient for Pro-L 2 Parity
 
 ## Description
 The current knob face colour (`knobFace: 0xff3A3A3A`) is a neutral dark grey that doesn't match the Pro-L 2 reference. Pixel sampling of the reference image shows knob face colours in the range `#626F8C`–`#7F88A9` — a medium **steel blue-grey**. Additionally, Pro-L 2 knobs have a subtle 3D radial gradient (lighter at top-left, darker at bottom-right) creating a sphere/dome illusion. The current flat fill looks noticeably flat by comparison.
@@ -69,3 +69,6 @@ const juce::Colour knobFaceShadow   { 0xff303448 };  // knob shadow for 3D gradi
 
 ## Dependencies
 Requires task 003
+Note: If task 102 (consolidate-knob-drawing) has been completed before this task,
+`drawRotarySlider` no longer exists in `LookAndFeel.cpp`. In that case, skip the
+`LookAndFeel.cpp` modification and apply the 3D gradient ONLY to `RotaryKnob::paint()`.

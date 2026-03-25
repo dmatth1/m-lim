@@ -1,4 +1,4 @@
-# Task 076: getTailLengthSeconds Returns 0 — Lookahead Buffer Not Drained at Stop
+# Task 093: getTailLengthSeconds Returns 0 — Lookahead Buffer Not Drained at Stop
 
 ## Description
 `MLIMAudioProcessor::getTailLengthSeconds()` always returns `0.0` (`PluginProcessor.cpp` line 38).

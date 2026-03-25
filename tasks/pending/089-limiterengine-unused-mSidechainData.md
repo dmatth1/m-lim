@@ -1,4 +1,4 @@
-# Task 075: Remove Unused mSidechainData Allocation in LimiterEngine
+# Task 089: Remove Unused mSidechainData Allocation in LimiterEngine
 
 ## Description
 `LimiterEngine` allocates `mSidechainData` (a `std::vector<std::vector<float>>`)
