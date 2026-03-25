@@ -99,3 +99,34 @@ cd build && ctest --output-on-failure
 - `LoudnessPanel` — Collapsible LUFS readout panel
 - `ABState` — A/B comparison snapshot system
 - `PresetManager` — XML preset load/save/browse
+
+## UI Screenshot Testing (MANDATORY for all UI tasks)
+
+Every UI task MUST capture before/after screenshots via `Scripts/ui-test-helper.sh`:
+
+```bash
+# Install deps (already in Docker image)
+sudo apt-get install -y xvfb xdotool imagemagick scrot optipng bc
+
+# Source the helper
+source Scripts/ui-test-helper.sh
+
+# Start app on virtual display
+start_app
+
+# Capture screenshot
+screenshot "task-NNN-before.png"  # or after.png
+
+# Compare against reference (threshold 0.15 = 15% RMSE)
+compare_to_reference /reference-docs/reference-screenshots/prol2-main-ui.jpg screenshots/task-NNN-after.png 0.15
+
+# Stop app
+stop_app
+```
+
+Before committing PNGs, optimize them:
+```bash
+find screenshots/ -name "*.png" -exec optipng -o2 -fix -quiet {} \;
+```
+
+Reference screenshots are at `/reference-docs/reference-screenshots/` (read-only mount). Workers MUST visually compare their UI output against these references when working on UI components.
