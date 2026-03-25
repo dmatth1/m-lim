@@ -35,10 +35,10 @@ void GainReductionMeter::resized() {}
 juce::Rectangle<float> GainReductionMeter::peakLabelArea() const
 {
     auto bounds  = getLocalBounds().toFloat();
-    auto numArea = bounds.removeFromBottom (static_cast<float> (kNumericH));
+    auto numArea = bounds.removeFromTop (static_cast<float> (kNumericH));
     // The peak readout occupies the lower half of numArea (matches drawNumeric)
-    auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
-    return cur.withY (cur.getBottom());
+    return numArea.withHeight (numArea.getHeight() * 0.5f)
+                  .translated (0.0f, numArea.getHeight() * 0.5f);
 }
 
 void GainReductionMeter::mouseDown (const juce::MouseEvent& e)
@@ -73,8 +73,8 @@ void GainReductionMeter::paint (juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Numeric readout at bottom
-    auto numArea   = bounds.removeFromBottom (static_cast<float> (kNumericH));
+    // Numeric readout at top
+    auto numArea   = bounds.removeFromTop (static_cast<float> (kNumericH));
     // Scale labels on the right
     auto scaleArea = bounds.removeFromRight  (static_cast<float> (kScaleW));
     auto barArea   = bounds;
