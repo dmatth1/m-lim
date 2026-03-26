@@ -1,0 +1,70 @@
+Task 324: RMSE Remeasure After Visual Tasks 318–321, 325–327
+=============================================================
+Date: 2026-03-26
+Build: Latest (tasks 318–321, 325–327 merged and rebuilt)
+
+Methodology
+-----------
+- M-LIM standalone rebuilt from latest main (LevelMeter.cpp, LoudnessPanel.cpp updated)
+- Launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 317):       0.2197 (21.97%)
+After tasks 318–320 (321): 0.2267 (22.67%)
+Current (task 324):        0.2314 (23.14%)
+Change from 317:           +0.0117 (+1.17 pp regression)
+Change from 321:           +0.0047 (+0.47 pp regression)
+Target:                    0.230 (23.0%) [task requirement: < 0.230]
+Status:                    MISS — 0.2314 slightly above 0.230 threshold
+
+Sub-Region RMSE
+---------------
+Left level meters (30x378 at x=0, y=30):   0.2371 (23.71%)  [was 23.71% at task 321 — unchanged]
+Waveform area (600x400 at x=150, y=50):     0.2208 (22.08%)  [was 21.10% at task 321 — +0.98 pp]
+Right panel (100x400 at x=800, y=50):       0.2966 (29.66%)  [was 29.66% at task 321 — unchanged]
+Control strip (900x60 at x=0, y=440):       0.2340 (23.40%)  [was 23.40% at task 321 — unchanged]
+
+Analysis
+--------
+Overall: slight regression of 1.17 pp from task 317 baseline (21.97% → 23.14%).
+Target of < 23.0% NARROWLY MISSED (0.2314 vs 0.230 threshold).
+
+Tasks covered (318–321, 325–327):
+- 318: Control strip larger knobs — increased knob area vs. reference proportions
+- 319: Level meter smooth gradient fill — improved visual quality but slightly changes layout
+- 320: Widen output level meter — wider meter diverges slightly from reference proportions
+- 321: RMSE checkpoint at 22.67%
+- 325: Loudness histogram below-target bins → steel-blue (visual improvement, right panel static state unchanged)
+- 326: Loudness histogram scale no-skip (show −15 label) — label layout refinement
+- 327: GR meter remove numeric readout area (kNumericH → 0) — reduces wasted space
+
+Key observations:
+- Right panel RMSE unchanged at 29.66% — changes in tasks 325–327 affect runtime display
+  elements (histogram bars, GR needle) that are not visible at plugin rest state with no audio.
+  At rest, the histogram and GR area appear as empty/static backgrounds.
+- Waveform region regression (+0.98 pp from 321) likely due to proportional layout shifts
+  from control strip height changes affecting plugin boundary rendering.
+- Control strip and left meters regions stable between task 321 and 324.
+
+Comparison Table
+----------------
+Region              | Task 317 | Task 321 | Task 324 | Change (317→324)
+Left level meters   |  23.45%  |  23.71%  |  23.71%  |  +0.26 pp
+Waveform area       |  20.00%  |  21.10%  |  22.08%  |  +2.08 pp
+Right panel         |  29.61%  |  29.66%  |  29.66%  |  +0.05 pp
+Control strip       |  22.57%  |  23.40%  |  23.40%  |  +0.83 pp
+FULL IMAGE          |  21.97%  |  22.67%  |  23.14%  |  +1.17 pp
+
+Files Saved
+-----------
+screenshots/task-324-raw.png               — Full 1920x1080 desktop capture
+screenshots/task-324-mlim-cropped.png      — M-LIM plugin area (900x500)
+screenshots/task-324-ref-cropped.png       — Pro-L 2 reference (900x500)
+screenshots/task-324-diff-full.png         — ImageMagick diff visualization
+screenshots/task-324-rmse-results.txt      — This file
