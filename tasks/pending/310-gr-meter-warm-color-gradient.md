@@ -1,4 +1,4 @@
-# Task 304: GR Meter — Warm Orange/Yellow Color Zones (Pro-L 2 Style)
+# Task 310: GR Meter — Warm Orange/Yellow Color Zones (Pro-L 2 Style)
 
 ## Description
 The GainReductionMeter currently draws all active GR segments in a single flat red color
@@ -28,7 +28,6 @@ Read: `M-LIM/src/ui/LevelMeter.cpp` — reference for how zone-based drawSegment
 
 ## Acceptance Criteria
 - [ ] Run: `cmake --build /workspace/M-LIM/build --config Release -j$(nproc) --target MLIM_Standalone 2>&1 | tail -3` → Expected: exit 0
-- [ ] Visual: Launch standalone on Xvfb :99, play audio or manually invoke `setGainReduction(6.0f)` via test. Confirm GR bar shows yellow at the top (low GR portion), transitioning through orange to red for larger GR values.
 - [ ] Code check: `grep -n "grMeterLow\|grMeterMid\|gainReduction" M-LIM/src/ui/GainReductionMeter.cpp` → Expected: output shows the three zone colours referenced in drawBar()
 
 ## Tests
@@ -42,7 +41,6 @@ In `GainReductionMeter::drawBar()`, replace the existing single-colour segment b
 drawSegments (MLIMColours::gainReduction, barTop, fillBot);
 
 // AFTER (three zones):
-// Zone boundaries in pixels from top of bar
 float zone1Bot = barTop + std::min(fillH, grToFrac(3.0f)  * barH);  // 0–3 dB
 float zone2Bot = barTop + std::min(fillH, grToFrac(9.0f)  * barH);  // 3–9 dB
 float zone3Bot = barTop + fillH;                                      // 9+ dB
@@ -56,8 +54,10 @@ In `Colours.h`, add near the existing meter colours:
 ```cpp
 const juce::Colour grMeterLow { 0xffE8C840 };  // warm yellow (0–3 dB GR)
 const juce::Colour grMeterMid { 0xffFF8C00 };  // warm orange (3–9 dB GR)
-// gainReduction (red) is used for 9+ dB GR (already defined)
 ```
+
+**Note:** `Colours.h` is also being modified by active tasks 306 (meterSafe) and 307 (meterSafe).
+Add only the new `grMeterLow`/`grMeterMid` constants; do not modify any existing constants.
 
 ## Dependencies
 None
