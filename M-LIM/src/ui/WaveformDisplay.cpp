@@ -312,7 +312,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::String label = (db == 0.0f) ? "0 dB"
                                           : juce::String (juce::roundToInt (db)) + " dB";
-        const float labelW = 44.0f;
+        const float labelW = 38.0f;
         auto labelRect = juce::Rectangle<float> (
             area.getX() + 2.0f,
             y - 6.0f,
@@ -320,7 +320,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             12.0f);
         float alpha = 0.35f;
         g.setColour (MLIMColours::textPrimary.withAlpha (alpha));
-        g.drawText (label, labelRect, juce::Justification::centredLeft, false);
+        g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 }
 
