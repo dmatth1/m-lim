@@ -2,15 +2,15 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "../dsp/LimiterAlgorithm.h"
 #include <functional>
 
 /**
- * Algorithm selector UI component — compact single-row navigation widget:
- * [ ‹ ] [ ALGORITHM NAME ] [ › ]
+ * Algorithm selector UI component — 2×4 grid of algorithm buttons.
  *
  * The underlying juce::ComboBox is kept hidden and acts as the APVTS
- * attachment point (via getComboBox()). Prev/next buttons cycle through
- * algorithms 0–7 with wrap-around.
+ * attachment point (via getComboBox()). Eight TextButtons arranged in
+ * 2 rows of 4 allow direct selection of any algorithm.
  */
 class AlgorithmSelector : public juce::Component
 {
@@ -38,14 +38,15 @@ private:
     /** Hidden ComboBox — APVTS attachment point only. */
     juce::ComboBox comboBox;
 
-    /** Navigation buttons. */
+    /** 2×4 grid of algorithm selection buttons. */
+    juce::TextButton algoButtons_[kNumAlgorithms];
+
+    /** Legacy nav widgets — kept for ABI compatibility but hidden. */
     juce::TextButton prevButton_;
     juce::TextButton nextButton_;
-
-    /** Displays the current algorithm name. */
     juce::Label nameLabel_;
 
-    /** Refresh label text to reflect current comboBox selection. */
+    /** Refresh button toggle states to reflect current comboBox selection. */
     void updateButtonStates();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AlgorithmSelector)

@@ -2,7 +2,7 @@
 #include "Colours.h"
 #include "../dsp/LimiterAlgorithm.h"
 
-// Short display names for the compact navigation widget (ALL CAPS).
+// Short display names for the compact button grid (ALL CAPS).
 static constexpr const char* kAlgorithmButtonLabels[] = {
     "TRANSPARENT", "PUNCHY", "DYNAMIC", "AGGRESSIVE",
     "ALLROUND", "BUS", "SAFE", "MODERN"
@@ -27,40 +27,26 @@ AlgorithmSelector::AlgorithmSelector()
     // The ComboBox is never visible — only here as an APVTS hook.
     addChildComponent(comboBox);
 
-    // Prev button: cycle backwards.
-    prevButton_.setButtonText(juce::CharPointer_UTF8("\xe2\x80\xb9"));  // ‹
-    prevButton_.onClick = [this]
+    // Build 2×4 algorithm button grid.
+    for (int i = 0; i < kNumAlgorithms; ++i)
     {
-        const int cur  = comboBox.getSelectedId() - 1;
-        const int next = (cur - 1 + kNumAlgorithms) % kNumAlgorithms;
-        comboBox.setSelectedId(next + 1, juce::sendNotificationSync);
-    };
-
-    // Next button: cycle forwards.
-    nextButton_.setButtonText(juce::CharPointer_UTF8("\xe2\x80\xba"));  // ›
-    nextButton_.onClick = [this]
-    {
-        const int cur  = comboBox.getSelectedId() - 1;
-        const int next = (cur + 1) % kNumAlgorithms;
-        comboBox.setSelectedId(next + 1, juce::sendNotificationSync);
-    };
-
-    // Style the nav buttons.
-    for (auto* btn : { &prevButton_, &nextButton_ })
-    {
-        btn->setColour(juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
-        btn->setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
-        btn->setColour(juce::TextButton::textColourOffId,  MLIMColours::textPrimary);
-        btn->setColour(juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
-        addAndMakeVisible(*btn);
+        algoButtons_[i].setButtonText(kAlgorithmButtonLabels[i]);
+        algoButtons_[i].setClickingTogglesState(false);
+        algoButtons_[i].setColour(juce::TextButton::buttonColourId,   MLIMColours::buttonBackground);
+        algoButtons_[i].setColour(juce::TextButton::buttonOnColourId, MLIMColours::accentBlue.withAlpha(0.8f));
+        algoButtons_[i].setColour(juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
+        algoButtons_[i].setColour(juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
+        algoButtons_[i].onClick = [this, i]
+        {
+            comboBox.setSelectedId(i + 1, juce::sendNotificationSync);
+        };
+        addAndMakeVisible(algoButtons_[i]);
     }
 
-    // Style the name label.
-    nameLabel_.setFont(juce::Font(MLIMColours::kFontSizeSmall, juce::Font::bold));
-    nameLabel_.setColour(juce::Label::textColourId, MLIMColours::textPrimary);
-    nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
-    nameLabel_.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(nameLabel_);
+    // Hide legacy nav widgets.
+    prevButton_.setVisible(false);
+    nextButton_.setVisible(false);
+    nameLabel_.setVisible(false);
 
     updateButtonStates();
 }
@@ -79,12 +65,14 @@ int AlgorithmSelector::getAlgorithm() const
 void AlgorithmSelector::updateButtonStates()
 {
     const int selected = juce::jlimit(0, kNumAlgorithms - 1, comboBox.getSelectedId() - 1);
+    for (int i = 0; i < kNumAlgorithms; ++i)
+        algoButtons_[i].setToggleState(i == selected, juce::dontSendNotification);
     nameLabel_.setText(kAlgorithmButtonLabels[selected], juce::dontSendNotification);
 }
 
 void AlgorithmSelector::paint(juce::Graphics& g)
 {
-    // Subtle rounded background behind the whole component.
+    // Subtle rounded background behind the button grid.
     auto bounds = getLocalBounds().toFloat();
     g.setColour(MLIMColours::displayBackground);
     g.fillRoundedRectangle(bounds, 4.0f);
@@ -96,7 +84,12 @@ void AlgorithmSelector::paint(juce::Graphics& g)
 void AlgorithmSelector::resized()
 {
     auto b = getLocalBounds();
-    prevButton_.setBounds(b.removeFromLeft(14));
-    nextButton_.setBounds(b.removeFromRight(14));
-    nameLabel_.setBounds(b);
+    const int rowH = b.getHeight() / 2;
+    const int colW = b.getWidth() / 4;
+    for (int i = 0; i < kNumAlgorithms; ++i)
+    {
+        int row = i / 4;
+        int col = i % 4;
+        algoButtons_[i].setBounds(col * colW, row * rowH, colW, rowH);
+    }
 }
