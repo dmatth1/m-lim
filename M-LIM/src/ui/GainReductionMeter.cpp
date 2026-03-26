@@ -113,7 +113,7 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
     const float fillH  = grToFrac (currentGR_) * barH;
     const float fillBot = barTop + fillH;
 
-    // GR bar uses a single colour (red) consistent with waveform GR overlay
+    // GR bar uses zone-based colours: yellow (0–3 dB), orange (3–9 dB), red (9+ dB)
     auto drawSegments = [&] (juce::Colour colour, float top, float bot)
     {
         if (top >= bot) return;
@@ -125,7 +125,14 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
                 g.fillRect (barArea.getX(), sy, barArea.getWidth(), segBot - sy);
         }
     };
-    drawSegments (MLIMColours::gainReduction, barTop, fillBot);
+
+    float zone1Bot = barTop + std::min (fillH, grToFrac (3.0f) * barH);  // 0–3 dB
+    float zone2Bot = barTop + std::min (fillH, grToFrac (9.0f) * barH);  // 3–9 dB
+    float zone3Bot = barTop + fillH;                                       // 9+ dB
+
+    drawSegments (MLIMColours::grMeterLow,    barTop,    zone1Bot);  // warm yellow
+    drawSegments (MLIMColours::grMeterMid,    zone1Bot,  zone2Bot);  // warm orange
+    drawSegments (MLIMColours::gainReduction, zone2Bot,  zone3Bot);  // red
 }
 
 void GainReductionMeter::drawPeakTick (juce::Graphics& g,

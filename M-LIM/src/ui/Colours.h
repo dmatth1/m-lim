@@ -24,6 +24,8 @@ namespace MLIMColours
     const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
     const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
     const juce::Colour gainReduction        { 0xffEE3333 };  // clear red (Pro-L 2 parity — GR fill is red in reference)
+    const juce::Colour grMeterLow           { 0xffE8C840 };  // warm yellow (0–3 dB GR)
+    const juce::Colour grMeterMid           { 0xffFF8C00 };  // warm orange (3–9 dB GR)
     const juce::Colour waveformGridLine     { 0xff9AA0B4 };  // horizontal dB grid lines — lighter than gradient, matches Pro-L 2 subtle grid
     const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
     const juce::Colour waveformCeilingLine  { 0xCCDD4444 };  // ceiling line — warm red, ~80% alpha (matches Pro-L 2 red ceiling)
