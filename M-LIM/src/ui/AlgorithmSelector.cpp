@@ -56,7 +56,7 @@ AlgorithmSelector::AlgorithmSelector()
     }
 
     // Style the name label.
-    nameLabel_.setFont(juce::Font(MLIMColours::kFontSizeMedium, juce::Font::bold));
+    nameLabel_.setFont(juce::Font(MLIMColours::kFontSizeSmall, juce::Font::bold));
     nameLabel_.setColour(juce::Label::textColourId, MLIMColours::textPrimary);
     nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     nameLabel_.setJustificationType(juce::Justification::centred);
@@ -96,7 +96,7 @@ void AlgorithmSelector::paint(juce::Graphics& g)
 void AlgorithmSelector::resized()
 {
     auto b = getLocalBounds();
-    prevButton_.setBounds(b.removeFromLeft(20));
-    nextButton_.setBounds(b.removeFromRight(20));
+    prevButton_.setBounds(b.removeFromLeft(14));
+    nextButton_.setBounds(b.removeFromRight(14));
     nameLabel_.setBounds(b);
 }

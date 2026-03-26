@@ -9,7 +9,7 @@ namespace
     static constexpr int kKnobLabelH  = 10;  // headroom above knob row for section labels
 
     // Knob column width (equal slices in the top row)
-    static constexpr int kNumKnobs  = 7;   // algo(x2) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
+    static constexpr int kNumKnobs  = 6;   // algo(x1) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
     // Width reserved for the output ceiling vertical slider on the far right
     static constexpr int kOutputSliderW = 40;
     // Width of the ADVANCED toggle strip (right of knobs, left of output slider)
@@ -463,9 +463,9 @@ void ControlStrip::resized()
     // Position ADVANCED button in the knob-row portion of the reserved column
     advancedButton_.setBounds (advancedCol.withTrimmedTop (kKnobLabelH).withHeight (kKnobRowH));
 
-    // 7 equal knob slots: 2 (algo) + 1 (lookahead) + 1 (attack) + 1 (release) + 1 (cl-transients) + 1 (cl-release)
-    int knobW = knobRow.getWidth() / 7;
-    algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
+    // 6 equal knob slots: algo(1) + lookahead(1) + attack(1) + release(1) + cl-transients(1) + cl-release(1)
+    int knobW = knobRow.getWidth() / 6;
+    algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW));
 
     // Basic knobs: Lookahead, Attack, Release
     lookaheadKnob_.setBounds (knobRow.removeFromLeft (knobW));
