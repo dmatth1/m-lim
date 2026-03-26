@@ -15,15 +15,16 @@ namespace MLIMColours
     const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
 
     // Waveform display gradient colours
-    const juce::Colour displayGradientTop   { 0xff141218 };  // very dark, warm-neutral (matches Pro-L 2 empty waveform BG ~#1E1C1F)
-    const juce::Colour displayGradientBottom{ 0xff1C1A28 };  // slightly warmer dark (less blue-navy bias)
+    // Reference samples from Pro-L 2: top ~#8992AB, middle ~#6F7790 (measured from v1-0005.png)
+    const juce::Colour displayGradientTop   { 0xff5A6075 };  // medium blue-gray (matches Pro-L 2 idle waveform BG)
+    const juce::Colour displayGradientBottom{ 0xff3E4258 };  // slightly darker blue-gray at bottom
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform        { 0xCC6878A0 };  // lighter steel-blue, ~80% alpha (composites to ~#5A6A8A matching reference)
     const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
     const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
     const juce::Colour gainReduction        { 0xffEE3333 };  // clear red (Pro-L 2 parity — GR fill is red in reference)
-    const juce::Colour waveformGridLine     { 0xff252538 };  // horizontal dB grid lines (slightly lighter for visibility)
+    const juce::Colour waveformGridLine     { 0xff474D62 };  // horizontal dB grid lines — darker than background for subtle visibility
     const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
     const juce::Colour waveformCeilingLine  { 0xCCDD4444 };  // ceiling line — warm red, ~80% alpha (matches Pro-L 2 red ceiling)
 
