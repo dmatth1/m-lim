@@ -16,6 +16,7 @@ TopBar::TopBar()
     presetLabel_.setColour (juce::Label::textColourId,       MLIMColours::textPrimary);
     presetLabel_.setColour (juce::Label::backgroundColourId, MLIMColours::topBarPresetBackground);
     presetLabel_.setJustificationType (juce::Justification::centred);
+    presetLabel_.setColour (juce::Label::outlineColourId, MLIMColours::panelBorder);
     addAndMakeVisible (presetLabel_);
 
     // Prev / Next buttons

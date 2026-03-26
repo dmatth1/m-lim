@@ -10,7 +10,7 @@ namespace MLIMColours
     const juce::Colour panelBorder              { 0xff333333 };
     const juce::Colour widgetBackground         { 0xff222230 };  // combo boxes, tooltips, etc.
     const juce::Colour peakLabelBackground      { 0xff1A1A1A };  // dark background behind peak labels
-    const juce::Colour topBarPresetBackground   { 0xff232323 };  // slightly lighter background for preset label
+    const juce::Colour topBarPresetBackground   { 0xff2D2D2D };  // noticeably lighter than bar bg (0xff252525)
     const juce::Colour accentDarkBackground     { 0xff1E1E2A };  // dark navy tint for accent buttons
     const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
 
