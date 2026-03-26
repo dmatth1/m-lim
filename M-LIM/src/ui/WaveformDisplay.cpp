@@ -318,7 +318,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             y - 6.0f,
             labelW,
             12.0f);
-        float alpha = 0.75f;
+        float alpha = 0.35f;
         g.setColour (MLIMColours::textPrimary.withAlpha (alpha));
         g.drawText (label, labelRect, juce::Justification::centredLeft, false);
     }
