@@ -1,0 +1,62 @@
+Task 317: RMSE Remeasure After Visual Tasks 306–316
+=====================================================
+Date: 2026-03-26
+Build: Latest (tasks 305–316 merged)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 299/303):  0.2419 (24.19%)
+Current (task 317):       0.2197 (21.97%)
+Change:                   -0.0222 (-2.22 pp improvement)
+Target:                   0.230 (23.0%) [task requirement: < 0.230]
+Status:                   PASS (0.2197 < 0.230)
+
+Sub-Region RMSE
+---------------
+Left level meters (30x378 at x=0, y=30):   0.2345 (23.45%)  [was 26.00% — -2.55 pp]
+Waveform area (600x400 at x=150, y=50):     0.2000 (20.00%)  [was 23.03% — -3.03 pp]
+Right panel (100x400 at x=800, y=50):       0.2961 (29.61%)  [was 29.60% — minimal change]
+Control strip (900x60 at x=0, y=440):       0.2257 (22.57%)  [was 22.56% — stable]
+
+Analysis
+--------
+Overall improvement: 2.22 pp on full image since task 299 (24.19% → 21.97%).
+Target of < 23.0% ACHIEVED (21.97% < 23.0%).
+
+Key improvements from tasks 305–316:
+- Waveform area: -3.03 pp (biggest improvement)
+  From task 305 (neutral top/blue bottom gradient), 306 (waveform dB label opacity),
+  and 316 (waveform dB label right-aligned)
+- Left level meters: -2.55 pp
+  From task 307 (level meter safe-zone muted blue-gray)
+- Control strip: stable (negligible change)
+- Right panel: essentially unchanged — remaining difference is mostly the GR meter
+  appearance and loudness panel layout; warm gradient (task 310) and narrow bar (task 312)
+  had minimal measurable impact at rest state (no audio playing)
+
+Tasks Covered (305–316):
+- 305: waveform gradient neutral top / blue bottom
+- 306: loudness panel large LUFS readout font + waveform dB label opacity
+- 307: knob face neutral gray, arc subtle + level meter safe-zone muted blue
+- 309: rotary knob face lighter gray
+- 310: GR meter warm color gradient (yellow/orange/red)
+- 311: output meter dB scale strip
+- 312: GR meter narrowed to 12px thin bar, scale hidden
+- 316: waveform dB labels right-aligned
+
+Files Saved
+-----------
+screenshots/task-317-raw.png           — Full 1920x1080 desktop capture
+screenshots/task-317-mlim-cropped.png  — M-LIM plugin area (900x500)
+screenshots/task-317-ref-cropped.png   — Pro-L 2 reference (900x500)
+screenshots/task-317-diff-full.png     — ImageMagick diff visualization
+screenshots/task-317-rmse-results.txt  — This file
