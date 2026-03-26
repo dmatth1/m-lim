@@ -32,11 +32,11 @@ namespace MLIMColours
     const juce::Colour peakLabel        { 0xffFFD700 };  // gold/yellow
 
     // Knob colours
-    const juce::Colour knobFace         { 0xff9A9AA8 };  // medium gray (was 4A526A)
-    const juce::Colour knobFaceHighlight{ 0xffCCCCD6 };  // near-white light gray highlight (was 7080A0)
-    const juce::Colour knobFaceShadow   { 0xff707888 };  // medium neutral gray shadow (was 303448)
-    const juce::Colour knobArc          { 0xff4888C8 };  // medium blue arc for clear value visibility
-    const juce::Colour knobArcDim       { 0xff555555 };  // dim grey for inactive/minimum arc tick marks
+    const juce::Colour knobFace         { 0xff585858 };  // neutral medium gray (matches Pro-L 2 silver)
+    const juce::Colour knobFaceHighlight{ 0xff808080 };  // neutral light gray highlight
+    const juce::Colour knobFaceShadow   { 0xff303030 };  // neutral dark shadow
+    const juce::Colour knobArc          { 0xff6898C8 };  // slightly lighter blue, more subtle at 2.0px
+    const juce::Colour knobArcDim       { 0xff404040 };  // slightly darker dim track for better contrast with face
     const juce::Colour knobPointer      { 0xffFFFFFF };
     const juce::Colour sliderFill       { 0xff2D7EE8 };  // accent blue for linear slider fills
 
