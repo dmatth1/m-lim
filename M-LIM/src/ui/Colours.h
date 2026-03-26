@@ -57,6 +57,7 @@ namespace MLIMColours
     const juce::Colour controlStripBottom { 0xff3E4255 };  // darker blue-gray bottom
 
     // Button colours
+    const juce::Colour algoButtonInactive       { 0xff303848 };  // inactive algo button — dark blue-gray blending with control strip
     const juce::Colour buttonBackground         { 0xff242424 };  // default button/toggle background
     const juce::Colour buttonOnBackground       { 0xff1A4A1A };  // toggle-on background (dark green)
     const juce::Colour buttonOnText             { 0xff66DD66 };  // toggle-on text (bright green)

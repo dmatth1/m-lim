@@ -67,7 +67,7 @@ void AlgorithmSelector::updateButtonStates()
 
         algoButtons_[i]->setColour(juce::TextButton::buttonColourId,
                                    isSelected ? MLIMColours::accentBlue
-                                              : MLIMColours::buttonBackground);
+                                              : MLIMColours::algoButtonInactive);
         algoButtons_[i]->setColour(juce::TextButton::buttonOnColourId,
                                    MLIMColours::accentBlue);
         algoButtons_[i]->setColour(juce::TextButton::textColourOffId,
@@ -85,7 +85,7 @@ void AlgorithmSelector::paint(juce::Graphics& g)
     g.setColour(MLIMColours::displayBackground);
     g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(MLIMColours::panelBorder);
+    g.setColour(MLIMColours::algoButtonInactive.brighter(0.3f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, 1.0f);
 }
 
