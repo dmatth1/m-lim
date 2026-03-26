@@ -168,8 +168,8 @@ void MLIMAudioProcessorEditor::resized()
     topBar_.setBounds       (bounds.removeFromTop    (kTopBarH));
     controlStrip_.setBounds (bounds.removeFromBottom (kControlStripH));
 
-    // Input level meter on the LEFT edge
-    inputMeter_.setBounds (bounds.removeFromLeft (kInputMeterW));
+    // Input level meter hidden — waveform extends to left edge (no left strip)
+    inputMeter_.setVisible (false);
 
     // Right edge: loudness panel (outermost), then output meter, then GR meter adjacent to waveform
     loudnessPanel_.setBounds (bounds.removeFromRight (kLoudnessPanelW));
