@@ -255,7 +255,10 @@ void LimiterEngine::stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock)
     const int upSamples  = static_cast<int>(upBlock.getNumSamples());
     const int upChannels = static_cast<int>(upBlock.getNumChannels());
     mTransientLimiter.process(mUpPtrs.data(), upChannels, upSamples, mSidePtrs.data());
-    mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples, mSidePtrs.data());
+    // Stage 2 detects on the post-Stage-1 main audio (nullptr = use channelData).
+    // Passing mSidePtrs here caused over-limiting: Stage 2 would see the
+    // pre-Stage-1 peak and apply additional GR even when Stage 1 already handled it.
+    mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples, nullptr);
 }
 
 void LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,

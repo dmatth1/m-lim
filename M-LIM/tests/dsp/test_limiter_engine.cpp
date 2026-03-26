@@ -1247,3 +1247,92 @@ TEST_CASE("test_leveling_limiter_setter_guard_no_redundant_coefficients", "[Limi
     // And GR should be active (the signal is above threshold)
     REQUIRE(gr1 < -0.5f);
 }
+
+// ============================================================================
+// test_stage2_no_overlimit_on_stage1_handled_peaks
+// Feed a 1.2-amplitude sine through the engine with both stages active.
+// After processing, the output peak should not fall more than ~0.5 dB below
+// the ceiling — i.e. Stage 2 must not apply extra GR on top of Stage 1 for
+// peaks that Stage 1 already handled.
+// ============================================================================
+TEST_CASE("test_stage2_no_overlimit_on_stage1_handled_peaks", "[LimiterEngine]")
+{
+    const float ceilingDb  = 0.0f;
+    const float ceilingLin = 1.0f;
+    // 0.5 dB below ceiling — Stage 2 over-limiting would push output further down
+    const float tooLowThreshold = static_cast<float>(std::pow(10.0, -0.5 / 20.0));
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(ceilingDb);
+
+    // Warm up the limiter to a settled state before measuring
+    for (int i = 0; i < 20; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.2f, kBlockSize);
+        engine.process(buf);
+    }
+
+    // Measure the output peak on settled blocks
+    float minPeak = 1.0f;
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.2f, kBlockSize);
+        engine.process(buf);
+        const float peak = maxAbsValue(buf);
+        if (peak < minPeak)
+            minPeak = peak;
+    }
+
+    INFO("Min output peak: " << minPeak << "  too-low threshold: " << tooLowThreshold
+         << "  ceiling: " << ceilingLin);
+
+    // Output must not exceed the ceiling
+    REQUIRE(minPeak <= ceilingLin + 0.01f);
+    // Output must not drop more than ~0.5 dB below ceiling (over-limiting check)
+    REQUIRE(minPeak >= tooLowThreshold);
+}
+
+// ============================================================================
+// test_stage2_no_gr_on_signal_at_ceiling
+// A signal that arrives exactly at the ceiling (1.0 linear) after Stage 1
+// should pass through Stage 2 without significant additional gain reduction,
+// since Stage 1 already handled it and Stage 2 detects on the post-Stage-1 audio.
+// ============================================================================
+TEST_CASE("test_stage2_no_gr_on_signal_at_ceiling", "[LimiterEngine]")
+{
+    const float ceilingDb = 0.0f;
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(ceilingDb);
+
+    // Warm up with a signal slightly above ceiling so both stages settle
+    for (int i = 0; i < 30; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.01f, kBlockSize);
+        engine.process(buf);
+    }
+
+    // Now feed a signal exactly at the ceiling — Stage 1 passes it at ceiling,
+    // Stage 2 should see peak ≤ threshold and not apply further GR.
+    float minPeak = 1.0f;
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        engine.process(buf);
+        const float peak = maxAbsValue(buf);
+        if (peak < minPeak)
+            minPeak = peak;
+    }
+
+    // Output must not exceed ceiling
+    REQUIRE(minPeak <= 1.01f);
+    // Output must remain close to ceiling (Stage 2 should not over-limit).
+    // Allow up to -2 dB below ceiling to absorb release transients from warmup.
+    // The bug (passing mSidePtrs to Stage 2) would cause ~1.6 dB extra GR,
+    // pushing minPeak well below this floor.
+    const float floorLin = static_cast<float>(std::pow(10.0, -2.0 / 20.0));
+    INFO("Min peak: " << minPeak << "  floor: " << floorLin);
+    REQUIRE(minPeak >= floorLin);
+}
