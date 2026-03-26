@@ -184,3 +184,106 @@ TEST_CASE("test_many_actions_no_crash", "[UndoManager]")
 
     REQUIRE(value == 0);
 }
+
+TEST_CASE("test_history_limit_drops_oldest_no_crash", "[UndoManager]")
+{
+    // UndoableAction::getSizeInUnits() returns 10 by default.
+    // To keep exactly `limit` transactions, set maxUnitsToKeep = limit * 10.
+    const int limit = 5;
+    juce::UndoManager manager(limit * 10, 0);
+
+    int value = 0;
+    const int totalActions = 20;
+
+    // Perform 20 transactions — only the last `limit` should be retained
+    for (int i = 1; i <= totalActions; ++i)
+    {
+        manager.beginNewTransaction();
+        manager.perform(new SetValueAction(value, i));
+    }
+    REQUIRE(value == totalActions);
+
+    // There should be something to undo (oldest entries dropped, not all)
+    REQUIRE(manager.canUndo() == true);
+
+    // Count how many undos are available — must not exceed the limit
+    int undoCount = 0;
+    while (manager.canUndo())
+    {
+        manager.undo();
+        ++undoCount;
+    }
+
+    // At most `limit` undos should have been available
+    REQUIRE(undoCount <= limit);
+    // And at least one undo succeeded (history wasn't entirely lost)
+    REQUIRE(undoCount >= 1);
+    // No crash — reaching here means we're good
+}
+
+TEST_CASE("test_undo_returns_false_when_exhausted", "[UndoManager]")
+{
+    // Use a large enough limit so all 3 transactions are retained.
+    // Default getSizeInUnits() = 10, so 3 transactions cost 30 units.
+    juce::UndoManager manager(300, 30);
+
+    int value = 0;
+
+    // Perform a few transactions
+    for (int i = 1; i <= 3; ++i)
+    {
+        manager.beginNewTransaction();
+        manager.perform(new SetValueAction(value, i));
+    }
+
+    // Undo all available transactions
+    while (manager.canUndo())
+        manager.undo();
+
+    REQUIRE(manager.canUndo() == false);
+
+    // Calling undo() when history is exhausted must return false, not crash
+    bool result = manager.undo();
+    REQUIRE(result == false);
+
+    // Value should remain at 0 (fully undone)
+    REQUIRE(value == 0);
+}
+
+TEST_CASE("test_rapid_undo_redo_cycles_stable", "[UndoManager]")
+{
+    // 10 transactions × 10 units each = 100 units; use 1000 to keep all of them.
+    juce::UndoManager manager(1000, 30);
+
+    int value = 0;
+    const int actionCount = 10;
+
+    // Perform 10 transactions
+    for (int i = 1; i <= actionCount; ++i)
+    {
+        manager.beginNewTransaction();
+        manager.perform(new SetValueAction(value, i));
+    }
+    REQUIRE(value == actionCount);
+
+    // Perform 50 undo-all / redo-all cycles
+    for (int cycle = 0; cycle < 50; ++cycle)
+    {
+        // Undo all
+        while (manager.canUndo())
+            manager.undo();
+
+        REQUIRE(manager.canUndo() == false);
+
+        // Redo all
+        while (manager.canRedo())
+            manager.redo();
+
+        REQUIRE(manager.canRedo() == false);
+    }
+
+    // After all cycles, value should be fully redone
+    REQUIRE(value == actionCount);
+    // No more redos available
+    REQUIRE(manager.canRedo() == false);
+}
