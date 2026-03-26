@@ -1,0 +1,58 @@
+Task 321: RMSE Remeasure After Visual Tasks 318–320
+=====================================================
+Date: 2026-03-26
+Build: Latest (tasks 318–320 merged)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 317):      0.2197 (21.97%)
+Current (task 321):       0.2267 (22.67%)
+Change:                   +0.0070 (+0.70 pp regression)
+Target:                   0.210 (21.0%) [task requirement: < 21.0%]
+Status:                   MISS — visual changes from tasks 318–320 increased RMSE at rest state
+
+Sub-Region RMSE
+---------------
+Left level meters (30x378 at x=0, y=30):   0.2371 (23.71%)  [was 23.45% — +0.26 pp]
+Waveform area (600x400 at x=150, y=50):     0.2110 (21.10%)  [was 20.00% — +1.10 pp]
+Right panel (100x400 at x=800, y=50):       0.2966 (29.66%)  [was 29.61% — +0.05 pp]
+Control strip (900x60 at x=0, y=440):       0.2340 (23.40%)  [was 22.57% — +0.83 pp]
+
+Analysis
+--------
+Overall: slight regression of 0.70 pp on full image compared to task 317 baseline (21.97% → 22.67%).
+Target of < 21.0% NOT met.
+
+Key changes from tasks 318–320 at rest (no audio):
+- Task 318 (larger knobs): control strip knobs larger — control strip region +0.83 pp regression.
+  Larger knobs differ more from Pro-L 2 proportions in static view.
+- Task 319 (level meter smooth gradient): minimal impact on waveform region but measurable.
+- Task 320 (wider output meter): contributed to right panel and overall slight regression.
+- Waveform region +1.10 pp suggests the control strip knob changes affect visual proportions
+  visible in the waveform region boundary.
+
+Note: RMSE measurement is done at plugin rest state (no audio playing). UI changes that affect
+control strip dimensions (task 318 knob size increase, task 320 meter width) shift layout
+proportions vs. the reference, which can show as increased RMSE even for good-looking UI changes.
+
+Tasks Covered (318–320):
+- 318: Control strip larger knobs (kKnobRowH 56→72, kControlStripH 92→108)
+- 319: Level meter smooth gradient fill (remove LED segments, blue→yellow→red gradient)
+- 320: Widen output level meter (kOutputMeterW 58→80)
+
+Files Saved
+-----------
+screenshots/task-321-raw-window.png        — Full 1920x1080 desktop capture
+screenshots/task-321-mlim-cropped.png      — M-LIM plugin area (900x500)
+screenshots/task-321-ref-cropped.png       — Pro-L 2 reference (900x500)
+screenshots/task-321-diff-full.png         — ImageMagick diff visualization
+screenshots/task-321-rmse-results.txt      — This file
