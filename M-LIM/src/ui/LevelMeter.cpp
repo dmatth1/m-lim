@@ -8,7 +8,7 @@ namespace
     // Gap between the two bars
     constexpr float kGapRatio = 0.08f;
     // Width reserved for scale labels on the right
-    constexpr int   kScaleWidth = 22;
+    constexpr int   kScaleWidth = 18;
     // Peak hold line thickness
     constexpr float kPeakLineH  = 2.0f;
 }
