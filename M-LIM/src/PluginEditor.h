@@ -50,6 +50,7 @@ private:
     // ── Input Gain: horizontal badge slider in bottom-left of waveform ───────
     juce::Slider inputGainSlider_;
     juce::Label  inputGainValueLabel_;  // badge text showing current dB value
+    juce::Label  gainLabel_;            // static "GAIN" label below the badge
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputGainAttach_;
 
     // Peak hold state (2-second hold, then fall)

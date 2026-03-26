@@ -58,6 +58,13 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputGainValueLabel_.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (inputGainValueLabel_);
 
+    gainLabel_.setText ("GAIN", juce::dontSendNotification);
+    gainLabel_.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+    gainLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
+    gainLabel_.setJustificationType (juce::Justification::centred);
+    gainLabel_.setInterceptsMouseClicks (false, false);
+    addAndMakeVisible (gainLabel_);
+
     // Keep badge label in sync with slider
     inputGainSlider_.onValueChange = [this]
     {
@@ -218,10 +225,12 @@ void MLIMAudioProcessorEditor::resized()
 
     // Input Gain badge slider: floating in the bottom-left corner of waveform area
     // The badge rect sits on top of the waveform content (non-interactive label overlay)
+    // Leave room for the "GAIN" label (12px) + 2px gap below the badge
     const int badgeX = waveformDisplay_.getX() + 4;
-    const int badgeY = waveformDisplay_.getBottom() - kGainBadgeH - 4;
+    const int badgeY = waveformDisplay_.getBottom() - kGainBadgeH - 14 - 4;
     inputGainSlider_.setBounds     (badgeX, badgeY, kGainBadgeW, kGainBadgeH);
     inputGainValueLabel_.setBounds (badgeX, badgeY, kGainBadgeW, kGainBadgeH);
+    gainLabel_.setBounds           (badgeX, badgeY + kGainBadgeH + 2, kGainBadgeW, 12);
 }
 
 void MLIMAudioProcessorEditor::timerCallback()
