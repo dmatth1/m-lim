@@ -116,8 +116,10 @@ private:
     Oversampler      mSidechainOversampler;  // mirrors mOversampler for sidechain path
     TransientLimiter mTransientLimiter;
     LevelingLimiter  mLevelingLimiter;
-    TruePeakDetector mTruePeakL;
-    TruePeakDetector mTruePeakR;
+    TruePeakDetector mTruePeakL;        // display/metering
+    TruePeakDetector mTruePeakR;        // display/metering
+    TruePeakDetector mTruePeakEnforceL; // post-ceiling enforcement
+    TruePeakDetector mTruePeakEnforceR; // post-ceiling enforcement
     SidechainFilter  mSidechainFilter;
     DCFilter         mDCFilterL;
     DCFilter         mDCFilterR;
@@ -206,8 +208,11 @@ private:
 
     void stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock);
 
-    void stepApplyCeiling(juce::AudioBuffer<float>& buffer,
-                          int numChannels, int numSamples, float inputGain);
+    float stepApplyCeiling(juce::AudioBuffer<float>& buffer,
+                           int numChannels, int numSamples, float inputGain);
+
+    void stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
+                              int numChannels, int numSamples, float ceiling);
 
     void stepDCFilter(juce::AudioBuffer<float>& buffer,
                       int numChannels, int numSamples);

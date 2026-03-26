@@ -1430,3 +1430,58 @@ TEST_CASE("test_silence_with_8x_oversampling", "[LimiterEngine]")
         REQUIRE(peak < 1e-5f);
     }
 }
+
+// ============================================================================
+// test_true_peak_not_exceeded
+// Feeds a worst-case Nyquist-frequency alternating signal (+1, -1, ...) which
+// produces inter-sample peaks up to ~+3 dBTP after the hard clip at 0 dBFS.
+// After processing, the TruePeakDetector must report <= 1.0 + tolerance.
+// ============================================================================
+TEST_CASE("test_true_peak_not_exceeded", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);   // ceiling = 1.0 linear
+    engine.setTruePeakEnabled(true);
+
+    TruePeakDetector tpCheck;
+    tpCheck.prepare(kSampleRate);
+
+    // Run several blocks so limiters and FIR buffers are fully warmed up
+    for (int warmup = 0; warmup < 10; ++warmup)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        // Alternating +1 / -1 — worst-case Nyquist signal
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int s = 0; s < kBlockSize; ++s)
+                data[s] = (s % 2 == 0) ? 1.0f : -1.0f;
+        }
+        engine.process(buf);
+    }
+
+    // Now measure the true peak of the processed output over several blocks
+    float worstTruePeak = 0.0f;
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int s = 0; s < kBlockSize; ++s)
+                data[s] = (s % 2 == 0) ? 1.0f : -1.0f;
+        }
+        engine.process(buf);
+
+        // Measure true peak of left channel output
+        tpCheck.reset();
+        tpCheck.processBlock(buf.getReadPointer(0), kBlockSize);
+        worstTruePeak = std::max(worstTruePeak, tpCheck.getPeak());
+    }
+
+    // True peak must be within 0.5 dB of ceiling (1.0 linear)
+    // 0.5 dB tolerance = factor of ~1.059
+    INFO("Worst true peak after enforcement: " << worstTruePeak);
+    REQUIRE(worstTruePeak <= 1.059f);
+}

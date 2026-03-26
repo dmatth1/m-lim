@@ -69,6 +69,8 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     // True peak detectors at the original output rate
     mTruePeakL.prepare(sampleRate);
     mTruePeakR.prepare(sampleRate);
+    mTruePeakEnforceL.prepare(sampleRate);
+    mTruePeakEnforceR.prepare(sampleRate);
 
     // DC filters at original rate
     mDCFilterL.prepare(sampleRate);
@@ -178,8 +180,9 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     stepUpsample(buffer, upBlock, upSideBlock);
     stepRunLimiters(upBlock);
     mOversampler.downsample(buffer);
-    stepApplyCeiling(buffer, numChannels, numSamples, inputGain);
+    const float ceiling = stepApplyCeiling(buffer, numChannels, numSamples, inputGain);
     stepDCFilter(buffer, numChannels, numSamples);
+    stepEnforceTruePeak(buffer, numChannels, numSamples, ceiling);
     stepDither(buffer, numChannels, numSamples);
     stepDeltaMode(buffer, numChannels, numSamples);
     const float totalGR = juce::jmax(mTransientLimiter.getGainReduction() + mLevelingLimiter.getGainReduction(), -60.0f);
@@ -261,8 +264,8 @@ void LimiterEngine::stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock)
     mLevelingLimiter.process(mUpPtrs.data(), upChannels, upSamples, nullptr);
 }
 
-void LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
-                                      int numChannels, int numSamples, float inputGain)
+float LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
+                                       int numChannels, int numSamples, float inputGain)
 {
     const float ceiling = mUnityGain.load()
         ? (1.0f / std::max(inputGain, kDspUtilMinGain))
@@ -272,6 +275,33 @@ void LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
         float* data = buffer.getWritePointer(ch);
         for (int s = 0; s < numSamples; ++s)
             data[s] = std::max(-ceiling, std::min(ceiling, data[s]));
+    }
+    return ceiling;
+}
+
+void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
+                                         int numChannels, int numSamples, float ceiling)
+{
+    if (!mTruePeakEnabled.load())
+        return;
+
+    mTruePeakEnforceL.reset();
+    mTruePeakEnforceL.processBlock(buffer.getReadPointer(0), numSamples);
+    float tpL = mTruePeakEnforceL.getPeak();
+
+    float tpR = tpL;
+    if (numChannels > 1)
+    {
+        mTruePeakEnforceR.reset();
+        mTruePeakEnforceR.processBlock(buffer.getReadPointer(1), numSamples);
+        tpR = mTruePeakEnforceR.getPeak();
+    }
+
+    const float worstPeak = std::max(tpL, tpR);
+    if (worstPeak > ceiling)
+    {
+        const float gain = ceiling / worstPeak;
+        buffer.applyGain(0, numSamples, gain);
     }
 }
 
