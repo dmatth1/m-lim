@@ -1,0 +1,77 @@
+Task 299: RMSE Re-Measure After Visual Tasks 293–302
+=====================================================
+Date: 2026-03-26
+Build: Latest (tasks 293, 294, 295, 296, 297, 298, 300, 301, 302 merged)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome at y+64=325)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 288):  0.2570 (25.70%)
+Current (task 299):   0.2419 (24.19%)
+Change:               -0.0151 (-1.51 pp improvement)
+Target:               0.245 (24.5%) [task requirement: < 0.245]
+Status:               PASS (0.2419 < 0.245)
+
+Sub-Region RMSE
+---------------
+Left level meters (30x378 at x=0, y=30):   0.2600 (26.00%)  [was 33.36% — -7.36 pp improvement] PASS (< 0.300)
+Waveform area (600x400 at x=150, y=50):     0.2303 (23.03%)
+Right panel (100x400 at x=800, y=50):       0.2960 (29.60%)
+Control strip (900x60 at x=0, y=440):       0.2256 (22.56%)
+
+Analysis
+--------
+Overall improvement: 1.51 pp on full image since task 288 (25.70% → 24.19%).
+
+Improvements from tasks 293–302:
+- Left level meters: massive improvement from 33.36% → 26.00% (-7.36 pp)
+  Likely from task 294 (remove input meter from left layout), task 296 (level meter
+  right panel visual match), and task 297 (level meter inactive background darker)
+- Full image improved 1.51 pp — the best single-batch improvement in recent history
+- Waveform area improved (waveform gradient darkening in tasks 295/302)
+- Control strip remains good (23% range)
+- TopBar height reduction (task 301) and algorithm selector changes (task 300) helped
+
+Tasks Completed (293–302):
+- 293: ADVANCED button returned to control strip
+- 294: Input meter removed from left layout
+- 295: Waveform background gradient darkened
+- 296: Level meter right panel visual match
+- 297: Level meter inactive background darkened
+- 298: Waveform dB labels contrast increased
+- 300: Algorithm selector compact single slot (~17% larger knobs)
+- 301: TopBar height reduced 30→24 px
+- 302: Waveform background gradient further darkened
+
+Top Remaining Visual Differences
+---------------------------------
+1. RIGHT PANEL (29.60%) — Highest sub-region RMSE
+   - GR meter colors and LED segments differ from Pro-L 2
+   - Loudness panel layout still has differences
+
+2. WAVEFORM AREA (23.03%)
+   - Background gradient now much closer to reference
+   - Most remaining difference is absence of audio content during capture
+
+3. LEFT LEVEL METERS (26.00%) — Greatly improved
+   - Still above target of ~20% ideal
+   - Pro-L 2 shows active LED-segmented bars; M-LIM shows inactive state
+
+4. CONTROL STRIP (22.56%) — Good
+   - Algorithm selector now compact, knobs larger
+   - Remaining differences in button/knob appearance
+
+Files Saved
+-----------
+screenshots/task-299-raw.png           — Full 1920x1080 desktop capture
+screenshots/task-299-mlim-cropped.png  — M-LIM plugin area (900x500)
+screenshots/task-299-ref-cropped.png   — Pro-L 2 reference (900x500)
+screenshots/task-299-diff-full.png     — ImageMagick diff visualization
