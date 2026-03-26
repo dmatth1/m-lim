@@ -424,17 +424,11 @@ void ControlStrip::paint (juce::Graphics& g)
         g.drawText ("ADVANCED", rotatedR, juce::Justification::centred, false);
     }
 
-    // Draw CHANNEL LINKING section overlay (always visible — Pro-L 2 parity)
+    // "CHANNEL LINKING" label above the knobs (no surrounding box — matches Pro-L 2)
     {
         auto linkBounds = channelLinkTransientsKnob_.getBounds()
                               .getUnion (channelLinkReleaseKnob_.getBounds())
                               .expanded (4, 2);
-        g.setColour (MLIMColours::panelOverlay);
-        g.fillRoundedRectangle (linkBounds.toFloat(), 4.0f);
-        g.setColour (MLIMColours::panelBorder);
-        g.drawRoundedRectangle (linkBounds.toFloat(), 4.0f, 1.0f);
-
-        // "CHANNEL LINKING" label above the panel
         g.setColour (MLIMColours::textSecondary);
         g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
         g.drawText ("CHANNEL LINKING",
