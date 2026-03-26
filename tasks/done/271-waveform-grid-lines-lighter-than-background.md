@@ -1,4 +1,4 @@
-# Task 277: Waveform Grid Lines — Make Lighter Than Background
+# Task 271: Waveform Grid Lines — Make Lighter Than Background
 
 ## Description
 In Pro-L 2, horizontal dB grid lines in the waveform display appear as **slightly lighter
