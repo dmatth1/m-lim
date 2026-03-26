@@ -301,7 +301,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             g.drawHorizontalLine (juce::roundToInt (y), area.getX(), area.getRight());
     }
 
-    // dB overlay labels — right-aligned on the waveform right edge (Pro-L 2 style)
+    // dB overlay labels — left-aligned on the waveform left edge (Pro-L 2 style)
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
@@ -314,13 +314,13 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
                                           : juce::String (juce::roundToInt (db)) + " dB";
         const float labelW = 40.0f;
         auto labelRect = juce::Rectangle<float> (
-            area.getRight() - labelW - 4.0f,
+            area.getX() + 2.0f,
             y - 6.0f,
             labelW,
             12.0f);
-        float alpha = (gi % 2 == 0) ? 0.70f : 0.45f;
+        float alpha = 0.60f;
         g.setColour (MLIMColours::textSecondary.withAlpha (alpha));
-        g.drawText (label, labelRect, juce::Justification::centredRight, false);
+        g.drawText (label, labelRect, juce::Justification::centredLeft, false);
     }
 }
 
