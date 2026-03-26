@@ -131,19 +131,19 @@ void GainReductionMeter::drawScale (juce::Graphics& g,
     g.drawVerticalLine (juce::roundToInt (scaleArea.getX()),
                         scaleArea.getY(), scaleArea.getBottom());
 
-    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+    g.setFont (juce::Font (8.0f));
 
-    // Marks at 0, -3, -6, -9, -12, -18, -24 dB
+    // Marks at 0, -3, -6, -9, -12, -18, -24 dB (labels shown without leading minus)
     static const float kMarks[] = { 0.0f, 3.0f, 6.0f, 9.0f, 12.0f, 18.0f, 24.0f };
     for (float mark : kMarks)
     {
         if (mark > maxGRdB_) break;
         float frac = grToFrac (mark);
         float y    = scaleArea.getY() + frac * scaleArea.getHeight();
-        juce::String label = (mark == 0.0f) ? "0" : "-" + juce::String (juce::roundToInt (mark));
-        auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 2.0f,
+        juce::String label = juce::String (juce::roundToInt (mark));
+        auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 1.0f,
                                                   y - 5.0f,
-                                                  scaleArea.getWidth() - 4.0f,
+                                                  scaleArea.getWidth() - 2.0f,
                                                   10.0f);
         g.setColour (MLIMColours::textSecondary);
         g.drawText (label, labelRect, juce::Justification::centredLeft, false);

@@ -42,7 +42,7 @@ private:
     float peakGR_    = 0.0f;   // positive dB
     float maxGRdB_   = 24.0f;  // full-scale range
 
-    static constexpr int kScaleW  = 22;  // width of dB scale labels
+    static constexpr int kScaleW  = 16;  // width of dB scale labels
     static constexpr int kNumericH = 28; // height reserved for numeric readout below bar
 
     void drawBar       (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
