@@ -6,6 +6,15 @@
 #include <atomic>
 #include <limits>
 
+// SSE2 is available on all x86-64 targets and on x86 targets with /arch:SSE2 or -msse2.
+#if defined(__SSE2__) || (defined(_MSC_VER) && (defined(_M_AMD64) || defined(_M_X64) \
+    || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)))
+#  include <emmintrin.h>
+#  define MLIM_HAS_SSE2 1
+#else
+#  define MLIM_HAS_SSE2 0
+#endif
+
 /**
  * LoudnessMeter — ITU-R BS.1770-4 compliant loudness metering.
  *
@@ -78,9 +87,70 @@ private:
         void reset() noexcept { z1 = z2 = 0.0; }
     };
 
+    // -----------------------------------------------------------------------
+    // Stereo SIMD biquad: processes L and R in a single SSE2 operation.
+    // Coefficients are the same for both channels (see setupKWeightingFilters).
+    // State arrays are 16-byte aligned so __m128d loads/stores are aligned.
+    // -----------------------------------------------------------------------
+    struct alignas(16) Biquad2
+    {
+        double b0 = 1.0, b1 = 0.0, b2 = 0.0;
+        double a1 = 0.0, a2 = 0.0;
+        alignas(16) double z1[2] = {0.0, 0.0}; // z1 for [L, R]
+        alignas(16) double z2[2] = {0.0, 0.0}; // z2 for [L, R]
+
+        /** Process a stereo sample pair. Coefficients must be identical for both channels. */
+        void processStereo(double xL, double xR, double& yL, double& yR) noexcept
+        {
+            constexpr double kFix = 1e-25;
+#if MLIM_HAS_SSE2
+            const __m128d vX      = _mm_set_pd(xR, xL);        // lo=L, hi=R
+            const __m128d vZ1     = _mm_load_pd(z1);
+            const __m128d vZ2     = _mm_load_pd(z2);
+            const __m128d vB0     = _mm_set1_pd(b0);
+            const __m128d vB1     = _mm_set1_pd(b1);
+            const __m128d vB2     = _mm_set1_pd(b2);
+            const __m128d vA1     = _mm_set1_pd(a1);
+            const __m128d vA2     = _mm_set1_pd(a2);
+            const __m128d vFix    = _mm_set1_pd( kFix);
+            const __m128d vNegFix = _mm_set1_pd(-kFix);
+
+            // Direct form II transposed: y = b0*x + z1
+            const __m128d vY = _mm_add_pd(_mm_mul_pd(vB0, vX), vZ1);
+
+            // z1_new = b1*x - a1*y + z2 + kFix
+            _mm_store_pd(z1, _mm_add_pd(
+                _mm_add_pd(_mm_sub_pd(_mm_mul_pd(vB1, vX), _mm_mul_pd(vA1, vY)), vZ2),
+                vFix));
+
+            // z2_new = b2*x - a2*y - kFix
+            _mm_store_pd(z2, _mm_add_pd(
+                _mm_sub_pd(_mm_mul_pd(vB2, vX), _mm_mul_pd(vA2, vY)),
+                vNegFix));
+
+            yL = _mm_cvtsd_f64(vY);
+            yR = _mm_cvtsd_f64(_mm_unpackhi_pd(vY, vY));
+#else
+            // Scalar fallback (non-SSE2 platforms)
+            yL  = b0 * xL + z1[0];
+            z1[0] = b1 * xL - a1 * yL + z2[0] + kFix;
+            z2[0] = b2 * xL - a2 * yL - kFix;
+            yR  = b0 * xR + z1[1];
+            z1[1] = b1 * xR - a1 * yR + z2[1] + kFix;
+            z2[1] = b2 * xR - a2 * yR - kFix;
+#endif
+        }
+
+        void reset() noexcept { z1[0] = z1[1] = z2[0] = z2[1] = 0.0; }
+    };
+
     // K-weighting filter pair per channel
-    std::vector<Biquad> preFilters;   // Stage 1: high-shelf pre-filter
-    std::vector<Biquad> rlbFilters;   // Stage 2: RLB high-pass
+    std::vector<Biquad> preFilters;   // Stage 1: high-shelf pre-filter (scalar/non-stereo path)
+    std::vector<Biquad> rlbFilters;   // Stage 2: RLB high-pass (scalar/non-stereo path)
+
+    // Stereo SIMD filter pair (used when numCh == 2)
+    Biquad2 mPreFilter2;
+    Biquad2 mRlbFilter2;
 
     double mSampleRate  = 44100.0;
     int    mNumChannels = 2;

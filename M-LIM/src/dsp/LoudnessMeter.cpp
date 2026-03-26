@@ -88,6 +88,11 @@ void LoudnessMeter::setupKWeightingFilters()
 
         for (auto& f : preFilters)
             f = pre;
+
+        // Copy coefficients to stereo SIMD filter
+        mPreFilter2.b0 = pre.b0; mPreFilter2.b1 = pre.b1; mPreFilter2.b2 = pre.b2;
+        mPreFilter2.a1 = pre.a1; mPreFilter2.a2 = pre.a2;
+        mPreFilter2.reset();
     }
 
     // ------------------------------------------------------------------
@@ -109,6 +114,11 @@ void LoudnessMeter::setupKWeightingFilters()
 
         for (auto& f : rlbFilters)
             f = rlb;
+
+        // Copy coefficients to stereo SIMD filter
+        mRlbFilter2.b0 = rlb.b0; mRlbFilter2.b1 = rlb.b1; mRlbFilter2.b2 = rlb.b2;
+        mRlbFilter2.a1 = rlb.a1; mRlbFilter2.a2 = rlb.a2;
+        mRlbFilter2.reset();
     }
 }
 
@@ -141,32 +151,54 @@ void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
     const int numCh  = std::min(buffer.getNumChannels(), mNumChannels);
     const int numSmp = buffer.getNumSamples();
 
-    for (int i = 0; i < numSmp; ++i)
+    if (numCh == 2)
     {
-        // K-weight each channel and accumulate mean square
-        double samplePower = 0.0;
-        for (int ch = 0; ch < numCh; ++ch)
+        // Stereo SIMD path: process L and R simultaneously via Biquad2.
+        // On SSE2 platforms this computes both channels in parallel;
+        // on non-SSE2 platforms Biquad2::processStereo falls through to scalar.
+        for (int i = 0; i < numSmp; ++i)
         {
-            float s = buffer.getSample(ch, i);
-            s = preFilters[ch].process(s);
-            s = rlbFilters[ch].process(s);
-            samplePower += static_cast<double>(s) * s;
-        }
-        // BS.1770-4 channel weighting: equal for L/R (G_i = 1.0)
-        // Surround channels (LFE excluded) use G = 1.41; simplified here for stereo
-        mBlockPower += samplePower;
+            const double xL = static_cast<double>(buffer.getSample(0, i));
+            const double xR = static_cast<double>(buffer.getSample(1, i));
+            double yL, yR;
+            mPreFilter2.processStereo(xL, xR, yL, yR);
+            mRlbFilter2.processStereo(yL, yR, yL, yR);
+            mBlockPower += yL * yL + yR * yR;
 
-        ++mBlockAccum;
-        if (mBlockAccum >= mBlockSize)
+            ++mBlockAccum;
+            if (mBlockAccum >= mBlockSize)
+            {
+                double blockMeanSquare = mBlockPower / static_cast<double>(mBlockSize);
+                mBlockPower = 0.0;
+                mBlockAccum = 0;
+                onBlockComplete(blockMeanSquare);
+            }
+        }
+    }
+    else
+    {
+        // Scalar fallback for mono and surround (numCh != 2).
+        // BS.1770-4 channel weighting: G_i = 1.0 for L/R; simplified here for stereo.
+        for (int i = 0; i < numSmp; ++i)
         {
-            // Finish this 100 ms block.
-            // BS.1770-4: mean-square per channel is summed (not averaged) across channels.
-            // mBlockPower = Σ_channels Σ_samples x^2; divide by mBlockSize to get
-            // the channel-summed mean square z = Σ_i (1/T * Σ x_i^2).
-            double blockMeanSquare = mBlockPower / static_cast<double>(mBlockSize);
-            mBlockPower  = 0.0;
-            mBlockAccum  = 0;
-            onBlockComplete(blockMeanSquare);
+            double samplePower = 0.0;
+            for (int ch = 0; ch < numCh; ++ch)
+            {
+                float s = buffer.getSample(ch, i);
+                s = preFilters[ch].process(s);
+                s = rlbFilters[ch].process(s);
+                samplePower += static_cast<double>(s) * s;
+            }
+            mBlockPower += samplePower;
+
+            ++mBlockAccum;
+            if (mBlockAccum >= mBlockSize)
+            {
+                double blockMeanSquare = mBlockPower / static_cast<double>(mBlockSize);
+                mBlockPower  = 0.0;
+                mBlockAccum  = 0;
+                onBlockComplete(blockMeanSquare);
+            }
         }
     }
 }
