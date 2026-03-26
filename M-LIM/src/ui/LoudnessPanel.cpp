@@ -372,7 +372,7 @@ void LoudnessPanel::drawHistogram (juce::Graphics& g,
         const float labelY  = originY + totalH - normPos * totalH;
 
         // Skip if too close to the target label
-        if (std::abs (static_cast<float> (dB) - targetLUFS_) < 3.0f)
+        if (std::abs (static_cast<float> (dB) - targetLUFS_) < 0.75f)
             continue;
 
         juce::String label = (dB == 0) ? "0" : juce::String (dB);
