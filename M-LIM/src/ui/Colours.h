@@ -49,6 +49,7 @@ namespace MLIMColours
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
     const juce::Colour meterAtTarget    { 0xffFF8C00 };  // orange — at target ±2 LU
     const juce::Colour histogramHighlight{ 0xff2A2A3A }; // target level row highlight in histogram
+    const juce::Colour lufsReadoutGood  { 0xffE8C040 };  // warm golden-yellow for LUFS readout (below target)
 
     // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
     const juce::Colour controlStripTop    { 0xff3A3D4A };  // medium blue-gray (top)

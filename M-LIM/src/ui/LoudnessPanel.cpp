@@ -395,9 +395,13 @@ void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
                                       juce::Rectangle<int> bounds) const
 {
     const juce::String valStr = fmtLUFS (shortTerm_);
-    const juce::Colour valColour = (shortTerm_ < targetLUFS_)
-                                 ? MLIMColours::textPrimary
-                                 : MLIMColours::meterDanger;
+    juce::Colour valColour;
+    if (shortTerm_ >= targetLUFS_)
+        valColour = MLIMColours::meterDanger;                         // over target: red
+    else if (shortTerm_ >= targetLUFS_ - 1.0f)
+        valColour = MLIMColours::meterWarning;                        // within 1 LU of target: yellow
+    else
+        valColour = MLIMColours::lufsReadoutGood;                     // comfortably below: golden
 
     // Value in large bold font — occupies the upper 2/3 of the strip
     g.setFont (juce::Font (28.0f, juce::Font::bold));
