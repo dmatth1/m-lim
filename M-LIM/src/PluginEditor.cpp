@@ -207,6 +207,7 @@ void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
 
     inputMeter_.setPeakHold  (inputPeakL_, inputPeakR_);
     outputMeter_.setPeakHold (outputPeakL_, outputPeakR_);
+    waveformDisplay_.setPeakReadouts (inputPeakL_, inputPeakR_);
 
     // gainReduction in MeterData is negative dB (0 = no GR, -3 = 3 dB reduction)
     const float grPositive = -data.gainReduction;

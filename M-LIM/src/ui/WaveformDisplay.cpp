@@ -138,6 +138,13 @@ void WaveformDisplay::setCeiling (float dB)
     ceilingDB_ = juce::jlimit (-30.0f, 0.0f, dB);
 }
 
+void WaveformDisplay::setPeakReadouts (float leftDB, float rightDB)
+{
+    peakReadoutL_ = leftDB;
+    peakReadoutR_ = rightDB;
+    // No explicit repaint needed — timer repaints at 60fps
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 void WaveformDisplay::timerCallback()
 {
@@ -208,6 +215,7 @@ void WaveformDisplay::paint (juce::Graphics& g)
     drawOutputEnvelope (g, displayArea);
     drawPeakMarkers    (g, displayArea);
     drawScale          (g, scaleArea);
+    drawPeakReadouts   (g, displayArea);
     drawModeSelector   (g);
 }
 
@@ -232,6 +240,41 @@ void WaveformDisplay::drawModeSelector (juce::Graphics& g) const
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (textCol);
     g.drawText (label, rect, juce::Justification::centredLeft, false);
+}
+
+void WaveformDisplay::drawPeakReadouts (juce::Graphics& g,
+                                         const juce::Rectangle<float>& area) const
+{
+    // Two small boxes in top-right corner: [L: xxx dB] [R: xxx dB]
+    static constexpr float kBoxW = 60.0f;
+    static constexpr float kBoxH = 14.0f;
+    static constexpr float kGap  =  3.0f;
+
+    auto fmtPeak = [](float db) -> juce::String
+    {
+        if (db <= -96.0f) return "--- dB";
+        return juce::String (db, 1) + " dB";
+    };
+
+    juce::String lStr = fmtPeak (peakReadoutL_);
+    juce::String rStr = fmtPeak (peakReadoutR_);
+
+    auto drawBox = [&] (float x, float y, const juce::String& text, bool isClipping)
+    {
+        auto box = juce::Rectangle<float> (x, y, kBoxW, kBoxH);
+        g.setColour (MLIMColours::peakLabelBackground.withAlpha (0.85f));
+        g.fillRect (box);
+        g.setColour (MLIMColours::panelBorder);
+        g.drawRect (box, 1.0f);
+        g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+        g.setColour (isClipping ? MLIMColours::meterDanger : MLIMColours::peakLabel);
+        g.drawText (text, box.reduced (2.0f, 1.0f), juce::Justification::centredRight, false);
+    };
+
+    const float rightEdge = area.getRight() - kGap;
+    const float topY      = area.getY() + kGap;
+    drawBox (rightEdge - kBoxW,            topY, rStr, peakReadoutR_ >= -0.5f);
+    drawBox (rightEdge - kBoxW * 2 - kGap, topY, lStr, peakReadoutL_ >= -0.5f);
 }
 
 void WaveformDisplay::drawBackground (juce::Graphics& g,

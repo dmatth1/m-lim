@@ -45,6 +45,9 @@ public:
     /** Update the output ceiling reference line (dBFS, e.g. -0.1). */
     void setCeiling (float dB);
 
+    /** Update the displayed stereo peak level readouts (called from 60fps UI timer). */
+    void setPeakReadouts (float leftDB, float rightDB);
+
     /** Get the current display mode. */
     DisplayMode getDisplayMode() const noexcept { return displayMode_; }
 
@@ -89,7 +92,8 @@ private:
     /** Iterate the history in display order and invoke a callback for each frame. */
     void forEachFrame (std::function<void(int col, const Frame&, int totalCols)> cb) const;
 
-    void drawModeSelector  (juce::Graphics& g) const;
+    void drawModeSelector   (juce::Graphics& g) const;
+    void drawPeakReadouts   (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawBackground    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawCeilingLine   (juce::Graphics& g, const juce::Rectangle<float>& area,
                             const juce::Rectangle<float>& scaleArea) const;
@@ -118,6 +122,9 @@ private:
 
     static constexpr float kScaleWidth = 0.0f;    // no internal scale strip (inputMeter_ provides dB labels)
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
+
+    float peakReadoutL_ = -96.0f;
+    float peakReadoutR_ = -96.0f;
 
     mutable std::array<float, kHistorySize> mGrScratch_ {};   // scratch buffer for drawPeakMarkers
 
