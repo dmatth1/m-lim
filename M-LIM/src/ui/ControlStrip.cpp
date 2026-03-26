@@ -3,9 +3,10 @@
 namespace
 {
     // Heights for each row
-    static constexpr int kKnobRowH  = 70;
-    static constexpr int kBtnRowH   = 24;
-    static constexpr int kPadding   = 4;
+    static constexpr int kKnobRowH    = 70;
+    static constexpr int kBtnRowH     = 24;
+    static constexpr int kPadding     = 4;
+    static constexpr int kKnobLabelH  = 12;  // headroom above knob row for section labels
 
     // Knob column width (equal slices in the top row)
     static constexpr int kNumKnobs  = 7;   // algo(x2) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
@@ -421,7 +422,7 @@ void ControlStrip::paint (juce::Graphics& g)
 
     // Separator line between knob row and button row
     g.setColour (MLIMColours::panelBorder);
-    int sepY = kKnobRowH + kPadding;
+    int sepY = kKnobLabelH + kKnobRowH + kPadding;
     g.drawHorizontalLine (sepY, 0.0f, static_cast<float> (getWidth()));
 
     // Draw "STYLE" label above the algorithm selector
@@ -475,6 +476,7 @@ void ControlStrip::resized()
     outputCeilingSlider_.setBounds (rightCol.withHeight (totalH - kOutputLabelH));
 
     // ── Top row: knobs ────────────────────────────────────────────────────
+    bounds.removeFromTop (kKnobLabelH);  // headroom for "STYLE" and "CHANNEL LINKING" labels
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
     // AlgorithmSelector on far left, takes 2 knob-widths
