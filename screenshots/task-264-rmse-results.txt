@@ -1,0 +1,107 @@
+Task 264: RMSE Verification After Visual Fixes 257-263
+======================================================
+Date: 2026-03-26
+Baseline: Task 245 RMSE = 0.3146 (31.5%)
+
+Methodology
+-----------
+M-LIM Screenshot:
+  - Full virtual display (1920x1080 on Xvfb :99)
+  - Window geometry: Position=509,261, Size=908x564
+  - Crop (exclude 64px standalone chrome: title bar + audio-muted banner):
+      908x500+509+325
+  - Resized to 900x500 for comparison
+
+Reference (Pro-L 2):
+  - Source: /reference-docs/reference-screenshots/prol2-main-ui.jpg
+  - Crop: 1712x1073+97+32 (standard plugin area per task 256 spec)
+  - Resized to 900x500 for comparison
+
+Task 261 Fix Applied
+--------------------
+  Task 261 (waveform mode label hide when not hovered) was still active for
+  worker-2 but not yet committed. The fix was applied before this measurement:
+    WaveformDisplay.cpp drawModeSelector(): alpha 0.7f → 0.0f for non-hover state
+  This ensures no mode label text is visible at idle.
+
+RMSE Measurements
+-----------------
+  Full-image RMSE:
+    Absolute: 16638.4
+    Normalized: 0.2539 (25.4%)
+    Previous (task 245): 0.3146 (31.5%)
+    Improvement: -6.1 percentage points (-19.3% relative reduction)
+
+  Control Strip Only (900x130 at y=370):
+    Absolute: 14558.4
+    Normalized: 0.2221 (22.2%)
+
+  Waveform Area (900x370 at y=0):
+    Absolute: 17310
+    Normalized: 0.2641 (26.4%)
+
+  Left Level Meters (75x370):
+    Absolute: 19514
+    Normalized: 0.2978 (29.8%)
+
+  Right Panel / GR + Loudness (200x370 at x=700):
+    Absolute: 16764
+    Normalized: 0.2558 (25.6%)
+
+Target: 0.15 (15%)
+Current: 0.2539 (25.4%) — 10.4 pp above target
+
+Top Remaining Visual Differences
+---------------------------------
+1. WAVEFORM DISPLAY (primary driver, ~26% RMSE):
+   Reference shows an active audio session — blue/purple waveform fill with
+   yellow/red gain reduction overlay. M-LIM shows an empty dark waveform
+   (expected for idle standalone). This is ~60% of the plugin area. This
+   difference is structural and cannot be resolved without feeding live audio.
+
+2. LEFT LEVEL METERS (highest per-region RMSE, ~30%):
+   Despite task 257's LED-segment implementation, the meter bars still read
+   near-zero (idle state). Pro-L 2 reference shows active signal with colored
+   green→yellow→red segments. The segment count, spacing, and color gradient
+   match may need further tuning. The scale labels and gutter width differ.
+
+3. COLOR PALETTE / OVERALL BRIGHTNESS (~25% RMSE throughout):
+   Pro-L 2 uses a lighter blue-gray theme with more contrast. M-LIM's theme is
+   darker. The algorithm selector buttons, control strip background, and right-
+   panel LUFS readout area all contribute. The output slider area appears
+   significantly different in coloring.
+
+4. LOUDNESS PANEL RIGHT SIDE (~26%):
+   The LUFS readout section in M-LIM is darker with different layout spacing
+   vs. Pro-L 2's brighter gray panel. The Momentary/Short-Term/Integrated/Range
+   row heights and font sizes appear to differ.
+
+5. BOTTOM STATUS BAR (included in control strip, ~22%):
+   The status bar row (True Peak Limiting label with green underline, TP/Pause/
+   Loudness buttons at right) uses different colors/styling. The TP indicator
+   and pause button positions have been fixed per task 263, but overall bar
+   color scheme still differs.
+
+What Improved Since Task 245 (-6.1 pp)
+---------------------------------------
+- LevelMeter: LED-strip segmented appearance (task 257) — reduced uniform bar blur
+- AlgorithmSelector: button styling improvements (task 258)
+- WaveformDisplay: symmetric center-anchored rendering (task 259)
+- GainReductionMeter: removed input level overlay (task 260)
+- WaveformDisplay: mode label hidden when idle (task 261)
+- TruePeak indicator: 2px green top bar, no background fill (task 262)
+- Pause/mode buttons: moved to LoudnessPanel below LUFS (task 263)
+
+CTest Results
+-------------
+  1/1 Test MLIMTests: PASSED (3.03 sec)
+  100% tests passed, 0 tests failed out of 1
+
+Artifacts
+---------
+  screenshots/task-264-mlim-cropped.png   — M-LIM plugin crop at 900x500
+  screenshots/task-264-ref-cropped.png    — Pro-L 2 reference crop at 900x500
+  screenshots/task-264-diff-full.png      — Full-image RMSE diff overlay
+  screenshots/task-264-mlim-strip.png     — M-LIM control strip (900x130)
+  screenshots/task-264-ref-strip.png      — Reference control strip (900x130)
+  screenshots/task-264-diff-strip.png     — Control strip RMSE diff overlay
