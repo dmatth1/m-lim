@@ -99,26 +99,23 @@ void LoudnessPanel::setTarget        (float lufs) { targetLUFS_    = lufs; repai
 
 float LoudnessPanel::targetChoiceToLUFS (int choiceIndex) noexcept
 {
-    switch (choiceIndex)
-    {
-        case 0: return -9.0f;
-        case 1: return -14.0f;
-        case 2: return -23.0f;
-        case 3: return -24.0f;
-        default: return -14.0f;
-    }
+    static constexpr float kTargetLUFS[] = { -9.0f, -14.0f, -23.0f, -24.0f };
+    static constexpr int   kNumTargets   = (int) std::size (kTargetLUFS);
+
+    jassert (choiceIndex >= 0 && choiceIndex < kNumTargets);
+    return kTargetLUFS[juce::jlimit (0, kNumTargets - 1, choiceIndex)];
 }
 
 juce::String LoudnessPanel::targetChoiceLabel (int choiceIndex) noexcept
 {
-    switch (choiceIndex)
-    {
-        case 0: return "-9 (CD)";
-        case 1: return "-14 (Strm)";
-        case 2: return "-23 (EBU)";
-        case 3: return "-24 (ATSC)";
-        default: return "Custom";
-    }
+    static constexpr const char* kTargetLabels[] = {
+        "-9 (CD)", "-14 (Strm)", "-23 (EBU)", "-24 (ATSC)"
+    };
+    static constexpr int kNumTargets = (int) std::size (kTargetLabels);
+
+    if (choiceIndex < 0 || choiceIndex >= kNumTargets)
+        return "Custom";
+    return kTargetLabels[choiceIndex];
 }
 
 void LoudnessPanel::setTargetChoice (int choiceIndex)

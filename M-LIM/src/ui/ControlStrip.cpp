@@ -256,19 +256,17 @@ void ControlStrip::comboBoxChanged (juce::ComboBox* /*comboBox*/)
 void ControlStrip::updateStatusLabels()
 {
     // ── Oversampling label ─────────────────────────────────────────────────
-    const int osId = oversamplingBox_.getSelectedId();
-    juce::String osText;
-    switch (osId)
-    {
-        case 1:  osText = "Oversampling: Off"; break;
-        case 2:  osText = "Oversampling: 2x";  break;
-        case 3:  osText = "Oversampling: 4x";  break;
-        case 4:  osText = "Oversampling: 8x";  break;
-        case 5:  osText = "Oversampling: 16x"; break;
-        case 6:  osText = "Oversampling: 32x"; break;
-        default: osText = "Oversampling: Off"; break;
-    }
-    oversamplingStatusLabel_.setText (osText, juce::dontSendNotification);
+    static constexpr const char* kOversamplingLabels[] = {
+        "Oversampling: Off", "Oversampling: 2x",  "Oversampling: 4x",
+        "Oversampling: 8x",  "Oversampling: 16x", "Oversampling: 32x"
+    };
+    static constexpr int kNumOversamplingLabels = (int) std::size (kOversamplingLabels);
+
+    const int osIdx = oversamplingBox_.getSelectedId() - 1;
+    jassert (osIdx >= 0 && osIdx < kNumOversamplingLabels);
+    oversamplingStatusLabel_.setText (
+        kOversamplingLabels[juce::jlimit (0, kNumOversamplingLabels - 1, osIdx)],
+        juce::dontSendNotification);
 
     // ── Dither label ───────────────────────────────────────────────────────
     const bool ditherOn = ditherButton_.getToggleState();
@@ -278,31 +276,24 @@ void ControlStrip::updateStatusLabels()
         return;
     }
 
-    const int bitDepthId = ditherBitDepthBox_.getSelectedId();
-    const int nsId       = ditherNoiseShapingBox_.getSelectedId();
+    static constexpr const char* kBitDepthLabels[]     = { "16", "18", "20", "22", "24" };
+    static constexpr const char* kNoiseShapingChars[]  = { "B", "O", "W" };  // Basic, Optimized, Weighted
+    static constexpr int kNumBitDepthLabels    = (int) std::size (kBitDepthLabels);
+    static constexpr int kNumNoiseShapingChars = (int) std::size (kNoiseShapingChars);
 
-    juce::String bits;
-    switch (bitDepthId)
-    {
-        case 1:  bits = "16"; break;
-        case 2:  bits = "18"; break;
-        case 3:  bits = "20"; break;
-        case 4:  bits = "22"; break;
-        case 5:  bits = "24"; break;
-        default: bits = "16"; break;
-    }
+    const int bitIdx = ditherBitDepthBox_.getSelectedId() - 1;
+    const int nsIdx  = ditherNoiseShapingBox_.getSelectedId() - 1;
 
-    juce::String nsChar;
-    switch (nsId)
-    {
-        case 1:  nsChar = "B"; break;  // Basic
-        case 2:  nsChar = "O"; break;  // Optimized
-        case 3:  nsChar = "W"; break;  // Weighted
-        default: nsChar = "O"; break;
-    }
+    jassert (bitIdx >= 0 && bitIdx < kNumBitDepthLabels);
+    jassert (nsIdx  >= 0 && nsIdx  < kNumNoiseShapingChars);
 
-    ditherStatusLabel_.setText ("Dither: " + bits + " Bits (" + nsChar + ")",
-                                juce::dontSendNotification);
+    ditherStatusLabel_.setText (
+        juce::String ("Dither: ")
+            + kBitDepthLabels[juce::jlimit (0, kNumBitDepthLabels - 1, bitIdx)]
+            + " Bits ("
+            + kNoiseShapingChars[juce::jlimit (0, kNumNoiseShapingChars - 1, nsIdx)]
+            + ")",
+        juce::dontSendNotification);
 }
 
 void ControlStrip::setOutputLevel (float dBTPValue)
