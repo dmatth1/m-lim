@@ -564,6 +564,62 @@ TEST_CASE("test_setter_clamping_no_crash", "[SidechainFilter]")
 }
 
 // ---------------------------------------------------------------------------
+// test_coefficient_change_no_transient_spike
+// Processes a block at HP=200 Hz, then changes HP to 1000 Hz, processes the
+// next block, and verifies no sample in that next block exceeds 2× the input
+// amplitude (i.e. no transient spike from stale filter state).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_coefficient_change_no_transient_spike", "[SidechainFilter]")
+{
+    static constexpr int    kBlockSize   = 512;
+    static constexpr double kInputFreq   = 1000.0;  // 1 kHz sine, passes both HP settings
+    static constexpr float  kAmplitude   = 0.5f;
+    static constexpr float  kSpikeCeiling = 2.0f * kAmplitude;  // 2× input ceiling
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kBlockSize);
+
+    // Set initial HP at 200 Hz and let the filter settle.
+    filter.setHighPassFreq(200.0f);
+
+    // Process several settling blocks so the IIR delay state reaches steady-state.
+    juce::AudioBuffer<float> settleBuf(1, kBlockSize);
+    for (int block = 0; block < 20; ++block)
+    {
+        float* data = settleBuf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = kAmplitude * static_cast<float>(std::sin(kTwoPi * kInputFreq * i / kSampleRate));
+        filter.process(settleBuf);
+    }
+
+    // Now change the HP frequency — this should trigger a coefficient update
+    // and reset the filter state on the next process() call.
+    filter.setHighPassFreq(1000.0f);
+
+    // Process one block immediately after the frequency change.
+    juce::AudioBuffer<float> testBuf(1, kBlockSize);
+    float* data = testBuf.getWritePointer(0);
+    for (int i = 0; i < kBlockSize; ++i)
+        data[i] = kAmplitude * static_cast<float>(std::sin(kTwoPi * kInputFreq * i / kSampleRate));
+
+    filter.process(testBuf);
+
+    // Check that no sample in the block after the change exceeds 2× the input amplitude.
+    const float* out = testBuf.getReadPointer(0);
+    bool noSpike = true;
+    for (int i = 0; i < kBlockSize; ++i)
+    {
+        if (std::abs(out[i]) > kSpikeCeiling)
+        {
+            noSpike = false;
+            break;
+        }
+    }
+
+    REQUIRE(noSpike);
+}
+
+// ---------------------------------------------------------------------------
 // test_inplace_coefficients_correctness
 // Verifies that after the RT-safe coefficient update path (in-place writes to
 // pre-allocated Coefficients objects), the filter output is consistent with

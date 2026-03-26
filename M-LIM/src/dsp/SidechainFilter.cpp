@@ -279,4 +279,15 @@ void SidechainFilter::updateCoefficients()
             }
         }
     }
+
+    // Reset delay elements for all filters to avoid transient spikes caused
+    // by stale state accumulated under the old coefficients. reset() is O(1)
+    // and RT-safe (no allocation).
+    for (int ch = 0; ch < kMaxChannels; ++ch)
+    {
+        mHP[ch].reset();
+        mLP[ch].reset();
+        mTiltLS[ch].reset();
+        mTiltHS[ch].reset();
+    }
 }
