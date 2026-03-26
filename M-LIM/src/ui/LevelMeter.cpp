@@ -76,6 +76,13 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     g.setColour (MLIMColours::barTrackBackground);
     g.fillRect (bar);
 
+    // LED segment separator lines (matches GainReductionMeter pattern)
+    static constexpr float kSegH   = 3.0f;
+    static constexpr float kSegGap = 1.0f;
+    g.setColour (MLIMColours::barTrackBackground.brighter (0.25f));
+    for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
+        g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
+
     // --- filled level portion ---
     const float normLevel = dbToNorm (levelDB);
     const float fillH     = barH * normLevel;
