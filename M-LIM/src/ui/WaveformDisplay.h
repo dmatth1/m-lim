@@ -116,7 +116,7 @@ private:
                                     const juce::Rectangle<float>& area,
                                     std::function<float(const Frame&)> getLevelY) const;
 
-    static constexpr float kScaleWidth = 30.0f;   // pixels reserved for dB scale
+    static constexpr float kScaleWidth = 0.0f;    // no internal scale strip (inputMeter_ provides dB labels)
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
 
     mutable std::array<float, kHistorySize> mGrScratch_ {};   // scratch buffer for drawPeakMarkers
