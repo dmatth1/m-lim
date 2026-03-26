@@ -78,6 +78,11 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     g.setColour (MLIMColours::barTrackBackground);
     g.fillRect (bar);
 
+    // Segment-line texture across full bar height (filled + empty)
+    g.setColour (MLIMColours::barTrackBackground.brighter (0.35f));
+    for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
+        g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
+
     // --- filled level portion ---
     const float normLevel = dbToNorm (levelDB);
     const float fillH     = barH * normLevel;
