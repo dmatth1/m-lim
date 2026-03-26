@@ -113,6 +113,7 @@ M-LIM/
 - Lock-free FIFO for audio→UI data rather than message passing — lower latency for waveform display
 - CMake-only build (no Projucer) — modern, CI-friendly, better dependency management
 - CLAP support via clap-juce-extensions rather than native CLAP SDK — leverages existing JUCE code
+- JUCE 7.0.12 compatibility: use `juce::Font(float, int)` not `juce::FontOptions` (JUCE 8+ only)
 
 ## Interfaces
 

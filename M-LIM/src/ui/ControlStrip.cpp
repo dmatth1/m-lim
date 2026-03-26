@@ -420,7 +420,7 @@ void ControlStrip::paint (juce::Graphics& g)
     {
         auto algoB = algorithmSelector_.getBounds();
         g.setColour (MLIMColours::textSecondary);
-        g.setFont (juce::Font (juce::FontOptions().withHeight (MLIMColours::kFontSizeSmall).withStyle ("Bold")));
+        g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
         g.drawText ("STYLE",
                     algoB.getX(), algoB.getY() - 12,
                     algoB.getWidth(), 12,
@@ -441,7 +441,7 @@ void ControlStrip::paint (juce::Graphics& g)
 
         // "CHANNEL LINKING" label above the panel
         g.setColour (MLIMColours::textSecondary);
-        g.setFont (juce::Font (juce::FontOptions().withHeight (MLIMColours::kFontSizeSmall).withStyle ("Bold")));
+        g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
         g.drawText ("CHANNEL LINKING",
                     linkBounds.getX(), linkBounds.getY() - 12,
                     linkBounds.getWidth(), 12,

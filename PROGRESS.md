@@ -49,9 +49,18 @@ Tasks that can run in parallel after their dependencies:
 - After 026: task 027 (editor assembly)
 - After 027+028+029: task 030 (final verification)
 
+## Productionize Tasks (new)
+- [ ] 223 - Fix juce::FontOptions JUCE 7 API incompatibility (critical, blocks build)
+- [ ] 224 - Plugin metadata and build validation
+- [ ] 225 - Plugin lifecycle and thread safety audit
+- [ ] 226 - User-facing README
+- [ ] 227 - DSP inline documentation
+- [ ] 228 - Final productionize verification
+
 ## Notes
 - JUCE 7.x used as git submodule — workers must run `git submodule update --init --recursive`
+- JUCE 7.0.12: use `juce::Font(float, int)` not `juce::FontOptions` (JUCE 8+ only)
 - Linux build requires X11/ALSA/WebKit dev packages — see task 001 for apt-get command
 - All DSP tests use Catch2 v3 (header-only amalgamated)
-- UI components are not unit tested — visual verification by UIParityAuditor specialist
-- Reference screenshots and video frames at /reference-docs/ for UI parity checks
+- Build command: `export CCACHE_DIR=/build-cache && cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)`
+- Tests: `cd build && ctest --output-on-failure`
