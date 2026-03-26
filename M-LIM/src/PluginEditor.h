@@ -65,7 +65,7 @@ private:
     static constexpr int kControlStripH  = 108;
     static constexpr int kInputMeterW    = 30;
     static constexpr int kGRMeterW       = 12;
-    static constexpr int kOutputMeterW   = 58;
+    static constexpr int kOutputMeterW   = 80;
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
     static constexpr int kGainBadgeW     = 80;  // input gain badge width
