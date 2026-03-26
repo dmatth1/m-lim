@@ -2,6 +2,10 @@
 #include "Colours.h"
 #include "../dsp/LimiterAlgorithm.h"
 
+static constexpr const char* kAlgorithmButtonLabels[] = {
+    "Trans", "Punch", "Dyn", "Aggr", "Allrnd", "Bus", "Safe", "Modern"
+};
+
 AlgorithmSelector::AlgorithmSelector()
     : algoButtons_{ &transparentButton_, &punchyButton_, &dynamicButton_, &aggressiveButton_,
                     &allroundButton_,   &busButton_,    &safeButton_,    &modernButton_ }
@@ -27,7 +31,7 @@ AlgorithmSelector::AlgorithmSelector()
     // Configure each button and wire its click to the ComboBox.
     for (int i = 0; i < kNumAlgorithms; ++i)
     {
-        algoButtons_[i]->setButtonText(kAlgorithmNames[i]);
+        algoButtons_[i]->setButtonText(kAlgorithmButtonLabels[i]);
         algoButtons_[i]->setClickingTogglesState(false);
 
         const int idx = i;
