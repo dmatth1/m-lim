@@ -1336,3 +1336,97 @@ TEST_CASE("test_stage2_no_gr_on_signal_at_ceiling", "[LimiterEngine]")
     INFO("Min peak: " << minPeak << "  floor: " << floorLin);
     REQUIRE(minPeak >= floorLin);
 }
+
+// ============================================================================
+// test_silence_with_2x_oversampling
+// Silence in → silence out must hold with 2x oversampling active.
+// After 10 warm-up blocks the oversampling filter state should have settled;
+// the remaining 40 blocks must produce peak output < 1e-5 on both channels.
+// ============================================================================
+TEST_CASE("test_silence_with_2x_oversampling", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(1);   // 1 = 2x
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    // Warm-up: allow filter state to settle
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+    }
+
+    // Measured blocks: output must be near silence
+    for (int i = 0; i < 40; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+
+        const float peak = maxAbsValue(buf);
+        INFO("2x oversampling block " << i << " peak: " << peak);
+        REQUIRE(peak < 1e-5f);
+    }
+}
+
+// ============================================================================
+// test_silence_with_4x_oversampling
+// Same as above but with 4x oversampling.
+// ============================================================================
+TEST_CASE("test_silence_with_4x_oversampling", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(2);   // 2 = 4x
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+    }
+
+    for (int i = 0; i < 40; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+
+        const float peak = maxAbsValue(buf);
+        INFO("4x oversampling block " << i << " peak: " << peak);
+        REQUIRE(peak < 1e-5f);
+    }
+}
+
+// ============================================================================
+// test_silence_with_8x_oversampling
+// Same as above but with 8x oversampling.
+// ============================================================================
+TEST_CASE("test_silence_with_8x_oversampling", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(3);   // 3 = 8x
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+    }
+
+    for (int i = 0; i < 40; ++i)
+    {
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        buf.clear();
+        engine.process(buf);
+
+        const float peak = maxAbsValue(buf);
+        INFO("8x oversampling block " << i << " peak: " << peak);
+        REQUIRE(peak < 1e-5f);
+    }
+}
