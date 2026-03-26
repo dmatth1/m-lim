@@ -284,6 +284,100 @@ TEST_CASE("test_concurrent_data_integrity", "[lockfree_fifo]")
 }
 
 // ============================================================
+// Non-power-of-two capacity rounds up to next power of two
+// ============================================================
+
+TEST_CASE("test_non_power_of_two_capacity_rounds_up", "[lockfree_fifo]")
+{
+    // Each of these is non-power-of-two; capacity() must return a power of two > requested
+    for (int requested : {3, 5, 6, 7})
+    {
+        LockFreeFIFO<MeterData> fifo(requested);
+        const int cap = fifo.capacity();
+
+        // cap must be >= requested
+        CHECK(cap >= requested);
+        // cap must be a power of two
+        CHECK((cap & (cap - 1)) == 0);
+        // cap must be strictly greater than requested (since requested is not a power of two)
+        CHECK(cap > requested);
+    }
+}
+
+// ============================================================
+// Fill, drain, fill again — exercises ring-buffer wraparound
+// ============================================================
+
+TEST_CASE("test_fill_drain_fill_wraparound", "[lockfree_fifo]")
+{
+    // capacity=4 rounds to 4 (already a power of two); ring holds 3 items max
+    LockFreeFIFO<MeterData> fifo(4);
+    REQUIRE(fifo.capacity() == 4);
+
+    // --- First fill: push 3 items with distinct sentinel values ---
+    for (int i = 0; i < 3; ++i)
+    {
+        MeterData d;
+        d.inputLevelL = 10.0f + static_cast<float>(i);  // 10, 11, 12
+        REQUIRE(fifo.push(d));
+    }
+    // FIFO should now be full
+    CHECK(fifo.isFull());
+
+    // --- Drain all 3 ---
+    for (int i = 0; i < 3; ++i)
+    {
+        MeterData d;
+        REQUIRE(fifo.pop(d));
+        CHECK(d.inputLevelL == Catch::Approx(10.0f + static_cast<float>(i)));
+    }
+    CHECK(fifo.isEmpty());
+
+    // --- Second fill: head/tail pointers have advanced; this crosses the ring boundary ---
+    for (int i = 0; i < 3; ++i)
+    {
+        MeterData d;
+        d.inputLevelL = 20.0f + static_cast<float>(i);  // 20, 21, 22
+        REQUIRE(fifo.push(d));
+    }
+    CHECK(fifo.isFull());
+
+    // --- Drain second batch: verify no corruption at wraparound ---
+    for (int i = 0; i < 3; ++i)
+    {
+        MeterData d;
+        REQUIRE(fifo.pop(d));
+        CHECK(d.inputLevelL == Catch::Approx(20.0f + static_cast<float>(i)));
+    }
+    CHECK(fifo.isEmpty());
+}
+
+// ============================================================
+// Capacity=1 construction — degenerate edge case
+// ============================================================
+
+TEST_CASE("test_capacity_one_construction", "[lockfree_fifo]")
+{
+    // nextPowerOfTwo(1) == 2, so capacity() should return 2; ring holds 1 item
+    LockFreeFIFO<MeterData> fifo(1);
+    const int cap = fifo.capacity();
+
+    CHECK(cap >= 1);
+    // capacity must be a power of two
+    CHECK((cap & (cap - 1)) == 0);
+
+    // Must be able to push and pop at least one item without crash
+    MeterData in;
+    in.inputLevelL = 42.0f;
+    REQUIRE(fifo.push(in));
+
+    MeterData out;
+    REQUIRE(fifo.pop(out));
+    CHECK(out.inputLevelL == Catch::Approx(42.0f));
+    CHECK(fifo.isEmpty());
+}
+
+// ============================================================
 // isEmpty / isFull transitions
 // ============================================================
 
