@@ -1,0 +1,87 @@
+Task 245: RMSE Verification — Crop and Compare Plugin Window Only
+=================================================================
+Date: 2026-03-26
+Method: Cropped plugin window comparison (no desktop background)
+
+Methodology
+-----------
+M-LIM Screenshot:
+  - Full virtual display (1920x1080 on Xvfb :99)
+  - Window geometry detected with xdotool: Position=509,261, Size=908x564
+  - Plugin editor content (below JUCE standalone chrome): y-offset=65px
+  - Crop: 908x499+509+326 (excludes title bar + audio mute banner)
+  - Resized to 900x500 for comparison
+
+Reference (Pro-L 2):
+  - Source: /reference-docs/reference-screenshots/prol2-main-ui.jpg (1900x1184)
+  - Plugin area crop: 1712x1073+97+32 (per task specification)
+  - Resized to 900x500 for comparison
+
+RMSE Measurement
+----------------
+  Absolute RMSE: 20619.5
+  Normalized RMSE: 0.3146 (31.5%)
+  Target threshold: 0.15 (15%)
+  Result: ABOVE TARGET
+
+  Note: This is an improvement over task-238's full-screenshot RMSE of 37.1%,
+  confirming that cropping removes ~5.6% of the RMSE caused by the black desktop.
+
+Top 3 Visual Differences
+-------------------------
+1. WAVEFORM DISPLAY AREA (largest contributor):
+   The reference shows Pro-L 2 with an active audio session — colorful waveform
+   with blue/purple amplitude fill and yellow/red gain reduction overlay. M-LIM
+   shows a flat, empty dark waveform with no audio activity. This difference
+   affects the entire main display area (~60% of the plugin area) and is the
+   primary driver of the high RMSE. This is expected for a static screenshot
+   comparison: active audio content cannot be reproduced in a standalone idle state.
+
+2. COLOR PALETTE AND THEME:
+   Pro-L 2 uses a blue/purple color scheme with light gray UI elements, brighter
+   highlights, and warmer accent colors. M-LIM uses a darker overall theme with
+   darker gray controls and different accent colors (e.g., blue "True Peak Limiting"
+   button vs Pro-L 2's gradient style). The bottom control strip and knob appearance
+   contribute significantly to per-pixel RMSE.
+
+3. LEVEL METERS AND LOUDNESS PANEL (right side):
+   The reference shows active level meters with colored bars (green/yellow/red),
+   active LUFS readouts with numeric values, and a bright output slider. M-LIM
+   shows inactive meters with a yellow -14 LUFS target line but no signal.
+   The loudness panel in M-LIM uses a darker styling compared to Pro-L 2's
+   lighter gray panel. The GR meter on the right side also differs in proportions
+   and color scheme.
+
+Additional Observations
+-----------------------
+- Structural layout matches well: top bar (A/B, Copy, undo/redo), waveform area,
+  level meters, algorithm selector (STYLE), knobs (LOOKAHEAD/ATTACK/RELEASE),
+  CHANNEL LINKING section, ADVANCED button, OUTPUT slider, and status bar.
+- The algorithm selector shows 8 buttons (Trans, Punch, Dyn, Aggr / Allrnd, Bus,
+  Safe, Mod) matching Pro-L 2's style selector layout.
+- The dB scale labels on the waveform are present and positioned correctly.
+- The bottom status bar (MIDI Learn, True Peak Limiting, Oversampling, Dither)
+  matches the Pro-L 2 equivalent section.
+
+Conclusion
+----------
+The structural and layout parity with Pro-L 2 is good. The RMSE of 31.5% is
+primarily driven by the waveform content difference (empty vs active audio) and
+color theme differences. To achieve ≤15% RMSE:
+  - Feed audio into the plugin to populate the waveform display
+  - Further align the color palette with Pro-L 2's blue/gray theme
+  - Improve level meter color zones to match Pro-L 2's gradient-style bars
+  - Align the overall UI brightness/contrast with the reference
+
+Artifacts Saved
+---------------
+  screenshots/task-245-initial.png        — Full 1920x1080 virtual display screenshot
+  screenshots/task-245-mlim-window.png    — M-LIM window crop (908x564, full window)
+  screenshots/task-245-mlim-cropped.png   — M-LIM plugin editor crop at 900x500
+  screenshots/task-245-ref-cropped.png    — Pro-L 2 reference crop at 900x500
+  screenshots/task-245-diff.png           — ImageMagick RMSE diff overlay
+
+CTest Results
+-------------
+  1/1 Test MLIMTests: PASSED (4.68 sec)
+  100% tests passed, 0 tests failed out of 1
