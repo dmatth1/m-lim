@@ -124,7 +124,7 @@ void GainReductionMeter::drawPeakTick (juce::Graphics& g,
 void GainReductionMeter::drawScale (juce::Graphics& g,
                                      const juce::Rectangle<float>& scaleArea) const
 {
-    g.setColour (juce::Colour (0xff1E1E1E));
+    g.setColour (MLIMColours::background);
     g.fillRect (scaleArea);
 
     g.setColour (MLIMColours::panelBorder);
@@ -153,7 +153,7 @@ void GainReductionMeter::drawScale (juce::Graphics& g,
 void GainReductionMeter::drawNumeric (juce::Graphics& g,
                                        const juce::Rectangle<float>& numArea) const
 {
-    g.setColour (juce::Colour (0xff1A1A1A));
+    g.setColour (MLIMColours::peakLabelBackground);
     g.fillRect (numArea);
 
     // Current GR
