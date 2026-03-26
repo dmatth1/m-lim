@@ -79,8 +79,13 @@ void GainReductionMeter::paint (juce::Graphics& g)
     auto scaleArea = bounds.removeFromRight  (static_cast<float> (kScaleW));
     auto barArea   = bounds;
 
-    // Background
-    g.setColour (MLIMColours::displayBackground);
+    // Background — use waveform gradient to blend with adjacent WaveformDisplay
+    juce::ColourGradient grBg = juce::ColourGradient::vertical (
+        MLIMColours::displayGradientTop,
+        barArea.getY(),
+        MLIMColours::displayGradientBottom,
+        barArea.getBottom());
+    g.setGradientFill (grBg);
     g.fillRect (barArea);
 
     drawBar (g, barArea);
@@ -96,9 +101,16 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
     static constexpr float kSegH   = 3.0f;
     static constexpr float kSegGap = 1.0f;
 
-    // 1. Background track
-    g.setColour (MLIMColours::barTrackBackground);
-    g.fillRect (barArea);
+    // 1. Background track — use waveform gradient so bar blends with display area
+    {
+        juce::ColourGradient barBg = juce::ColourGradient::vertical (
+            MLIMColours::displayGradientTop,
+            barArea.getY(),
+            MLIMColours::displayGradientBottom,
+            barArea.getBottom());
+        g.setGradientFill (barBg);
+        g.fillRect (barArea);
+    }
 
     // 2. Segment-separator texture across full bar height (LED strip look even at idle)
     g.setColour (MLIMColours::barTrackBackground.brighter (0.35f));
