@@ -1,4 +1,4 @@
-# Task 273: ADVANCED Button — Narrow Vertical Strip with Rotated Text
+# Task 279: ADVANCED Button — Narrow Vertical Strip with Rotated Text
 
 ## Description
 In Pro-L 2 (clearly visible in prol2-features.jpg and v1-0003), the "ADVANCED" control is

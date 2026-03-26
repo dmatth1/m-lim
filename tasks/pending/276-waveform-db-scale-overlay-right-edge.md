@@ -1,4 +1,4 @@
-# Task 270: Waveform dB Scale Labels — Overlay on Right Edge (Pro-L 2 Style)
+# Task 276: Waveform dB Scale Labels — Overlay on Right Edge (Pro-L 2 Style)
 
 ## Description
 In Pro-L 2, the dB scale labels ("0 dB", "-3 dB", "-6 dB", ..., "-30 dB") appear as

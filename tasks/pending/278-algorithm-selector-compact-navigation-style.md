@@ -1,4 +1,4 @@
-# Task 272: Algorithm Selector — Compact "‹ Name ›" Navigation Style
+# Task 278: Algorithm Selector — Compact "‹ Name ›" Navigation Style
 
 ## Description
 Pro-L 2's STYLE selector (visible in prol2-features.jpg, v1-0016, v1-0018, v1-0020) uses

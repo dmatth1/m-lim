@@ -1,7 +1,7 @@
-# Task 275: RMSE Re-Measure After Tasks 270–274
+# Task 281: RMSE Re-Measure After Tasks 276–280
 
 ## Description
-After the visual parity improvements from tasks 270–274 are complete
+After the visual parity improvements from tasks 276–280 are complete
 (dB scale overlay, grid line color, algorithm selector, ADVANCED strip, control strip height),
 measure the updated RMSE to quantify progress and identify remaining top contributors.
 
@@ -18,7 +18,7 @@ measure the updated RMSE to quantify progress and identify remaining top contrib
    - Left level meters: 30×378 at x=0 (adjusted for new kInputMeterW=30)
    - Right panel (GR + Loudness): 200×378 at x=700
 8. Document all RMSE values, list top remaining visual differences.
-9. Save results to `screenshots/task-275-rmse-results.txt`.
+9. Save results to `screenshots/task-281-rmse-results.txt`.
 
 Baseline: task 268 full-image RMSE = 0.2659 (26.6%). Target: 0.15 (15%).
 
@@ -32,10 +32,10 @@ None
 Read: `Scripts/ui-test-helper.sh` — helper functions
 Read: `/reference-docs/reference-screenshots/prol2-main-ui.jpg` — reference
 Read: `screenshots/task-268-rmse-results.txt` — baseline to compare against
-Create: `screenshots/task-275-rmse-results.txt` — new measurement results
+Create: `screenshots/task-281-rmse-results.txt` — new measurement results
 
 ## Acceptance Criteria
-- [ ] Run: `cat screenshots/task-275-rmse-results.txt` → Expected: file exists with full-image and sub-region RMSE values
+- [ ] Run: `cat screenshots/task-281-rmse-results.txt` → Expected: file exists with full-image and sub-region RMSE values
 - [ ] Run: `cmake --build build -j$(nproc) 2>&1 | tail -3` → Expected: build succeeds
 - [ ] Run: `cd build && ctest --output-on-failure 2>&1 | tail -3` → Expected: all tests pass
 
@@ -73,7 +73,7 @@ compare -metric RMSE /tmp/mlim-wave.png /tmp/ref-wave.png /tmp/diff-wave.png 2>&
 stop_app
 ```
 
-Save screenshots: task-275-mlim-cropped.png, task-275-ref-cropped.png, task-275-diff-full.png
+Save screenshots: task-281-mlim-cropped.png, task-281-ref-cropped.png, task-281-diff-full.png
 
 ## Dependencies
-Requires tasks 270, 271, 272, 273, 274
+Requires tasks 276, 277, 278, 279, 280

@@ -1,4 +1,4 @@
-# Task 274: Control Strip Height Reduction (120 → 92 px)
+# Task 280: Control Strip Height Reduction (120 → 92 px)
 
 ## Description
 Pro-L 2's control strip is significantly more compact than M-LIM's current 120 px.
