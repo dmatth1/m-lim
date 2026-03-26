@@ -140,6 +140,17 @@ void MLIMLookAndFeel::drawButtonBackground (juce::Graphics& g,
 {
     const juce::Rectangle<float> bounds = button.getLocalBounds().toFloat();
 
+    // True Peak status button: transparent background, green top bar when on
+    if (button.getComponentID() == "truePeakStatus")
+    {
+        if (button.getToggleState())
+        {
+            g.setColour (juce::Colour (0xff44CC44));
+            g.fillRect (bounds.getX(), bounds.getY(), bounds.getWidth(), 2.5f);
+        }
+        return;
+    }
+
     juce::Colour fillColour = MLIMColours::displayBackground;
     if (shouldDrawButtonAsDown)
         fillColour = MLIMColours::accentBlue.darker (0.3f);

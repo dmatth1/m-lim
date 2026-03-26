@@ -161,14 +161,15 @@ void ControlStrip::setupStatusBar()
 
     // ── True Peak Limiting toggle (directly APVTS-attached) ──
     truePeakLimitingButton_.setClickingTogglesState (true);
+    truePeakLimitingButton_.setComponentID ("truePeakStatus");
     truePeakLimitingButton_.setColour (juce::TextButton::buttonColourId,
                                        juce::Colours::transparentBlack);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonOnColourId,
-                                       MLIMColours::accentBlue.withAlpha (0.15f));
+                                       juce::Colours::transparentBlack);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOffId,
                                        MLIMColours::textSecondary);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOnId,
-                                       MLIMColours::buttonOnText);
+                                       MLIMColours::textPrimary);
 
     // ── Oversampling status label ──────────────────────────────────────────
     oversamplingStatusLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium));
