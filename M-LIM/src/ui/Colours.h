@@ -11,6 +11,8 @@ namespace MLIMColours
     const juce::Colour widgetBackground         { 0xff2A2A2A };  // combo boxes, tooltips, etc.
     const juce::Colour peakLabelBackground      { 0xff1A1A1A };  // dark background behind peak labels
     const juce::Colour topBarPresetBackground   { 0xff232323 };  // slightly lighter background for preset label
+    const juce::Colour accentDarkBackground     { 0xff1E1E2A };  // dark navy tint for accent buttons
+    const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
 
     // Waveform display gradient colours
     const juce::Colour displayGradientTop   { 0xff141828 };  // dark navy
@@ -45,6 +47,8 @@ namespace MLIMColours
     const juce::Colour meterSafe        { 0xff4D88CC };  // medium cyan-blue (matches Pro-L 2 reference level bar colour)
     const juce::Colour meterWarning     { 0xffFFD54F };  // yellow
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
+    const juce::Colour meterAtTarget    { 0xffFF8C00 };  // orange — at target ±2 LU
+    const juce::Colour histogramHighlight{ 0xff2A2A3A }; // target level row highlight in histogram
 
     // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
     const juce::Colour controlStripTop    { 0xff3A3D4A };  // medium blue-gray (top)

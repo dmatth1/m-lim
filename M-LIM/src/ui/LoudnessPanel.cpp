@@ -9,7 +9,7 @@
 LoudnessPanel::LoudnessPanel()
 {
     resetButton_.setClickingTogglesState (false);
-    resetButton_.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff2A2A2A));
+    resetButton_.setColour (juce::TextButton::buttonColourId,  MLIMColours::widgetBackground);
     resetButton_.setColour (juce::TextButton::textColourOffId, MLIMColours::textSecondary);
     resetButton_.onClick = [this]
     {
@@ -21,7 +21,7 @@ LoudnessPanel::LoudnessPanel()
     // Target selector button
     targetButton_.setButtonText (targetChoiceLabel (targetChoice_));
     targetButton_.setClickingTogglesState (false);
-    targetButton_.setColour (juce::TextButton::buttonColourId,  juce::Colour (0xff1E1E2A));
+    targetButton_.setColour (juce::TextButton::buttonColourId,  MLIMColours::accentDarkBackground);
     targetButton_.setColour (juce::TextButton::textColourOffId, MLIMColours::accentBlue);
     targetButton_.onClick = [this]
     {
@@ -299,7 +299,7 @@ void LoudnessPanel::drawHistogram (juce::Graphics& g,
         // Target level highlight (slightly lighter background)
         if (std::abs (binLUFS - targetLUFS_) < kHistStep * 0.5f)
         {
-            g.setColour (juce::Colour (0xff2A2A3A));
+            g.setColour (MLIMColours::histogramHighlight);
             g.fillRect (juce::Rectangle<float> (originX, barY, barAreaW, barH));
         }
 
@@ -382,7 +382,7 @@ juce::Colour LoudnessPanel::histogramBarColour (float binLUFS,
     if (diff >= 0.0f)
         return MLIMColours::meterDanger;                          // above target: red
     else if (diff >= -2.0f)
-        return juce::Colour (0xffFF8C00);                         // at target ±2: orange
+        return MLIMColours::meterAtTarget;                        // at target ±2: orange
     else if (diff >= -6.0f)
         return MLIMColours::meterWarning;                         // approaching: yellow
     else
@@ -453,7 +453,7 @@ void LoudnessPanel::drawBar (juce::Graphics& g,
                               float targetFrac) const
 {
     // Background track
-    g.setColour (juce::Colour (0xff222222));
+    g.setColour (MLIMColours::barTrackBackground);
     g.fillRoundedRectangle (barBounds, 2.0f);
 
     if (fill <= 0.0f) return;
