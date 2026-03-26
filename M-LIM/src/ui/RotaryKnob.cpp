@@ -103,13 +103,35 @@ void RotaryKnob::paint (juce::Graphics& g)
                                             (int)knobSize, (int)labelH),
                       juce::Justification::centred, 1);
 
-    // Value + suffix text BELOW the knob (cached; updated only on value/suffix change)
+    // Value row: [min label] [current value] [max label]
+    const float valueRowY = (float)(int)(knobY + knobSize + 2);
+    const float valueRowH = valueH;
+    const float colW = knobSize / 3.0f;
+
+    // Min label (left third)
+    g.setColour (MLIMColours::textSecondary.withAlpha (0.65f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall - 1.0f));
+    juce::String minStr = juce::String (slider.getMinimum(), 0) + " " + suffixText;
+    g.drawFittedText (minStr,
+                      juce::Rectangle<int> ((int)knobX, (int)valueRowY, (int)colW, (int)valueRowH),
+                      juce::Justification::centredLeft, 1);
+
+    // Current value (centre third)
     g.setColour (MLIMColours::textPrimary);
     g.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     g.drawFittedText (cachedValueStr_,
-                      juce::Rectangle<int> ((int)knobX, (int)(knobY + knobSize + 2),
-                                            (int)knobSize, (int)valueH),
+                      juce::Rectangle<int> ((int)(knobX + colW), (int)valueRowY,
+                                            (int)colW, (int)valueRowH),
                       juce::Justification::centred, 1);
+
+    // Max label (right third)
+    g.setColour (MLIMColours::textSecondary.withAlpha (0.65f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall - 1.0f));
+    juce::String maxStr = juce::String (slider.getMaximum(), 0) + " " + suffixText;
+    g.drawFittedText (maxStr,
+                      juce::Rectangle<int> ((int)(knobX + 2.0f * colW), (int)valueRowY,
+                                            (int)colW, (int)valueRowH),
+                      juce::Justification::centredRight, 1);
 }
 
 void RotaryKnob::resized()
