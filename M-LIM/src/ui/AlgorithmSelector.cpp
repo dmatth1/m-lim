@@ -3,7 +3,7 @@
 #include "../dsp/LimiterAlgorithm.h"
 
 static constexpr const char* kAlgorithmButtonLabels[] = {
-    "Trans", "Punch", "Dyn", "Aggr", "Allrnd", "Bus", "Safe", "Modern"
+    "Trans", "Punch", "Dyn", "Aggr", "Allrnd", "Bus", "Safe", "Mod"
 };
 
 AlgorithmSelector::AlgorithmSelector()
