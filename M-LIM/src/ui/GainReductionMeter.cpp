@@ -92,22 +92,40 @@ void GainReductionMeter::paint (juce::Graphics& g)
 void GainReductionMeter::drawBar (juce::Graphics& g,
                                    const juce::Rectangle<float>& barArea) const
 {
+    // Constants matching LevelMeter segment style
+    static constexpr float kSegH   = 3.0f;
+    static constexpr float kSegGap = 1.0f;
+
+    // 1. Background track
+    g.setColour (MLIMColours::barTrackBackground);
+    g.fillRect (barArea);
+
+    // 2. Segment-separator texture across full bar height (LED strip look even at idle)
+    g.setColour (MLIMColours::barTrackBackground.brighter (0.35f));
+    const float barTop = barArea.getY();
+    const float barH   = barArea.getHeight();
+    for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
+        g.fillRect (barArea.getX(), sy + kSegH, barArea.getWidth(), kSegGap);
+
     if (currentGR_ <= 0.0f) return;
 
-    float fillH = grToFrac (currentGR_) * barArea.getHeight();
-    auto filled = barArea.withHeight (fillH);   // top-anchored
+    // 3. Filled level portion as discrete segments (top-anchored: 0 dB GR = top)
+    const float fillH  = grToFrac (currentGR_) * barH;
+    const float fillBot = barTop + fillH;
 
-    // Gradient: slightly brighter at top where GR is highest
-    auto grColour    = MLIMColours::gainReduction;
-    auto grColourDim = MLIMColours::gainReduction.darker (0.3f);
-    juce::ColourGradient grad (
-        grColour,
-        filled.getTopLeft(),
-        grColourDim,
-        filled.getBottomLeft(),
-        false);
-    g.setGradientFill (grad);
-    g.fillRect (filled);
+    // GR bar uses a single colour (red) consistent with waveform GR overlay
+    auto drawSegments = [&] (juce::Colour colour, float top, float bot)
+    {
+        if (top >= bot) return;
+        g.setColour (colour);
+        for (float sy = top; sy < bot; sy += kSegH + kSegGap)
+        {
+            float segBot = juce::jmin (sy + kSegH, bot);
+            if (segBot > sy)
+                g.fillRect (barArea.getX(), sy, barArea.getWidth(), segBot - sy);
+        }
+    };
+    drawSegments (MLIMColours::gainReduction, barTop, fillBot);
 }
 
 void GainReductionMeter::drawPeakTick (juce::Graphics& g,
