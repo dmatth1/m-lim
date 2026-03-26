@@ -909,3 +909,57 @@ TEST_CASE("test_momentary_lufs_ring_buffer", "[LoudnessMeter]")
     CHECK(lufsA > -22.5f);
     CHECK(lufsA < -19.0f);
 }
+
+// ---------------------------------------------------------------------------
+// test_lra_relative_gate_excludes_quiet_section
+//
+// Validates that the EBU R128 relative gate (-20 LU below the ungated mean
+// of abs-gated windows) is applied in computeLRA(). Without the relative
+// gate, a very quiet section (well below the loud section) would be included
+// in the 10th-percentile tail of the histogram, inflating the LRA.
+//
+// Signal design:
+//   - 15 s of a loud tone at -18 dBFS (~-20 LUFS integrated, stereo)
+//   - 15 s of a very quiet tone at -58 dBFS (~-60 LUFS, above abs gate -70)
+//
+// The quiet section is ~40 LU below the loud section, so it is more than
+// 20 LU below the ungated mean and must be excluded by the relative gate.
+// With the relative gate applied, LRA must be ≤ loudness difference between
+// the two sections (≤ ~40 LU), and in practice should be much smaller since
+// the quiet section is excluded entirely.
+//
+// Without the relative gate, the LRA would be approximately the difference
+// between the two sections (~40 LU), clearly failing the ≤ 20 LU check.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_relative_gate_excludes_quiet_section", "[LoudnessMeter]")
+{
+    constexpr double fs           = 48000.0;
+    constexpr double kLoudAmpDBFS = -18.0;
+    constexpr double kQuietAmpDBFS= -58.0;
+    constexpr double kLoudSecs    = 15.0;
+    constexpr double kQuietSecs   = 15.0;
+
+    const float loudAmp  = static_cast<float>(std::pow(10.0, kLoudAmpDBFS  / 20.0));
+    const float quietAmp = static_cast<float>(std::pow(10.0, kQuietAmpDBFS / 20.0));
+
+    LoudnessMeter meter;
+    meter.prepare(fs, 2);
+
+    // Feed 15 s loud, then 15 s quiet.
+    feedSine(meter, 1000.0, loudAmp,  fs, kLoudSecs);
+    feedSine(meter, 1000.0, quietAmp, fs, kQuietSecs);
+
+    const float lra = meter.getLoudnessRange();
+    INFO("LRA = " << lra << " LU");
+
+    REQUIRE(std::isfinite(lra));
+    REQUIRE(lra > 0.0f);  // some range must be measured
+
+    // The loud section occupies most of the signal. Without the relative gate,
+    // the quiet section at ~-60 LUFS would be ~40 LU below the loud section
+    // (~-20 LUFS), inflating LRA to ~40 LU. With the relative gate (-20 LU
+    // from ungated mean), the quiet section is excluded, and LRA should
+    // reflect only the variation within the loud section (which is a steady
+    // sine, so very small), giving LRA well below 20 LU.
+    CHECK(lra <= 20.0f);
+}

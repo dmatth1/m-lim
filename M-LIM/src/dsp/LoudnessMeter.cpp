@@ -10,7 +10,8 @@
 static constexpr double kPi              = 3.14159265358979323846;
 static constexpr double kLufsCorrectiondB = -0.691; // BS.1770-4: 10*log10(Σ G_i * z_i) - 0.691
 static constexpr double kAbsGateLUFS     = -70.0;   // absolute gate threshold
-static constexpr double kRelGateOffset   = -10.0;   // relative gate = ungated mean - 10 LU
+static constexpr double kRelGateOffset   = -10.0;   // relative gate = ungated mean - 10 LU (integrated)
+static constexpr double kLraRelGateOffset = -20.0;  // relative gate = ungated mean - 20 LU (LRA, EBU R128 §3.3)
 static constexpr double kBS1770PreFilterFreqHz  = 1681.974450955533;  // ITU-R BS.1770-4 pre-filter Fc
 static constexpr double kBS1770RLBHighPassFreqHz = 38.13547087602444; // ITU-R BS.1770-4 RLB HP Fc
 
@@ -331,20 +332,51 @@ float LoudnessMeter::computeLRA()
     if (n < kShortTermBlocks)
         return 0.0f;
 
-    // Rebuild LRA histogram from current history (O(n)).
-    mLraHisto.fill(0);
-    int validCount = 0;
-
+    // Two-pass gating per EBU R128 §3.3 / EBU Tech 3342 §4.4.
     const int numWin3s = n - kShortTermBlocks + 1;
+
+    // Pass 1: compute the ungated mean power of windows above the absolute gate (-70 LUFS).
+    // Use mWindowPowers as scratch storage (pre-allocated, no heap alloc).
+    const double absGateLinear = lufsToLinear(static_cast<float>(kAbsGateLUFS));
+    double sumAbsGated = 0.0;
+    int    cntAbsGated = 0;
+
     for (int i = 0; i < numWin3s; ++i)
     {
         const double sum = mPrefixSums[static_cast<size_t>(i + kShortTermBlocks)]
                          - mPrefixSums[static_cast<size_t>(i)];
-        const float l = powerToLUFS(sum / kShortTermBlocks);
-
-        // Gate: above absolute threshold per EBU R128 §4.6 / ITU-R BS.1770-4 (-70 LUFS)
-        if (l > static_cast<float>(kAbsGateLUFS))
+        const double power = sum / kShortTermBlocks;
+        mWindowPowers[static_cast<size_t>(i)] = power;
+        if (power > absGateLinear)
         {
+            sumAbsGated += power;
+            ++cntAbsGated;
+        }
+    }
+
+    // Derive the relative gate: ungated mean - 20 LU (EBU R128 §3.3).
+    // If nothing passed the absolute gate, return 0 (no measurable range).
+    double relGateLinear = 0.0;
+    if (cntAbsGated > 0)
+    {
+        const float ungatedMeanLUFS = powerToLUFS(sumAbsGated / cntAbsGated);
+        relGateLinear = lufsToLinear(ungatedMeanLUFS + static_cast<float>(kLraRelGateOffset));
+    }
+    else
+    {
+        return 0.0f;
+    }
+
+    // Pass 2: populate the histogram with windows that pass BOTH gates.
+    mLraHisto.fill(0);
+    int validCount = 0;
+
+    for (int i = 0; i < numWin3s; ++i)
+    {
+        const double power = mWindowPowers[static_cast<size_t>(i)];
+        if (power > absGateLinear && power > relGateLinear)
+        {
+            const float l = powerToLUFS(power);
             int bin = static_cast<int>((l - kLraHistoMinLUFS) / kLraBinWidth);
             bin = std::clamp(bin, 0, kLraHistoBins - 1);
             ++mLraHisto[static_cast<size_t>(bin)];
