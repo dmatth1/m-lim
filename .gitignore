@@ -39,6 +39,8 @@ _CPack_Packages/
 # Screenshots (keep placeholder only)
 screenshots/*.png
 screenshots/*.jpg
+M-LIM/screenshots/*.png
+M-LIM/screenshots/*.jpg
 
 # OS files
 *.swp
