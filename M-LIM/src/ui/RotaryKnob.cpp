@@ -99,8 +99,8 @@ void RotaryKnob::paint (juce::Graphics& g)
     g.setColour (MLIMColours::textSecondary);
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
     g.drawFittedText (labelText,
-                      juce::Rectangle<int> ((int)knobX, (int)bounds.getY(),
-                                            (int)knobSize, (int)labelH),
+                      juce::Rectangle<int> ((int)bounds.getX(), (int)bounds.getY(),
+                                            (int)bounds.getWidth(), (int)labelH),
                       juce::Justification::centred, 1);
 
     // Value row: [min label] [current value] [max label]
