@@ -157,13 +157,14 @@ void ControlStrip::setupStatusBar()
 {
     // ── MIDI Learn button ──────────────────────────────────────────────────
     styleStatusButton (midiLearnButton_);
+    midiLearnButton_.setColour (juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
 
     // ── True Peak Limiting toggle (directly APVTS-attached) ──
     truePeakLimitingButton_.setClickingTogglesState (true);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonColourId,
-                                       MLIMColours::buttonBackground);
+                                       juce::Colours::transparentBlack);
     truePeakLimitingButton_.setColour (juce::TextButton::buttonOnColourId,
-                                       MLIMColours::buttonOnBackground);
+                                       MLIMColours::accentBlue.withAlpha (0.15f));
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOffId,
                                        MLIMColours::textSecondary);
     truePeakLimitingButton_.setColour (juce::TextButton::textColourOnId,
