@@ -476,6 +476,37 @@ TEST_CASE("test_32bit_depth_quantization_minimal_noise", "[Dither]")
         REQUIRE(std::abs(signal[i] - 0.5f) < 1e-6f);
 }
 
+TEST_CASE("test_noise_shaping_dither_not_cancelled", "[Dither]")
+{
+    // With second-order noise shaping (mode=2) and a DC input at 0.5 * LSB (half a
+    // quantization step), TPDF dither enables the signal to be reproduced on average.
+    // If the noise shaper incorrectly includes the dither in the error term it feeds
+    // back, it will partially cancel the dither at low frequencies, shifting the mean
+    // output below the true input value.
+    //
+    // Correct behaviour (Vanderkooy & Lipshitz 1984): mean output ≈ input ± 0.01 LSB.
+
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2); // second-order weighted
+
+    const float step     = std::pow(2.0f, 1.0f - 16.0f);
+    const float halfStep = 0.5f * step; // 0.5 LSB — sub-quantisation-step DC level
+
+    const int numSamples = 10000;
+    std::vector<float> signal(numSamples, halfStep);
+    d.process(signal.data(), numSamples);
+
+    double sum = 0.0;
+    for (int i = 0; i < numSamples; ++i)
+        sum += static_cast<double>(signal[i]);
+    const float meanOutput = static_cast<float>(sum / numSamples);
+
+    // Mean output must be within 0.01 LSB of the input (0.5 LSB).
+    REQUIRE(std::abs(meanOutput - halfStep) < 0.01f * step);
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.

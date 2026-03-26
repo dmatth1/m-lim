@@ -92,8 +92,10 @@ void Dither::process(float* data, int numSamples)
         const float r2 = (mRandom.nextFloat() - 0.5f) * step;
         const float dither = r1 + r2;
 
-        // Pre-quantisation value: input + dither + noise-shaping feedback.
-        float v = data[i] + dither;
+        // Pre-quantisation value: input + noise-shaping feedback (no dither yet).
+        // Dither is added to the pre-quantisation value but must NOT be included
+        // in the error signal — per Vanderkooy & Lipshitz 1984 / AES17.
+        float v = data[i];
 
         if (mNoiseShaping == 1)
         {
@@ -106,10 +108,11 @@ void Dither::process(float* data, int numSamples)
             v -= mCoeff1 * mError1 + mCoeff2 * mError2;
         }
 
-        // Quantise to nearest step.
-        const float quantized = std::round(v / step) * step;
+        // Quantise to nearest step, with dither added at quantisation time.
+        const float quantized = std::round((v + dither) / step) * step;
 
-        // Update error history for noise shaping.
+        // Error is relative to the undithered+feedback value.
+        // e[n] = Q(v + d) - v  (dither is not corrected by feedback)
         const float error = quantized - v;
         mError2 = mError1;
         mError1 = error;
