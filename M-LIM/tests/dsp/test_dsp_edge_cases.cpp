@@ -451,6 +451,15 @@ TEST_CASE("test_very_high_sample_rate", "[DSPEdgeCases]")
         f.process(buf, 64);
         for (int i = 0; i < 64; ++i)
             REQUIRE(std::isfinite(buf[i]));
+
+        // DC removal correctness: at 192 kHz the 5 Hz cutoff needs ~12000 additional
+        // samples to reduce a 0.5f DC signal to below 0.1f. Process more samples
+        // and verify the last few are near zero, confirming DC is being attenuated.
+        const int kSettleN = 14000;
+        std::vector<float> dcBuf(kSettleN, 0.5f);
+        f.process(dcBuf.data(), kSettleN);
+        for (int i = kSettleN - 5; i < kSettleN; ++i)
+            CHECK(std::abs(dcBuf[i]) < 0.1f);
     }
 
     SECTION("Dither 192kHz")

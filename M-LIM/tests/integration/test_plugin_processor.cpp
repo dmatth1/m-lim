@@ -49,6 +49,18 @@ static float peakLevel (const juce::AudioBuffer<float>& buf)
     return peak;
 }
 
+/** Returns true if every sample in the buffer is a finite (non-NaN, non-Inf) value. */
+static bool allFinite (const juce::AudioBuffer<float>& buf)
+{
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* data = buf.getReadPointer (ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            if (!std::isfinite (data[i])) return false;
+    }
+    return true;
+}
+
 // ============================================================================
 // test_process_block_no_crash
 // Process 1000 blocks through the plugin processor without crashing.
@@ -67,8 +79,9 @@ TEST_CASE("test_process_block_no_crash", "[PluginProcessor]")
         proc.processBlock (buffer, midiBuffer);
     }
 
-    // If we reach here without crashing, the test passes.
-    REQUIRE (true);
+    // Output must be finite and non-silent (limiter should not silence a 0.5-amplitude sine)
+    CHECK (allFinite (buffer));
+    CHECK (peakLevel (buffer) > 0.001f);
 }
 
 // ============================================================================

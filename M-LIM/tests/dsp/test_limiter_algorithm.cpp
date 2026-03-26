@@ -1,5 +1,6 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "dsp/LimiterAlgorithm.h"
+#include <cmath>
 
 static constexpr int NUM_ALGORITHMS = 8;
 
@@ -19,8 +20,17 @@ TEST_CASE ("test_all_algorithms_have_params", "[LimiterAlgorithm]")
     for (int i = 0; i < NUM_ALGORITHMS; ++i)
     {
         AlgorithmParams p = getAlgorithmParams (allAlgorithms[i]);
-        // If we reach here without crashing, params were returned
+        REQUIRE (std::isfinite (p.kneeWidth));
         REQUIRE (p.kneeWidth >= 0.0f);
+        REQUIRE (p.kneeWidth <= 12.0f);
+        REQUIRE (std::isfinite (p.saturationAmount));
+        REQUIRE (p.saturationAmount >= 0.0f);
+        REQUIRE (p.saturationAmount <= 1.0f);
+        REQUIRE (std::isfinite (p.transientAttackCoeff));
+        REQUIRE (p.transientAttackCoeff >= 0.0f);
+        REQUIRE (p.transientAttackCoeff <= 1.0f);
+        REQUIRE (std::isfinite (p.releaseShape));
+        REQUIRE (std::isfinite (p.dynamicEnhance));
     }
 }
 
