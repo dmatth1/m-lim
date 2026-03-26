@@ -1,0 +1,65 @@
+VisualParityAuditor Audit — RMSE Results (Pre-tasks 304-309)
+============================================================
+Date: 2026-03-26
+Build: Post-tasks 303 (same as task 299 baseline — no code changes since)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excludes 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Current RMSE (same as task 303 confirmed)
+------------------------------------------
+Full image:                           0.2419 (24.19%)
+Left level meters (30x378 at 0,30):  0.2600 (26.00%)
+Waveform (600x400 at 150,50):         0.2303 (23.03%)
+Right panel (100x400 at 800,50):      0.2960 (29.60%)
+Control strip (900x60 at 0,440):      0.2256 (22.56%)
+
+Key Visual Differences Identified
+-----------------------------------
+1. WAVEFORM AREA (23.03%)
+   - Background top too blue/light vs reference warm-neutral top
+     Reference top: #6B696F (107,105,111) | M-LIM: #717E89 (113,126,137)
+   - Background center under-saturated in blue channel
+     Reference center: #646E92 (100,110,146) | M-LIM: #626D7D (98,109,125)
+   - dB overlay labels at 75% opacity too visible (should be ~35%)
+
+2. RIGHT PANEL (29.60%)
+   - GR meter uses solid red; reference uses warm yellow→orange→red gradient
+   - At (820, 200): reference shows warm amber #BB9F52 (histogram bars active)
+     M-LIM shows flat background #2B2729 (no audio = no histogram content)
+
+3. LEFT LEVEL METERS (26.00%)
+   - meterSafe = #4D88CC (vivid blue) vs reference ~#81818A (muted neutral gray-blue)
+     Measured from v1-0011.png at safe zone (y≈230): reference = (129,130,138)
+     M-LIM vivid blue creates large colour distance from reference
+
+4. CONTROL STRIP (22.56%)
+   - Knob faces are dark blue-gray (#35323B measured, face ≈ #505A74 avg)
+     vs reference near-white gray (#BCBCC6 centre, #74798B edge)
+   - Very large colour gap (>100 units) in the most prominent control strip elements
+
+Tasks Created
+--------------
+304: GR meter warm color gradient (yellow→orange→red zones)
+305: Waveform background gradient (neutral top #686468, blue-saturated bottom #506090)
+306: Waveform dB overlay labels opacity (0.75 → 0.35)
+307: Level meter meterSafe color (0xff4D88CC → 0xff6879A0)
+308: RMSE remeasure after 304-309
+309: Rotary knob face lighter gray (knobFaceHighlight→#CCCCCD6, knobFaceShadow→#707888)
+
+Expected RMSE Improvements
+----------------------------
+Task 304 (GR colors): ~0.3 pp improvement in right panel
+Task 305 (waveform gradient): ~1.0-2.0 pp improvement in waveform area
+Task 306 (label opacity): ~0.3 pp improvement in waveform area
+Task 307 (meterSafe color): ~1.0-1.5 pp improvement in left meters
+Task 309 (knob face): ~0.5-1.0 pp improvement in control strip
+
+Total estimated improvement: ~3.1-5.1 pp
+Estimated post-fix RMSE: 19.1%-21.1%
