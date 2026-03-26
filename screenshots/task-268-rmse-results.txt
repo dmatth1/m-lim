@@ -1,0 +1,113 @@
+Task 268: RMSE Re-Measure After Tasks 265–267
+=============================================
+Date: 2026-03-26
+Baseline: Task 264 full-image RMSE = 0.2539 (25.4%)
+Target: 0.15 (15%)
+
+Methodology
+-----------
+M-LIM Screenshot:
+  - Full virtual display (1920x1080 on Xvfb :99)
+  - Window geometry: Position=509,261, Size=908x564
+  - Crop (exclude 64px standalone chrome: title bar + audio-muted banner):
+      908x500+509+325
+  - Resized to 900x500 for comparison
+
+Reference (Pro-L 2):
+  - Source: /reference-docs/reference-screenshots/prol2-main-ui.jpg
+  - Crop: 1712x1073+97+32 (standard plugin area)
+  - Resized to 900x500 for comparison
+
+Fixes Applied Since Task 264 (tasks 265–267 + 269)
+---------------------------------------------------
+  Task 265: Fixed waveform background gradient colours to better match Pro-L 2
+  Task 266: Adjusted control strip gradient brightness
+  Task 267: Removed internal dB scale strip from WaveformDisplay (kScaleWidth 30→0)
+  Task 269: Updated LoudnessPanel background to medium dark gray matching Pro-L 2
+
+RMSE Measurements
+-----------------
+  Full-image RMSE:
+    Absolute: 17420.9
+    Normalized: 0.2659 (26.6%)
+    Previous (task 264): 0.2539 (25.4%)
+    Change: +1.2 percentage points (slight regression)
+
+  Control Strip Only (900x130 at y=370):
+    Absolute: 15838.9
+    Normalized: 0.2417 (24.2%)
+    Previous (task 264): 0.2221 (22.2%)
+    Change: +2.0 percentage points
+
+  Waveform Area (900x370 at y=0):
+    Absolute: 17943.6
+    Normalized: 0.2738 (27.4%)
+    Previous (task 264): 0.2641 (26.4%)
+    Change: +1.0 percentage points
+
+  Left Level Meters (75x370):
+    Absolute: 19612.2
+    Normalized: 0.2993 (29.9%)
+    Previous (task 264): 0.2978 (29.8%)
+    Change: +0.1 percentage points (essentially unchanged)
+
+  Right Panel / GR + Loudness (200x370 at x=700):
+    Absolute: 15394.2
+    Normalized: 0.2349 (23.5%)
+    Previous (task 264): 0.2558 (25.6%)
+    Change: -2.1 percentage points (improvement from LoudnessPanel fix)
+
+Analysis
+--------
+  The overall RMSE has slightly regressed from 25.4% to 26.6% (+1.2 pp) despite
+  the visual improvements. The right panel improved by 2.1 pp (driven by task 269
+  LoudnessPanel background fix), but this was offset by slight regressions in the
+  waveform and control strip areas. Reasons for the regression:
+
+  1. The gradient/color changes in tasks 265–267 bring colors closer to Pro-L 2
+     subjectively, but RMSE is sensitive to exact pixel values. The reference shows
+     Pro-L 2 with live audio playing (blue/purple waveform, active meters), whereas
+     M-LIM is idle — this structural difference dominates the score.
+
+  2. Removing the internal dB scale strip (task 267) changed layout widths in the
+     waveform area, potentially shifting pixels slightly.
+
+  The target (0.15 / 15%) remains unmet. Current: 0.2659 (26.6%), 11.6 pp above target.
+
+Top Remaining Visual Differences
+---------------------------------
+1. WAVEFORM DISPLAY (primary driver, ~27% RMSE):
+   Reference shows active audio session — blue/purple waveform fill with yellow/red
+   gain reduction overlay and active playback. M-LIM shows empty dark waveform (idle
+   standalone state). This structural difference is unavoidable without live audio and
+   accounts for the majority of the RMSE in the waveform region.
+
+2. LEFT LEVEL METERS (highest per-region RMSE, ~30%):
+   Meter bars read near-zero (idle state). Pro-L 2 reference shows active signal with
+   colored green→yellow→red LED segments. Scale label fonts, gutter width, and
+   segment color gradient matching may need further refinement.
+
+3. CONTROL STRIP BACKGROUND (~24% RMSE):
+   Despite the gradient fix (task 266), the control strip still differs from the
+   reference in exact color tone and button/knob layout. The algorithm selector
+   dropdown, output ceiling knob, and LUFS target display all contribute.
+
+4. OVERALL COLOR PALETTE / BRIGHTNESS:
+   Pro-L 2 uses a lighter blue-gray theme with more contrast than M-LIM's current
+   theme. The plugin still appears darker overall than the reference.
+
+5. LOUDNESS PANEL (~24% right panel RMSE, improved):
+   The LoudnessPanel background fix (task 269) improved this area by 2.1 pp. The
+   LUFS readout row heights, font sizes, and number display colors still differ
+   from the reference.
+
+CTest Results
+-------------
+  1/1 Test MLIMTests: PASSED (3.01 sec)
+  100% tests passed, 0 tests failed out of 1
+
+Artifacts
+---------
+  screenshots/task-268-mlim-cropped.png   — M-LIM plugin crop at 900x500
+  screenshots/task-268-ref-cropped.png    — Pro-L 2 reference crop at 900x500
+  screenshots/task-268-diff-full.png      — Full-image RMSE diff overlay
