@@ -1,9 +1,9 @@
 # Task 303: RMSE Re-Measure After Tasks 294, 296, 301, 302
 
 ## Description
-After visual parity tasks 294 (remove left input meter), 296 (level meter right panel), 301 (topbar
-height reduction), and 302 (waveform gradient further darken) are complete, measure updated RMSE to
-quantify progress and identify next improvements. Note: task 293 (ADVANCED button) is already done.
+After visual parity tasks 294 (remove left input meter), 301 (topbar height reduction), and 302
+(waveform gradient further darken) are complete, measure updated RMSE to quantify progress and
+identify next improvements. Note: tasks 293, 296, 298 already done.
 
 **Steps:**
 1. Build latest code.
@@ -56,4 +56,4 @@ compare -metric RMSE /tmp/mlim-900.png /tmp/ref-900.png /tmp/diff-full.png 2>&1
 ```
 
 ## Dependencies
-Requires tasks 294, 296, 301, 302
+Requires tasks 294, 301, 302
