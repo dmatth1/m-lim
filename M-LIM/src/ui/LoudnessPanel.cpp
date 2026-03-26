@@ -377,13 +377,13 @@ juce::Colour LoudnessPanel::histogramBarColour (float binLUFS,
     const float diff = binLUFS - targetLUFS;   // positive = louder than target
 
     if (diff >= 0.0f)
-        return MLIMColours::meterDanger;                          // above target: red
+        return MLIMColours::meterWarning;                         // above target: yellow
     else if (diff >= -2.0f)
         return MLIMColours::meterAtTarget;                        // at target ±2: orange
     else if (diff >= -6.0f)
-        return MLIMColours::meterWarning;                         // approaching: yellow
+        return MLIMColours::lufsReadoutGood;                      // approaching: warm golden
     else
-        return MLIMColours::meterSafe.withAlpha (0.85f);           // below target: steel blue
+        return MLIMColours::lufsReadoutGood.withAlpha (0.65f);    // below target: warm golden (dimmer)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
