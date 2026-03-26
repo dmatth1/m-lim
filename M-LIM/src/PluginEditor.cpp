@@ -25,21 +25,6 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (loudnessPanel_);
     addAndMakeVisible (controlStrip_);
 
-    // ── Advanced toggle button (full-height left-edge strip) ─────────────────
-    advancedButton_.setButtonText ("");
-    advancedButton_.setClickingTogglesState (true);
-    advancedButton_.setColour (juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::textColourOffId,  juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::textColourOnId,   juce::Colours::transparentBlack);
-    addAndMakeVisible (advancedButton_);
-
-    advancedButton_.onClick = [this]
-    {
-        isAdvancedExpanded_ = advancedButton_.getToggleState();
-        repaint();
-    };
-
     // ── Input Gain badge slider (bottom-left corner of waveform) ─────────────
     inputGainSlider_.setSliderStyle (juce::Slider::LinearHorizontal);
     inputGainSlider_.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -172,32 +157,6 @@ void MLIMAudioProcessorEditor::wireCallbacks()
 void MLIMAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff1a1a1a));
-
-    // Draw ADVANCED button as narrow vertical strip with rotated text
-    {
-        auto advB = advancedButton_.getBounds();
-        juce::Graphics::ScopedSaveState ss (g);
-        g.addTransform (juce::AffineTransform::rotation (
-            -juce::MathConstants<float>::halfPi,
-            (float) advB.getCentreX(), (float) advB.getCentreY()));
-
-        // Rotated rect: same centre, width/height swapped
-        auto rotatedR = juce::Rectangle<float> (
-            (float) advB.getCentreX() - advB.getHeight() / 2.0f,
-            (float) advB.getCentreY() - advB.getWidth() / 2.0f,
-            (float) advB.getHeight(),
-            (float) advB.getWidth());
-
-        // Background fill
-        g.setColour (isAdvancedExpanded_ ? MLIMColours::accentBlue.withAlpha (0.7f)
-                                         : MLIMColours::algoButtonInactive);
-        g.fillRoundedRectangle (rotatedR, 3.0f);
-
-        // Text
-        g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
-        g.setColour (isAdvancedExpanded_ ? MLIMColours::textPrimary : MLIMColours::textSecondary);
-        g.drawText ("ADVANCED", rotatedR, juce::Justification::centred, false);
-    }
 }
 
 void MLIMAudioProcessorEditor::resized()
@@ -208,9 +167,6 @@ void MLIMAudioProcessorEditor::resized()
     // Full-width strips at top and bottom
     topBar_.setBounds       (bounds.removeFromTop    (kTopBarH));
     controlStrip_.setBounds (bounds.removeFromBottom (kControlStripH));
-
-    // ADVANCED toggle strip: full-height vertical strip on the far left
-    advancedButton_.setBounds (bounds.removeFromLeft (kAdvancedBtnW));
 
     // Input level meter on the LEFT edge
     inputMeter_.setBounds (bounds.removeFromLeft (kInputMeterW));

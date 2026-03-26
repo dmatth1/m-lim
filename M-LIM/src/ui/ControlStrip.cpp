@@ -12,6 +12,8 @@ namespace
     static constexpr int kNumKnobs  = 7;   // algo(x2) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
     // Width reserved for the output ceiling vertical slider on the far right
     static constexpr int kOutputSliderW = 40;
+    // Width of the ADVANCED toggle strip (right of knobs, left of output slider)
+    static constexpr int kAdvancedBtnW  = 18;
     // Label height above the output ceiling slider
     static constexpr int kOutputLabelH  = 12;
 
@@ -68,6 +70,20 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     outputCeilingLabel_.setJustificationType (juce::Justification::centred);
     outputCeilingLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
     outputCeilingLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
+
+    // ── ADVANCED toggle button (narrow vertical strip) ────────────────────
+    advancedButton_.setButtonText ("");
+    advancedButton_.setClickingTogglesState (true);
+    advancedButton_.setColour (juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
+    advancedButton_.setColour (juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+    advancedButton_.setColour (juce::TextButton::textColourOffId,  juce::Colours::transparentBlack);
+    advancedButton_.setColour (juce::TextButton::textColourOnId,   juce::Colours::transparentBlack);
+    addAndMakeVisible (advancedButton_);
+    advancedButton_.onClick = [this]
+    {
+        isAdvancedExpanded_ = advancedButton_.getToggleState();
+        repaint();
+    };
 
     // ── Setup buttons, combo boxes, and status bar ─────────────────────────
     setupButtons();
@@ -392,6 +408,32 @@ void ControlStrip::paint (juce::Graphics& g)
                     linkBounds.getWidth(), 12,
                     juce::Justification::centred, false);
     }
+
+    // Draw ADVANCED button as narrow vertical strip with rotated text
+    {
+        auto advB = advancedButton_.getBounds();
+        juce::Graphics::ScopedSaveState ss (g);
+        g.addTransform (juce::AffineTransform::rotation (
+            -juce::MathConstants<float>::halfPi,
+            (float) advB.getCentreX(), (float) advB.getCentreY()));
+
+        // Rotated rect: same centre, width/height swapped
+        auto rotatedR = juce::Rectangle<float> (
+            (float) advB.getCentreX() - advB.getHeight() / 2.0f,
+            (float) advB.getCentreY() - advB.getWidth() / 2.0f,
+            (float) advB.getHeight(),
+            (float) advB.getWidth());
+
+        // Background fill
+        g.setColour (isAdvancedExpanded_ ? MLIMColours::accentBlue.withAlpha (0.7f)
+                                         : MLIMColours::algoButtonInactive);
+        g.fillRoundedRectangle (rotatedR, 3.0f);
+
+        // Text
+        g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
+        g.setColour (isAdvancedExpanded_ ? MLIMColours::textPrimary : MLIMColours::textSecondary);
+        g.drawText ("ADVANCED", rotatedR, juce::Justification::centred, false);
+    }
 }
 
 void ControlStrip::resized()
@@ -411,12 +453,17 @@ void ControlStrip::resized()
                                           kOutputSliderW, 16);
     outputCeilingSlider_.setBounds (rightCol.withHeight (totalH - kOutputLabelH));
 
+    // ── ADVANCED strip: narrow vertical strip to the right of the knobs ──
+    auto advancedCol = bounds.removeFromRight (kAdvancedBtnW);
+
     // ── Top row: knobs ────────────────────────────────────────────────────
     bounds.removeFromTop (kKnobLabelH);  // headroom for "STYLE" and "CHANNEL LINKING" labels
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
+    // Position ADVANCED button in the knob-row portion of the reserved column
+    advancedButton_.setBounds (advancedCol.withTrimmedTop (kKnobLabelH).withHeight (kKnobRowH));
+
     // 7 equal knob slots: 2 (algo) + 1 (lookahead) + 1 (attack) + 1 (release) + 1 (cl-transients) + 1 (cl-release)
-    // (ADVANCED button moved to PluginEditor's left-edge strip — freed space used by knobs)
     int knobW = knobRow.getWidth() / 7;
     algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
 

@@ -53,6 +53,10 @@ private:
                                          juce::Slider::TextBoxBelow };
     juce::Label  outputCeilingLabel_;
 
+    // ── ADVANCED toggle: narrow vertical strip to the right of the knobs ─────
+    juce::TextButton advancedButton_;
+    bool             isAdvancedExpanded_ { false };
+
     // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
     juce::ComboBox   oversamplingBox_;
     juce::TextButton ditherButton_      { "DITHER" };

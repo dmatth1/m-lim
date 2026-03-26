@@ -43,10 +43,6 @@ private:
     LoudnessPanel       loudnessPanel_;
     ControlStrip        controlStrip_;
 
-    // ── Advanced toggle: full-height vertical strip on the far left ──────────
-    juce::TextButton advancedButton_;
-    bool             isAdvancedExpanded_ { false };
-
     // ── Input Gain: horizontal badge slider in bottom-left of waveform ───────
     juce::Slider inputGainSlider_;
     juce::Label  inputGainValueLabel_;  // badge text showing current dB value
@@ -67,7 +63,6 @@ private:
     static constexpr int kDefaultHeight  = 500;
     static constexpr int kTopBarH        = 30;
     static constexpr int kControlStripH  = 92;
-    static constexpr int kAdvancedBtnW   = 18;
     static constexpr int kInputMeterW    = 30;
     static constexpr int kGRMeterW       = 50;
     static constexpr int kOutputMeterW   = 38;
