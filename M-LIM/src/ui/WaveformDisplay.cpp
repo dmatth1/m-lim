@@ -268,24 +268,13 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
     float y    = area.getY() + frac * area.getHeight();
     y = juce::jlimit (area.getY(), area.getBottom(), y);
 
-    // Dashed ceiling line: subtle white with moderate alpha
+    // Solid ceiling line
     const juce::Colour lineColour = MLIMColours::waveformCeilingLine;
-    const float dashLen  = 6.0f;
-    const float gapLen   = 4.0f;
     const float lineX0   = area.getX();
     const float lineX1   = area.getRight();
 
     g.setColour (lineColour);
-    float x = lineX0;
-    bool drawing = true;
-    while (x < lineX1)
-    {
-        float segEnd = std::min (x + (drawing ? dashLen : gapLen), lineX1);
-        if (drawing)
-            g.drawLine (x, y, segEnd, y, 1.0f);
-        x = segEnd;
-        drawing = !drawing;
-    }
+    g.drawLine (lineX0, y, lineX1, y, 1.5f);
 
     // Small ceiling label on the right edge of scale area
     juce::String label = juce::String (ceilingDB_, 1) + " dB";
