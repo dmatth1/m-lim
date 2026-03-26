@@ -298,80 +298,53 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
     g.drawText (label, labelRect, juce::Justification::centredLeft, false);
 }
 
-void WaveformDisplay::drawOutputFill (juce::Graphics& g,
-                                       const juce::Rectangle<float>& area) const
+void WaveformDisplay::drawFilledWaveformPath (juce::Graphics& g,
+                                               juce::Colour colour,
+                                               const juce::Rectangle<float>& area,
+                                               std::function<float(const Frame&)> getY,
+                                               bool closeAtTop) const
 {
     if (frameCount_ == 0) return;
 
     juce::Path path;
     bool first = true;
+    const float anchorY = closeAtTop ? area.getY() : area.getBottom();
 
     forEachFrame ([&] (int col, const Frame& f, int totalCols)
     {
         float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
-        float y = levelToY (f.outputLevel, area);
-        if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
+        float y = getY (f);
+        if (first) { path.startNewSubPath (x, anchorY); first = false; }
         path.lineTo (x, y);
     });
 
-    path.lineTo (area.getRight(), area.getBottom());
+    path.lineTo (area.getRight(), anchorY);
     path.closeSubPath();
 
-    g.setColour (MLIMColours::outputWaveform);
+    g.setColour (colour);
     g.fillPath (path);
+}
+
+void WaveformDisplay::drawOutputFill (juce::Graphics& g,
+                                       const juce::Rectangle<float>& area) const
+{
+    drawFilledWaveformPath (g, MLIMColours::outputWaveform, area,
+        [&] (const Frame& f) { return levelToY (f.outputLevel, area); });
 }
 
 void WaveformDisplay::drawInputFill (juce::Graphics& g,
                                       const juce::Rectangle<float>& area) const
 {
-    if (frameCount_ == 0) return;
-
-    juce::Path path;
-    bool first = true;
-
-    forEachFrame ([&] (int col, const Frame& f, int totalCols)
-    {
-        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
-        float y = levelToY (f.inputLevel, area);
-        if (first) { path.startNewSubPath (x, area.getBottom()); first = false; }
-        path.lineTo (x, y);
-    });
-
-    path.lineTo (area.getRight(), area.getBottom());
-    path.closeSubPath();
-
-    g.setColour (MLIMColours::inputWaveform);
-    g.fillPath (path);
+    drawFilledWaveformPath (g, MLIMColours::inputWaveform, area,
+        [&] (const Frame& f) { return levelToY (f.inputLevel, area); });
 }
 
 void WaveformDisplay::drawGainReduction (juce::Graphics& g,
                                           const juce::Rectangle<float>& area) const
 {
-    if (frameCount_ == 0) return;
-
-    juce::Path path;
-    bool first = true;
-
-    forEachFrame ([&] (int col, const Frame& f, int totalCols)
-    {
-        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
-        float h = grToHeight (f.gainReduction, area);
-        float y = area.getY() + h;
-
-        if (first)
-        {
-            path.startNewSubPath (x, area.getY());
-            first = false;
-        }
-        path.lineTo (x, y);
-    });
-
-    // Close along the top edge
-    path.lineTo (area.getRight(), area.getY());
-    path.closeSubPath();
-
-    g.setColour (MLIMColours::gainReduction.withAlpha (0.82f));  // bright red, semi-transparent
-    g.fillPath (path);
+    drawFilledWaveformPath (g, MLIMColours::gainReduction.withAlpha (0.82f), area,
+        [&] (const Frame& f) { return area.getY() + grToHeight (f.gainReduction, area); },
+        true /* closeAtTop */);
 }
 
 void WaveformDisplay::drawOutputEnvelope (juce::Graphics& g,

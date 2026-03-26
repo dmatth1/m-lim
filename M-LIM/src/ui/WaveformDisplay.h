@@ -100,6 +100,15 @@ private:
     void drawPeakMarkers    (juce::Graphics& g, const juce::Rectangle<float>& area) const;
     void drawScale          (juce::Graphics& g, const juce::Rectangle<float>& area) const;
 
+    /** Shared helper: build a filled path over the frame history.
+     *  @param getY      Lambda (const Frame&) -> float y-coordinate for that column.
+     *  @param closeAtTop  true = GR style (closes along top edge); false = closes along bottom. */
+    void drawFilledWaveformPath (juce::Graphics& g,
+                                 juce::Colour colour,
+                                 const juce::Rectangle<float>& area,
+                                 std::function<float(const Frame&)> getY,
+                                 bool closeAtTop = false) const;
+
     static constexpr float kScaleWidth = 30.0f;   // pixels reserved for dB scale
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
 
