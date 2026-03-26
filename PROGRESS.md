@@ -49,13 +49,25 @@ Tasks that can run in parallel after their dependencies:
 - After 026: task 027 (editor assembly)
 - After 027+028+029: task 030 (final verification)
 
-## Productionize Tasks (new)
-- [ ] 223 - Fix juce::FontOptions JUCE 7 API incompatibility (critical, blocks build)
-- [ ] 224 - Plugin metadata and build validation
-- [ ] 225 - Plugin lifecycle and thread safety audit
-- [ ] 226 - User-facing README
-- [ ] 227 - DSP inline documentation
-- [ ] 228 - Final productionize verification
+## Productionize Tasks (done)
+- [x] 223 - Fix juce::FontOptions JUCE 7 API incompatibility (critical, blocks build)
+- [x] 224 - Plugin metadata and build validation
+- [x] 225 - Plugin lifecycle and thread safety audit
+- [x] 226 - User-facing README
+- [x] 227 - DSP inline documentation
+- [x] 228 - Final productionize verification
+
+## UI Visual Parity Tasks (new — FabFilter Pro-L 2 parity)
+- [ ] 229 - Algorithm selector: replace ComboBox with 8-button horizontal row
+- [ ] 230 - Create VisualParityAuditor script (build+screenshot+compare workflow)
+- [ ] 231 - Color palette: background and accent color parity (#1A1A1A, navy waveform)
+- [ ] 232 - Knob visual polish: remove tick marks, clean Pro-L 2 style
+- [ ] 233 - Control strip: channel linking always visible (not hidden behind ADVANCED)
+- [ ] 234 - Waveform display: color accuracy (darker navy gradient, input bar colors)
+- [ ] 235 - Level meter and GR meter visual polish
+- [ ] 236 - Top bar: logo, preset navigation, help button styling
+- [ ] 237 - Loudness panel: LUFS display visual parity (histogram colors, readout size)
+- [ ] 238 - Full UI screenshot verification (build + screenshot + compare vs reference)
 
 ## Notes
 - JUCE 7.x used as git submodule — workers must run `git submodule update --init --recursive`
