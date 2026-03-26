@@ -11,6 +11,9 @@ namespace
     constexpr int   kScaleWidth = 18;
     // Peak hold line thickness
     constexpr float kPeakLineH  = 2.0f;
+    // Segmented LED-strip appearance
+    constexpr float kSegH   = 3.0f;  // segment height in pixels
+    constexpr float kSegGap = 1.0f;  // gap between segments
 }
 
 //==============================================================================
@@ -90,13 +93,24 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     const float warnBot    = barTop + barH * (1.0f - normWarn);
     const float safeBot    = barTop + barH;  // bottom of safe zone = bottom of bar
 
+    // Helper lambda: draw segmented fill between [top, bot) with given colour
+    auto drawSegments = [&] (juce::Colour colour, float top, float bot)
+    {
+        if (top >= bot) return;
+        g.setColour (colour);
+        for (float sy = top; sy < bot; sy += kSegH + kSegGap)
+        {
+            float segBottom = juce::jmin (sy + kSegH, bot);
+            if (segBottom > sy)
+                g.fillRect (bar.withTop (sy).withBottom (segBottom));
+        }
+    };
+
     // danger zone
     if (fillTop < dangerBot)
     {
-        float top  = juce::jmax (fillTop, dangerTop);
-        float bot  = dangerBot;
-        g.setColour (MLIMColours::meterDanger);
-        g.fillRect (bar.withTop (top).withBottom (bot));
+        float top = juce::jmax (fillTop, dangerTop);
+        drawSegments (MLIMColours::meterDanger, top, dangerBot);
     }
 
     // warning zone
@@ -104,23 +118,14 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     {
         float top = juce::jmax (fillTop, warnTop);
         float bot = juce::jmin (warnBot, barTop + barH);
-        if (top < bot)
-        {
-            g.setColour (MLIMColours::meterWarning);
-            g.fillRect (bar.withTop (top).withBottom (bot));
-        }
+        drawSegments (MLIMColours::meterWarning, top, bot);
     }
 
     // safe zone
     if (fillTop < safeBot)
     {
         float top = juce::jmax (fillTop, warnBot);
-        float bot = safeBot;
-        if (top < bot)
-        {
-            g.setColour (MLIMColours::meterSafe);
-            g.fillRect (bar.withTop (top).withBottom (bot));
-        }
+        drawSegments (MLIMColours::meterSafe, top, safeBot);
     }
 
     // --- peak hold line ---
