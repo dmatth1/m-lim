@@ -314,17 +314,57 @@ void WaveformDisplay::drawFilledWaveformPath (juce::Graphics& g,
     g.fillPath (path);
 }
 
+void WaveformDisplay::drawSymmetricWaveformPath (juce::Graphics& g,
+                                                  juce::Colour colour,
+                                                  const juce::Rectangle<float>& area,
+                                                  std::function<float(const Frame&)> getLevelY) const
+{
+    if (frameCount_ == 0) return;
+
+    const float midY = area.getCentreY();
+
+    // Top half: trace from midY upward
+    juce::Path topPath;
+    bool firstTop = true;
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float h = std::max (0.0f, midY - getLevelY (f));
+        if (firstTop) { topPath.startNewSubPath (x, midY); firstTop = false; }
+        topPath.lineTo (x, midY - h);
+    });
+    topPath.lineTo (area.getRight(), midY);
+    topPath.closeSubPath();
+
+    // Bottom half: mirror of top
+    juce::Path botPath;
+    bool firstBot = true;
+    forEachFrame ([&] (int col, const Frame& f, int totalCols)
+    {
+        float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
+        float h = std::max (0.0f, midY - getLevelY (f));
+        if (firstBot) { botPath.startNewSubPath (x, midY); firstBot = false; }
+        botPath.lineTo (x, midY + h);
+    });
+    botPath.lineTo (area.getRight(), midY);
+    botPath.closeSubPath();
+
+    g.setColour (colour);
+    g.fillPath (topPath);
+    g.fillPath (botPath);
+}
+
 void WaveformDisplay::drawOutputFill (juce::Graphics& g,
                                        const juce::Rectangle<float>& area) const
 {
-    drawFilledWaveformPath (g, MLIMColours::outputWaveform, area,
+    drawSymmetricWaveformPath (g, MLIMColours::outputWaveform, area,
         [&] (const Frame& f) { return levelToY (f.outputLevel, area); });
 }
 
 void WaveformDisplay::drawInputFill (juce::Graphics& g,
                                       const juce::Rectangle<float>& area) const
 {
-    drawFilledWaveformPath (g, MLIMColours::inputWaveform, area,
+    drawSymmetricWaveformPath (g, MLIMColours::inputWaveform, area,
         [&] (const Frame& f) { return levelToY (f.inputLevel, area); });
 }
 
@@ -341,13 +381,15 @@ void WaveformDisplay::drawOutputEnvelope (juce::Graphics& g,
 {
     if (frameCount_ == 0) return;
 
+    const float midY = area.getCentreY();
     juce::Path path;
     bool first = true;
 
     forEachFrame ([&] (int col, const Frame& f, int totalCols)
     {
         float x = area.getX() + col * (area.getWidth() / static_cast<float> (totalCols));
-        float y = levelToY (f.outputLevel, area);
+        float h = std::max (0.0f, midY - levelToY (f.outputLevel, area));
+        float y = midY - h;   // top edge of symmetric output fill
         if (first) { path.startNewSubPath (x, y); first = false; }
         else        path.lineTo (x, y);
     });

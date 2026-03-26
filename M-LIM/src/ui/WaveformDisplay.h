@@ -109,6 +109,13 @@ private:
                                  std::function<float(const Frame&)> getY,
                                  bool closeAtTop = false) const;
 
+    /** Shared helper: build a symmetric (oscilloscope-style) filled path centered on midY.
+     *  @param getLevelY  Lambda (const Frame&) -> float levelToY result for that column. */
+    void drawSymmetricWaveformPath (juce::Graphics& g,
+                                    juce::Colour colour,
+                                    const juce::Rectangle<float>& area,
+                                    std::function<float(const Frame&)> getLevelY) const;
+
     static constexpr float kScaleWidth = 30.0f;   // pixels reserved for dB scale
     static constexpr float kMaxGRdB    = 30.0f;   // full-scale GR (maps to top of display)
 
