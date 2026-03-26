@@ -39,6 +39,12 @@ public:
     /** Clear internal state and running peak. */
     void reset();
 
+    /** Reset only the running peak accumulator, preserving FIR filter state.
+     *  Use this when starting a new measurement window (e.g., per-block enforcement)
+     *  to avoid a cold-FIR warm-up gap at block boundaries.
+     *  Use reset() only when completely reinitializing (e.g., after prepare()). */
+    void resetPeak();
+
     /**
      * Scalar FIR path — exposed for testing SIMD vs scalar parity.
      * Computes the same result as processSample() but without SIMD.

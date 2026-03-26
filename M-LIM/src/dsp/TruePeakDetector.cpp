@@ -194,3 +194,9 @@ void TruePeakDetector::reset()
     mLinearPos = 0;
     mPeak.store(0.0f, std::memory_order_relaxed);
 }
+
+void TruePeakDetector::resetPeak()
+{
+    mPeak.store(0.0f, std::memory_order_relaxed);
+    // FIR state (mLinearBuf, mBuffer, mLinearPos, mWritePos) intentionally preserved.
+}

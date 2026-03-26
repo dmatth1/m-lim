@@ -241,6 +241,87 @@ TEST_CASE("test_process_block_single_sample", "[TruePeakDetector]")
     REQUIRE(peak >= 0.0f);
 }
 
+TEST_CASE("test_resetpeak_preserves_fir_state", "[TruePeakDetector]")
+{
+    // Warm up the FIR with 12 samples of a 0.9 sine wave, then call resetPeak().
+    // The next processSample() output must be close to what a continuously warm FIR
+    // would produce — not the near-zero cold-start output.
+    TruePeakDetector warmDet;   // receives resetPeak() — FIR state preserved
+    TruePeakDetector coldDet;   // receives reset()    — FIR state zeroed (baseline)
+    TruePeakDetector refDet;    // never reset         — reference for warm output
+
+    warmDet.prepare(kSampleRate);
+    coldDet.prepare(kSampleRate);
+    refDet.prepare(kSampleRate);
+
+    // Feed all three the same 12-sample sine warm-up
+    const int warmupSamples = 12;
+    for (int i = 0; i < warmupSamples; ++i)
+    {
+        float s = 0.9f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+        warmDet.processSample(s);
+        coldDet.processSample(s);
+        refDet.processSample(s);
+    }
+
+    // Reset peak only (preserves FIR) vs full reset (zeros FIR)
+    warmDet.resetPeak();
+    coldDet.reset();
+
+    // Next sample
+    float nextSample = 0.9f * static_cast<float>(
+        std::sin(kTwoPi * 1000.0 * warmupSamples / kSampleRate));
+
+    float warmOutput = warmDet.processSample(nextSample);
+    float coldOutput = coldDet.processSample(nextSample);
+    float refOutput  = refDet.processSample(nextSample);
+
+    // The warm-FIR output must be close to the reference (never-reset) output
+    REQUIRE(std::abs(warmOutput - refOutput) < 1e-5f);
+
+    // The cold-FIR output should differ significantly from the reference
+    // (at this sample frequency the difference should be noticeable)
+    // Just verify warm is notably closer to ref than cold is
+    float warmError = std::abs(warmOutput - refOutput);
+    float coldError = std::abs(coldOutput - refOutput);
+    REQUIRE(warmError < coldError);
+}
+
+TEST_CASE("test_resetpeak_clears_peak_accumulator", "[TruePeakDetector]")
+{
+    // After resetPeak(), getPeak() must return 0.0 (peak accumulator cleared)
+    // but the next processSample() output must be consistent with a warm FIR.
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    // Warm up: feed 12 samples of a 0.9 sine
+    for (int i = 0; i < 12; ++i)
+    {
+        float s = 0.9f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+        det.processSample(s);
+    }
+
+    // Peak should be non-zero after warm-up
+    REQUIRE(det.getPeak() > 0.0f);
+
+    // resetPeak() must zero the peak accumulator
+    det.resetPeak();
+    REQUIRE(det.getPeak() == 0.0f);
+
+    // Process one more sample — the output must be non-trivially non-zero
+    // (a warmed FIR applied to a 0.9-amplitude sine produces a non-zero output)
+    float nextSample = 0.9f * static_cast<float>(
+        std::sin(kTwoPi * 1000.0 * 12.0 / kSampleRate));
+    float output = det.processSample(nextSample);
+
+    // A completely cold FIR at this sample would produce near zero;
+    // a warm FIR must produce something meaningfully non-zero (> 0.01)
+    REQUIRE(output > 0.01f);
+
+    // getPeak() must now reflect that output
+    REQUIRE(det.getPeak() == Catch::Approx(output).epsilon(1e-6f));
+}
+
 TEST_CASE("test_fir_coefficient_integrity", "[TruePeakDetector]")
 {
     // Verify that the transposed kCoeffsByTap table contains identical values

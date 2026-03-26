@@ -285,14 +285,14 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
     if (!mTruePeakEnabled.load())
         return;
 
-    mTruePeakEnforceL.reset();
+    mTruePeakEnforceL.resetPeak();
     mTruePeakEnforceL.processBlock(buffer.getReadPointer(0), numSamples);
     float tpL = mTruePeakEnforceL.getPeak();
 
     float tpR = tpL;
     if (numChannels > 1)
     {
-        mTruePeakEnforceR.reset();
+        mTruePeakEnforceR.resetPeak();
         mTruePeakEnforceR.processBlock(buffer.getReadPointer(1), numSamples);
         tpR = mTruePeakEnforceR.getPeak();
     }
@@ -302,6 +302,13 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
     {
         const float gain = ceiling / worstPeak;
         buffer.applyGain(0, numSamples, gain);
+
+        // The FIR state now reflects the pre-correction signal, which is out of
+        // sync with the scaled output.  Reset fully so the next block starts with
+        // a FIR that matches the actual output rather than the uncorrected samples.
+        mTruePeakEnforceL.reset();
+        if (numChannels > 1)
+            mTruePeakEnforceR.reset();
     }
 }
 
