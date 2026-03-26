@@ -82,9 +82,9 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (lookaheadKnob_);
     addAndMakeVisible (attackKnob_);
     addAndMakeVisible (releaseKnob_);
-    // Channel linking knobs are hidden by default (revealed by ADVANCED toggle)
-    addChildComponent (channelLinkTransientsKnob_);
-    addChildComponent (channelLinkReleaseKnob_);
+    // Channel linking knobs are always visible (Pro-L 2 parity)
+    addAndMakeVisible (channelLinkTransientsKnob_);
+    addAndMakeVisible (channelLinkReleaseKnob_);
     addAndMakeVisible (outputCeilingSlider_);
     addAndMakeVisible (outputCeilingLabel_);
 
@@ -101,8 +101,6 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     {
         isAdvancedExpanded_ = advancedButton_.getToggleState();
         advancedButton_.setButtonText (isAdvancedExpanded_ ? "ADVANCED <<" : "ADVANCED >>");
-        channelLinkTransientsKnob_.setVisible (isAdvancedExpanded_);
-        channelLinkReleaseKnob_.setVisible (isAdvancedExpanded_);
         resized();
     };
 
@@ -427,10 +425,8 @@ void ControlStrip::paint (juce::Graphics& g)
                     juce::Justification::centred, false);
     }
 
-    // Draw CHANNEL LINKING expanded panel overlay when advanced is open
-    if (isAdvancedExpanded_)
+    // Draw CHANNEL LINKING section overlay (always visible — Pro-L 2 parity)
     {
-        // Semi-transparent overlay behind the channel linking knobs
         auto linkBounds = channelLinkTransientsKnob_.getBounds()
                               .getUnion (channelLinkReleaseKnob_.getBounds())
                               .expanded (4, 2);
@@ -470,9 +466,9 @@ void ControlStrip::resized()
     bounds.removeFromTop (kKnobLabelH);  // headroom for "STYLE" and "CHANNEL LINKING" labels
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
-    // AlgorithmSelector on far left, takes 2 knob-widths
-    // (InputGain is on waveform edge in PluginEditor; OutputCeiling is the right vertical slider)
-    int knobW = knobRow.getWidth() / (kNumKnobs + 1); // +1 for wider algo selector
+    // 7 equal knob slots: 2 (algo) + 1 (lookahead) + 1 (attack) + 1 (release) + 1 (cl-transients) + 1 (cl-release)
+    // ADVANCED button gets its fixed width on the right
+    int knobW = (knobRow.getWidth() - kAdvancedBtnW - kPadding) / 7;
     algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
 
     // Basic knobs: Lookahead, Attack, Release
@@ -480,22 +476,12 @@ void ControlStrip::resized()
     attackKnob_.setBounds    (knobRow.removeFromLeft (knobW));
     releaseKnob_.setBounds   (knobRow.removeFromLeft (knobW));
 
-    if (isAdvancedExpanded_)
-    {
-        // Show channel linking knobs in remaining space (before the advanced button)
-        auto channelArea = knobRow.removeFromLeft (knobRow.getWidth() - kAdvancedBtnW - kPadding);
-        int linkKnobW = channelArea.getWidth() / 2;
-        channelLinkTransientsKnob_.setBounds (channelArea.removeFromLeft (linkKnobW));
-        channelLinkReleaseKnob_.setBounds    (channelArea);
+    // Channel linking knobs: always visible (Pro-L 2 parity)
+    channelLinkTransientsKnob_.setBounds (knobRow.removeFromLeft (knobW));
+    channelLinkReleaseKnob_.setBounds    (knobRow.removeFromLeft (knobW));
 
-        // ADVANCED button in remaining space
-        advancedButton_.setBounds (knobRow);
-    }
-    else
-    {
-        // ADVANCED button takes remaining space
-        advancedButton_.setBounds (knobRow);
-    }
+    // ADVANCED button in remaining space
+    advancedButton_.setBounds (knobRow);
 
     // ── Status bar row ────────────────────────────────────────────────────
     bounds.removeFromTop (kPadding); // gap after separator
