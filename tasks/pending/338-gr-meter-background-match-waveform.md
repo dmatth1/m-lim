@@ -1,4 +1,4 @@
-# Task 334: GainReductionMeter — Background Matches Waveform Gradient
+# Task 338: GainReductionMeter — Background Matches Waveform Gradient
 
 ## Description
 The GainReductionMeter component (12px wide strip, kGRMeterW=12) fills its background with
@@ -11,8 +11,8 @@ the narrow meter strip at x≈668-680 shows the SAME steel-blue gradient as the 
   M-LIM at x=670, y=100-350: #181818 (dark — displayBackground color)
 
 This dark strip is clearly visible against the waveform and creates an RMSE penalty in the
-waveform region. The fix is to paint the GR meter bar area background with the same vertical
-gradient as the waveform display, making the GR meter strip visually blend with the waveform.
+waveform region. The fix is to paint the GR meter background with the same vertical gradient
+as the waveform display, making the GR meter strip visually blend with the waveform.
 
 ## Produces
 None
@@ -27,8 +27,8 @@ Read: `M-LIM/src/ui/GainReductionMeter.h` — class structure
 
 ## Acceptance Criteria
 - [ ] Run: `cmake --build M-LIM/build --config Release -j$(nproc) 2>&1 | tail -3` → Expected: build succeeds, exit 0
-- [ ] Run: `source Scripts/ui-test-helper.sh && start_app && screenshot "screenshots/task-334-after.png" && stop_app` → Expected: screenshot saved
-- [ ] Visual: The GR meter strip (narrow dark band visible between waveform and level meter) should now blend with the waveform gradient, appearing as an extension of the waveform background rather than a separate dark strip
+- [ ] Run: `source Scripts/ui-test-helper.sh && start_app && screenshot "screenshots/task-338-after.png" && stop_app` → Expected: screenshot saved
+- [ ] Visual: The GR meter strip (narrow dark band between waveform and level meter) now blends with the waveform gradient, appearing as an extension of the waveform background rather than a separate dark strip
 
 ## Tests
 None
@@ -54,18 +54,12 @@ g.setGradientFill (grBg);
 g.fillRect (barArea);
 ```
 
-Also apply the same gradient to the scale area:
-```cpp
-// In drawScale(), change any background fill from displayBackground to the gradient
-```
+Also apply the same gradient to the scale area and any other `fillRect`/`fillAll` calls in
+GainReductionMeter.cpp that use displayBackground.
 
-Note: The GR meter bar itself (the actual gain reduction indicator drawn by drawBar()) is
-drawn on top of the background, so this change only affects the empty background behind the
-bar. The GR bar will still be visible against the gradient background.
-
-Also apply the gradient to the `scaleArea` in `paint()` if it is currently filled with
-displayBackground. Search for any `g.fillRect` or `g.fillAll` calls in GainReductionMeter.cpp
-that use displayBackground and change them to the gradient fill.
+The GR bar itself (drawn by drawBar()) is drawn on top of the background — it remains visible
+against the gradient background.
 
 ## Dependencies
-None (can be done in parallel with tasks 328-332)
+Requires task 330 (fix waveform gradient colors — active) to be complete first, so the
+gradient colors used here match the current waveform display.
