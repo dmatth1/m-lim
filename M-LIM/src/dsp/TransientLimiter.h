@@ -15,7 +15,7 @@
  *   1. Write input into delay buffer (length = lookahead samples)
  *   2. Scan delay buffer for maximum peak
  *   3. Compute required gain with soft-knee curve
- *   4. Smooth gain: instant attack, exponential release
+ *   4. Smooth gain: attack speed controlled by transientAttackCoeff (0=slow IIR, 1=instant), exponential release
  *   5. Read delayed output and multiply by smoothed gain
  *   6. Optionally apply soft saturation (tanh waveshaping)
  */

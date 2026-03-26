@@ -361,3 +361,80 @@ TEST_CASE ("test_saturation_affects_waveform_shape", "[LimiterAlgorithm]")
     INFO ("Crest-factor difference: " << ratioDiff);
     CHECK (ratioDiff > 0.01f);
 }
+
+// ---------------------------------------------------------------------------
+// test_transient_attack_coeff_affects_gr_onset
+//
+// A TransientLimiter with transientAttackCoeff=0.95 (fast) must apply gain
+// reduction within fewer samples of a sudden peak onset than one with
+// transientAttackCoeff=0.2 (slow). We feed a block of silence followed by
+// a full-amplitude pulse and compare gain states after just a few samples of
+// the transient, confirming the fast instance reduces gain more quickly.
+// ---------------------------------------------------------------------------
+TEST_CASE ("test_transient_attack_coeff_affects_gr_onset", "[LimiterAlgorithm][TransientLimiter]")
+{
+    constexpr double sr         = 44100.0;
+    constexpr int    blockSize  = 64;
+    constexpr int    numCh      = 1;
+    constexpr float  kThreshold = 1.0f;
+    constexpr float  kPeakAmp   = 2.0f;   // well above threshold
+
+    // Build two limiters: slow attack vs fast attack.
+    TransientLimiter slow, fast;
+    slow.prepare (sr, blockSize, numCh);
+    fast.prepare (sr, blockSize, numCh);
+    slow.setThreshold (kThreshold);
+    fast.setThreshold (kThreshold);
+
+    // No lookahead so gain reduction happens in the same block as the peak.
+    slow.setLookahead (0.0f);
+    fast.setLookahead (0.0f);
+
+    AlgorithmParams slowParams{};
+    slowParams.transientAttackCoeff = 0.2f;
+    slowParams.releaseShape         = 0.5f;
+    slowParams.saturationAmount     = 0.0f;
+    slowParams.dynamicEnhance       = 0.0f;
+    slowParams.kneeWidth            = 0.0f;
+    slowParams.adaptiveRelease      = false;
+
+    AlgorithmParams fastParams = slowParams;
+    fastParams.transientAttackCoeff = 0.95f;
+
+    slow.setAlgorithmParams (slowParams);
+    fast.setAlgorithmParams (fastParams);
+
+    // Process a single block: first 32 samples silence, last 32 samples at kPeakAmp.
+    std::vector<float> slowBuf (blockSize, 0.0f);
+    std::vector<float> fastBuf (blockSize, 0.0f);
+    for (int i = blockSize / 2; i < blockSize; ++i)
+    {
+        slowBuf[static_cast<size_t>(i)] = kPeakAmp;
+        fastBuf[static_cast<size_t>(i)] = kPeakAmp;
+    }
+
+    float* slowPtr = slowBuf.data();
+    float* fastPtr = fastBuf.data();
+
+    slow.process (&slowPtr, numCh, blockSize);
+    fast.process (&fastPtr, numCh, blockSize);
+
+    // After the onset (last 32 samples), the fast limiter should have applied
+    // more gain reduction (lower output amplitude) than the slow limiter.
+    float slowMaxGR = 0.0f;
+    float fastMaxGR = 0.0f;
+    for (int i = blockSize / 2; i < blockSize; ++i)
+    {
+        // GR = input - output (in amplitude); larger = more reduction
+        const float input = kPeakAmp;
+        slowMaxGR = std::max (slowMaxGR, input - std::abs (slowBuf[static_cast<size_t>(i)]));
+        fastMaxGR = std::max (fastMaxGR, input - std::abs (fastBuf[static_cast<size_t>(i)]));
+    }
+
+    INFO ("Slow-attack max GR amplitude: " << slowMaxGR);
+    INFO ("Fast-attack max GR amplitude: " << fastMaxGR);
+
+    // Fast coefficient must produce more gain reduction during onset.
+    CHECK (fastMaxGR > slowMaxGR);
+}
+

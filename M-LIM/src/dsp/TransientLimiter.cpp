@@ -337,7 +337,16 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
             if (target < g)
             {
-                g = target;  // instant attack
+                if (mParams.transientAttackCoeff >= 0.999f)
+                {
+                    g = target;  // instant attack at coefficient = 1
+                }
+                else
+                {
+                    // Interpolate: 0 = very slow IIR snap, 1 = instant snap
+                    const float alpha = mParams.transientAttackCoeff;
+                    g = g * (1.0f - alpha) + target * alpha;
+                }
             }
             else
             {

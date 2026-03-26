@@ -356,8 +356,9 @@ TEST_CASE("test_custom_threshold", "[TransientLimiter]")
         limiter.prepare(kSampleRate, kBlockSize, 1);
 
         AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
-        params.kneeWidth        = 0.0f;  // hard knee for predictable onset
-        params.saturationAmount = 0.0f;
+        params.kneeWidth            = 0.0f;  // hard knee for predictable onset
+        params.saturationAmount     = 0.0f;
+        params.transientAttackCoeff = 1.0f;  // instant attack to enforce threshold immediately
         limiter.setAlgorithmParams(params);
         limiter.setLookahead(0.0f);
         limiter.setThreshold(0.5f);  // custom threshold below 0.8
@@ -730,8 +731,9 @@ TEST_CASE("test_sliding_max_matches_brute_force", "[TransientLimiter]")
     limiter.prepare(kSampleRate, kBlockSize, 1);
 
     AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
-    params.kneeWidth        = 0.0f;  // hard knee
-    params.saturationAmount = 0.0f;
+    params.kneeWidth            = 0.0f;  // hard knee
+    params.saturationAmount     = 0.0f;
+    params.transientAttackCoeff = 1.0f;  // instant attack to match brute-force reference
     limiter.setAlgorithmParams(params);
     limiter.setLookahead(lookaheadMs);
 
@@ -1252,9 +1254,10 @@ TEST_CASE("test_release_linear_domain_parity", "[TransientLimiter]")
     limiter.prepare(kSampleRate, 1, 1);
 
     AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
-    params.releaseShape     = 0.5f;    // 255 ms at 44100 Hz — slow release keeps parity tight
-    params.kneeWidth        = 0.0f;    // hard knee for predictable gain
-    params.saturationAmount = 0.0f;
+    params.releaseShape         = 0.5f;    // 255 ms at 44100 Hz — slow release keeps parity tight
+    params.kneeWidth            = 0.0f;    // hard knee for predictable gain
+    params.saturationAmount     = 0.0f;
+    params.transientAttackCoeff = 1.0f;    // instant attack for repeatable GR onset
     limiter.setAlgorithmParams(params);
     limiter.setLookahead(0.0f);
 
@@ -1445,8 +1448,9 @@ TEST_CASE("test_saturation_reduces_peak", "[TransientLimiter]")
         limiter.prepare(kSampleRate, kBlockSize, 1);
 
         AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
-        params.saturationAmount = satAmt;
-        params.kneeWidth        = 0.0f;  // hard knee for predictable behaviour
+        params.saturationAmount     = satAmt;
+        params.kneeWidth            = 0.0f;  // hard knee for predictable behaviour
+        params.transientAttackCoeff = 1.0f;  // instant attack to keep output at threshold
         limiter.setAlgorithmParams(params);
         limiter.setLookahead(0.0f);
 

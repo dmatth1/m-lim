@@ -23,7 +23,7 @@ struct AlgorithmParams
     float transientAttackCoeff; // how aggressively transients are caught (0-1)
     float releaseShape;         // release curve shape / exponential factor (0-1)
     float saturationAmount;     // soft clipping amount (0 = none, 1 = max)
-    float dynamicEnhance;       // transient enhancement before limiting (0-1)
+    float dynamicEnhance;       // transient enhancement before limiting (0-1)  // TODO: not yet implemented
     float kneeWidth;            // soft knee width in dB (0-12)
     bool  adaptiveRelease;      // enable adaptive release behavior
 };
