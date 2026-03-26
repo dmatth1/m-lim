@@ -1,0 +1,77 @@
+Task 288: RMSE Re-Measure After Recent Visual Parity Tasks (285, 286, 289, 290, 291, 292)
+==========================================================================================
+Date: 2026-03-26
+Build: Latest (tasks 285, 286, 289, 290, 291, 292 merged)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 281): 0.2617 (26.17%)
+Current (task 288):  0.2570 (25.70%)
+Change:              -0.0047 (-0.47 pp improvement)
+Target:              0.15 (15%)
+Remaining gap:       10.70 pp
+
+Sub-Region RMSE
+---------------
+Control strip (900x92 at y=408):   0.2326 (23.26%)  [was 23.04% — +0.22 pp regression]
+Waveform area (900x378 at y=30):   0.2579 (25.79%)  [was 26.33% — -0.54 pp improvement]
+Left level meters (30x378 at x=0): 0.3336 (33.36%)  [was 29.46% — +3.90 pp regression]
+Right panel (200x378 at x=700):    0.2278 (22.78%)  [was 23.02% — -0.24 pp improvement]
+
+Analysis
+--------
+Overall improvement: 0.47 pp on full image since task 281.
+
+Positive changes from tasks 285–292:
+- Waveform area improved 0.54 pp (dB scale labels moved to left edge in task 290)
+- Right panel improved 0.24 pp (GR meter LED segments in task 289)
+
+Regressions noted:
+- Left level meters jumped from 29.46% to 33.36% — significant regression (+3.90 pp)
+  This is unexpected. The left meter area (30px wide) is highly sensitive to small changes.
+  Possible causes: dB label positioning from task 290 may have shifted left-edge content,
+  or the ADVANCED button placement from task 292 may have affected the left strip.
+- Control strip very slightly worse (+0.22 pp) — within measurement noise.
+
+Top Remaining Visual Differences
+---------------------------------
+1. LEFT LEVEL METERS (33.36%) — Highest sub-region RMSE, worsened since task 281
+   - Regression from recent tasks needs investigation (task 290 dB label movement or task 292)
+   - Pro-L 2 shows active segmented LED-style bars with color zones
+   - M-LIM shows empty gray bars (no audio input playing during capture)
+
+2. WAVEFORM AREA (25.79%)
+   - Pro-L 2 waveform is filled with blue/white audio content and GR overlay
+   - M-LIM shows a flat gray background (no audio → no waveform data)
+   - Most RMSE here is from absence of audio, not structural errors
+   - dB labels moved to left edge (task 290) improved this area
+
+3. FULL IMAGE (25.70%)
+   - Progress is slow: only 0.47 pp improvement from 6 visual tasks
+   - Target of 15% requires ~10.70 pp more improvement
+   - Major remaining differences: level meters, branding/logos, audio content
+
+4. CONTROL STRIP (23.26%) — Near-unchanged
+   - Algorithm selector style matches (‹ TRANSPARENT ›)
+   - Knob visual differences, label fonts, CHANNEL LINKING layout
+   - GAIN label added below badge (task 291) is a small improvement
+
+5. RIGHT PANEL — GR + Loudness (22.78%) — Slight improvement
+   - LED segment texture added to GR meter (task 289)
+   - Pro-L 2 shows active GR meter with colored bars
+   - LUFS readout structure matches well
+
+Files Saved
+-----------
+screenshots/task-288-mlim-cropped.png  — M-LIM plugin area (900x500)
+screenshots/task-288-ref-cropped.png   — Pro-L 2 reference (900x500)
+screenshots/task-288-diff-full.png     — ImageMagick diff visualization
