@@ -82,8 +82,6 @@ private:
     juce::TextButton truePeakWaveformButton_   { "TP" };
     juce::TextButton waveformModeButton_       { juce::CharPointer_UTF8 ("\xe2\x89\x8b") }; // ≋
     juce::TextButton loudnessToggleButton_     { "Loudness" };
-    juce::TextButton pauseMeasurementButton_   { "||" };
-    juce::TextButton measurementModeButton_    { "Short Term" };
     juce::Label      outputLevelLabel_;         // "Out: X.X dBTP"
 
     // ── APVTS attachments ─────────────────────────────────────────────────────
@@ -106,16 +104,11 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   unityAttach_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>   deltaAttach_;
 
-    // ── Measurement mode cycling ───────────────────────────────────────────────
-    enum class MeasurementMode { ShortTerm, Momentary, Integrated };
-    MeasurementMode measurementMode_ { MeasurementMode::ShortTerm };
-
     void setupButtons();
     void setupComboBoxes();
     void setupStatusBar();
     void createAttachments();
     void updateStatusLabels();
-    void cycleMeasurementMode();
 
     /** Called when oversamplingBox_ or dither boxes change. */
     void comboBoxChanged (juce::ComboBox* comboBox) override;

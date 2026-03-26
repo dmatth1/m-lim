@@ -84,6 +84,20 @@ LoudnessPanel::LoudnessPanel()
             });
     };
     addAndMakeVisible (targetButton_);
+
+    // ── Pause measurement button ─────────────────────────────────────────
+    pauseMeasurementButton_.setClickingTogglesState (true);
+    pauseMeasurementButton_.setColour (juce::TextButton::buttonColourId,   MLIMColours::buttonBackground);
+    pauseMeasurementButton_.setColour (juce::TextButton::buttonOnColourId, MLIMColours::accentBlue.withAlpha (0.85f));
+    pauseMeasurementButton_.setColour (juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
+    pauseMeasurementButton_.setColour (juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
+    addAndMakeVisible (pauseMeasurementButton_);
+
+    // ── Measurement mode button ──────────────────────────────────────────
+    measurementModeButton_.setColour (juce::TextButton::buttonColourId,  MLIMColours::buttonBackground);
+    measurementModeButton_.setColour (juce::TextButton::textColourOffId, MLIMColours::textSecondary);
+    measurementModeButton_.onClick = [this] { cycleMeasurementMode(); };
+    addAndMakeVisible (measurementModeButton_);
 }
 
 // ── Data setters ─────────────────────────────────────────────────────────────
@@ -173,6 +187,21 @@ void LoudnessPanel::resized()
                              kPadding,
                              kTargetBtnW,
                              kTargetBtnH);
+
+    // Pause / measurement-mode buttons: below the large LUFS readout
+    const int largeTop   = histH + kPadding + 5 * kRowH + kPadding;
+    const int btnRowY    = largeTop + kLargeReadoutH;
+    const int btnRowH    = kMeasureBtnRowH;
+    constexpr int kPauseBtnW   = 28;
+    constexpr int kModeBtnW    = 80;
+    pauseMeasurementButton_.setBounds (kPadding,
+                                       btnRowY + (btnRowH - 18) / 2,
+                                       kPauseBtnW,
+                                       18);
+    measurementModeButton_.setBounds  (kPadding + kPauseBtnW + kPadding,
+                                       btnRowY + (btnRowH - 18) / 2,
+                                       kModeBtnW,
+                                       18);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -497,6 +526,25 @@ juce::String LoudnessPanel::fmtLUFS (float lufs)
     if (std::isinf (lufs) || std::isnan (lufs) || lufs < -200.0f)
         return "---";
     return juce::String (lufs, 1);
+}
+
+void LoudnessPanel::cycleMeasurementMode()
+{
+    switch (measurementMode_)
+    {
+        case MeasurementMode::ShortTerm:
+            measurementMode_ = MeasurementMode::Momentary;
+            measurementModeButton_.setButtonText ("Momentary");
+            break;
+        case MeasurementMode::Momentary:
+            measurementMode_ = MeasurementMode::Integrated;
+            measurementModeButton_.setButtonText ("Integrated");
+            break;
+        case MeasurementMode::Integrated:
+            measurementMode_ = MeasurementMode::ShortTerm;
+            measurementModeButton_.setButtonText ("Short Term");
+            break;
+    }
 }
 
 juce::String LoudnessPanel::fmtDBTP (float dBTP)

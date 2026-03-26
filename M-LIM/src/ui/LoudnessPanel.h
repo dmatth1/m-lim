@@ -102,23 +102,31 @@ private:
     float customTargetLUFS_ = -14.0f;   // used when targetChoice_ == 4
 
     // ── Children ──────────────────────────────────────────────────────────
-    juce::TextButton resetButton_  { "RST" };
+    juce::TextButton resetButton_             { "RST" };
     juce::TextButton targetButton_;
+    juce::TextButton pauseMeasurementButton_  { "||" };
+    juce::TextButton measurementModeButton_   { "Short Term" };
+
+    // ── Measurement mode cycling ───────────────────────────────────────────
+    enum class MeasurementMode { ShortTerm, Momentary, Integrated };
+    MeasurementMode measurementMode_ { MeasurementMode::ShortTerm };
+    void cycleMeasurementMode();
 
     // ── Owned modal dialog (RAII lifetime, reset in callback or destructor) ─
     std::unique_ptr<juce::AlertWindow> customAlertWindow_;
 
     // ── Layout constants ──────────────────────────────────────────────────
-    static constexpr int kRowH         = 22;
-    static constexpr int kPadding      = 4;
-    static constexpr int kLabelW       = 72;
-    static constexpr int kValueW       = 52;
-    static constexpr int kBtnW         = 28;
+    static constexpr int kRowH          = 22;
+    static constexpr int kPadding       = 4;
+    static constexpr int kLabelW        = 72;
+    static constexpr int kValueW        = 52;
+    static constexpr int kBtnW          = 28;
     static constexpr int kLargeReadoutH = 48;  // height of large-number strip at bottom
-    static constexpr float kMinLUFS    = -60.0f;
+    static constexpr int kMeasureBtnRowH = 24; // height of pause/mode button row below large readout
+    static constexpr float kMinLUFS     = -60.0f;
 
-    /** Height reserved for the numeric readout rows + large display at the bottom. */
-    static constexpr int kReadoutAreaH = kPadding + 5 * kRowH + kPadding + kLargeReadoutH;
+    /** Height reserved for the numeric readout rows + large display + button row at the bottom. */
+    static constexpr int kReadoutAreaH = kPadding + 5 * kRowH + kPadding + kLargeReadoutH + kMeasureBtnRowH;
 
     // ── Private drawing helpers ───────────────────────────────────────────
 

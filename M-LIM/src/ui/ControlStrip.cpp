@@ -22,7 +22,6 @@ namespace
     static constexpr int kDitherLblW       = 130;
     static constexpr int kSmallBtnW        = 28;
     static constexpr int kLoudnessBtnW     = 60;
-    static constexpr int kMeasureModeBtnW  = 76;
     static constexpr int kOutLevelLblW     = 88;
     static constexpr int kStatusGap        = 4;
 
@@ -124,8 +123,6 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (truePeakWaveformButton_);
     addAndMakeVisible (waveformModeButton_);
     addAndMakeVisible (loudnessToggleButton_);
-    addAndMakeVisible (pauseMeasurementButton_);
-    addAndMakeVisible (measurementModeButton_);
     addAndMakeVisible (outputLevelLabel_);
 
     // ── APVTS attachments ─────────────────────────────────────────────────
@@ -187,13 +184,6 @@ void ControlStrip::setupStatusBar()
     styleToggleButton (truePeakWaveformButton_);    // TP: show true peak on waveform
     styleStatusButton (waveformModeButton_);
     styleToggleButton (loudnessToggleButton_);
-    styleStatusButton (pauseMeasurementButton_);
-
-    measurementModeButton_.setColour (juce::TextButton::buttonColourId,
-                                      MLIMColours::buttonBackground);
-    measurementModeButton_.setColour (juce::TextButton::textColourOffId,
-                                      MLIMColours::textSecondary);
-    measurementModeButton_.onClick = [this] { cycleMeasurementMode(); };
 
     // ── Output level label ─────────────────────────────────────────────────
     outputLevelLabel_.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
@@ -305,25 +295,6 @@ void ControlStrip::setOutputLevel (float dBTPValue)
         text = "Out: " + juce::String (dBTPValue, 1) + " dBTP";
 
     outputLevelLabel_.setText (text, juce::dontSendNotification);
-}
-
-void ControlStrip::cycleMeasurementMode()
-{
-    switch (measurementMode_)
-    {
-        case MeasurementMode::ShortTerm:
-            measurementMode_ = MeasurementMode::Momentary;
-            measurementModeButton_.setButtonText ("Momentary");
-            break;
-        case MeasurementMode::Momentary:
-            measurementMode_ = MeasurementMode::Integrated;
-            measurementModeButton_.setButtonText ("Integrated");
-            break;
-        case MeasurementMode::Integrated:
-            measurementMode_ = MeasurementMode::ShortTerm;
-            measurementModeButton_.setButtonText ("Short Term");
-            break;
-    }
 }
 
 void ControlStrip::createAttachments()
@@ -503,12 +474,6 @@ void ControlStrip::resized()
 
     // ── Right section (right-aligned) ─────────────────────────────────────
     outputLevelLabel_.setBounds       (statusRow.removeFromRight (kOutLevelLblW));
-    statusRow.removeFromRight (kStatusGap);
-
-    measurementModeButton_.setBounds  (statusRow.removeFromRight (kMeasureModeBtnW));
-    statusRow.removeFromRight (kStatusGap);
-
-    pauseMeasurementButton_.setBounds (statusRow.removeFromRight (kSmallBtnW));
     statusRow.removeFromRight (kStatusGap);
 
     loudnessToggleButton_.setBounds   (statusRow.removeFromRight (kLoudnessBtnW));
