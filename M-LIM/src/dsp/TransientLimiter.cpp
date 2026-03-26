@@ -128,6 +128,27 @@ void TransientLimiter::resetCounters(int64_t startOffset)
 // ---------------------------------------------------------------------------
 // computeRequiredGain  (private)
 // ---------------------------------------------------------------------------
+/**
+ * @brief Compute the linear gain factor needed to keep @p peakAbs at or below threshold.
+ *
+ * @details Three operating regions based on the soft-knee width:
+ *
+ *   - **Below knee** (peakDb ≤ threshDb − kneeHalf): return 1.0 (no reduction).
+ *   - **Within knee** (threshDb − kneeHalf < peakDb < threshDb + kneeHalf):
+ *     quadratic interpolation in dB — gain change ramps from 0 dB at the lower
+ *     knee edge to full limiting at the upper edge:
+ *       t = (peakDb − lowerDb) / kneeWidth   [0..1 across knee]
+ *       gainDb = (threshDb − upperDb) × t²
+ *     This produces a smooth onset that avoids the hard transient of a brick-wall
+ *     limiter (AES17 / typical mastering limiter convention).
+ *   - **Above knee** (peakDb ≥ threshDb + kneeHalf): hard limiting,
+ *     return threshold / peakAbs.
+ *
+ *   When kneeWidth < 0.01 the soft-knee path is skipped and a simple
+ *   threshold-over-peak ratio is used (hard knee, avoids log/pow overhead).
+ *
+ * @return Linear gain in (0, 1]. Returns 1.0 when @p peakAbs < kEpsilon.
+ */
 float TransientLimiter::computeRequiredGain(float peakAbs) const
 {
     if (peakAbs < kEpsilon)
@@ -180,6 +201,35 @@ float TransientLimiter::softSaturate(float x, float amount)
 // ---------------------------------------------------------------------------
 // process
 // ---------------------------------------------------------------------------
+/**
+ * @brief Process audio in-place using lookahead peak limiting.
+ *
+ * @details Algorithm per sample:
+ *   1. Write input sample into a circular lookahead delay buffer of length N
+ *      (N = mLookaheadSamples). The write happens AFTER the read so the delay
+ *      is exactly N samples, not N-1.
+ *   2. Maintain a per-channel sliding-window maximum deque (O(1) amortised)
+ *      over the past N+1 samples to find the window peak without scanning.
+ *   3. Compute required gain from the window peak via computeRequiredGain()
+ *      (applies soft-knee curve if kneeWidth > 0).
+ *   4. Apply channel linking: blend each channel's required gain toward the
+ *      minimum across all channels (mChannelLink=1 fully links, 0 is independent).
+ *   5. Smooth gain: instant attack (target < current → snap), exponential
+ *      release in linear domain (avoids per-sample transcendental calls at the
+ *      cost of <0.5% deviation from dB-domain smoothing for typical coefficients).
+ *   6. Read delayed sample, apply smoothed gain, apply soft saturation (tanh),
+ *      then write original input into the delay buffer.
+ *
+ * When @p sidechainData is non-null, peak detection uses the sidechain signal
+ * (which passes through its own parallel delay buffer to stay time-aligned)
+ * while gain is applied to @p channelData.
+ *
+ * When lookahead == 0, the delay path is bypassed and limiting is applied
+ * in-place with zero latency.
+ *
+ * @note No heap allocation occurs in this function. All buffers are pre-allocated
+ *       in prepare(). Thread safety: call only from the audio thread.
+ */
 void TransientLimiter::process(float** channelData, int numChannels, int numSamples,
                                 const float* const* sidechainData)
 {

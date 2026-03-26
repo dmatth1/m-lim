@@ -48,6 +48,29 @@ void TruePeakDetector::prepare(double sampleRate)
     reset();
 }
 
+/**
+ * @brief Process one sample and return the inter-sample true peak for that sample.
+ *
+ * @details Implements ITU-R BS.1770-4 Table 1 polyphase FIR interpolation to detect
+ * inter-sample peaks that exceed the sampled signal amplitude.
+ *
+ * For each input sample, 4 phase-shifted interpolated values are computed using a
+ * 12-tap FIR filter per phase (48 taps total at 4x oversampling). The four phases
+ * represent fractional offsets of 0/4, 1/4, 2/4, and 3/4 of a sample period.
+ * The maximum absolute value across all 4 phases is the per-sample true peak estimate.
+ *
+ * **SIMD path** (SSE/NEON 128-bit, 4 float lanes):
+ *   Uses the tap-major kCoeffsByTap[tap][4] table so all 4 phase coefficients for a
+ *   given tap can be loaded into a single SIMD register. The inner FIR accumulation
+ *   loop processes all 4 phases in parallel. A linear staging buffer (2×kFirTaps)
+ *   avoids modulo arithmetic in the inner loop.
+ *
+ * **Scalar fallback**: used on non-4-lane SIMD platforms or when JUCE_USE_SIMD is off.
+ *
+ * The running peak (getPeak()) is updated if the result exceeds the stored value.
+ *
+ * @see ITU-R BS.1770-4, Table 1; EBU R128 §A.3
+ */
 float TruePeakDetector::processSample(float sample)
 {
     // Update linear staging buffer — write at both halves to avoid modulo in FIR loop.

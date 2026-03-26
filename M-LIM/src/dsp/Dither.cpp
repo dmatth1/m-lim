@@ -58,6 +58,26 @@ void Dither::setNoiseShaping(int mode)
     mError2 = 0.0f;
 }
 
+/**
+ * @brief Quantize samples in-place to the target bit depth with TPDF dither and optional noise shaping.
+ *
+ * @details Per sample:
+ *   1. **TPDF dither**: two independent uniform random values each in [-step/2, +step/2]
+ *      are summed to produce a triangular distribution over [-step, +step] with zero mean
+ *      and variance = step²/6 (1/3 LSB² RMS). TPDF dither decorrelates quantisation error
+ *      from the signal and eliminates granulation noise (AES17 / Vanderkooy & Lipshitz 1984).
+ *   2. **Noise shaping** (if enabled): quantisation error from previous samples is fed back
+ *      as a pre-quantisation correction to push noise energy to higher frequencies:
+ *      - Mode 1 (first-order): v -= e[n-1]   (c1 = 1, flat correction)
+ *      - Mode 2 (second-order): v -= c1*e[n-1] + c2*e[n-2]  (rate- and sample-rate-tuned)
+ *        Coefficients are chosen per sample rate in prepare() to give near-DC-null response
+ *        and push excess noise energy above 10 kHz where the ear is less sensitive.
+ *   3. **Quantise**: round(v / step) × step — maps to the nearest quantisation level.
+ *   4. **Error update**: e[n] = quantized - v, shifted into the two-sample history.
+ *
+ * @note Mode 0 (Basic): TPDF only, no error feedback. Step size = 2^(1−B) for B-bit depth.
+ * @see  Vanderkooy & Lipshitz, "Resolution below the Least Significant Bit", JAES 1984
+ */
 void Dither::process(float* data, int numSamples)
 {
     juce::ScopedNoDenormals noDenormals;

@@ -114,6 +114,31 @@ float LevelingLimiter::computeRequiredGain(float peakAbs) const
 // ---------------------------------------------------------------------------
 // process
 // ---------------------------------------------------------------------------
+/**
+ * @brief Process audio in-place using a slow release envelope follower.
+ *
+ * @details Stage 2 of the dual-stage limiter. Unlike Stage 1 (TransientLimiter),
+ * there is no lookahead delay — this stage shapes the release envelope to provide
+ * gentle, program-dependent level control after fast peaks have been caught.
+ *
+ * Algorithm per sample:
+ *   1. Detect per-channel peak (from sidechain if provided, else from main audio).
+ *   2. Compute required gain: threshold / peak, or 1.0 if below threshold.
+ *   3. Apply channel linking: blend per-channel gains toward the minimum.
+ *   4. Smooth gain with a first-order IIR in linear domain:
+ *      - **Attack** (more reduction needed): g = g * attackCoeff + target * (1 − attackCoeff).
+ *        Slower than Stage 1's instant attack to avoid pumping on dense program material.
+ *      - **Release** (recovering toward unity): g = g * releaseCoeff + (1 − releaseCoeff).
+ *   5. Optional adaptive release: if sustained GR is deep (measured via a
+ *      ~500 ms slow envelope in mEnvState), the release coefficient is computed
+ *      only once per block (not per sample) via squaring for compounding speedup.
+ *   6. Apply gain to main audio in-place.
+ *
+ * All time coefficients are in linear domain to avoid per-sample log/pow calls.
+ * Deviation from dB-domain smoothing is < 0.5% for typical attack/release times.
+ *
+ * @note No heap allocation occurs in this function. Thread safety: audio thread only.
+ */
 void LevelingLimiter::process(float** channelData, int numChannels, int numSamples,
                                const float* const* sidechainData)
 {

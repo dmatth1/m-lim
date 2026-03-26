@@ -114,6 +114,26 @@ void LoudnessMeter::setupKWeightingFilters()
 // ---------------------------------------------------------------------------
 // processBlock
 // ---------------------------------------------------------------------------
+/**
+ * @brief Process one audio block and accumulate loudness metering data.
+ *
+ * @details K-weighting is applied to each channel sample via a two-stage biquad chain:
+ *   1. **Pre-filter** (Stage 1): high-shelf boosting ~+4 dB above ~1682 Hz, modelling
+ *      the acoustic effect of the head on the frontal sound field (BS.1770-4 Annex 2).
+ *   2. **RLB weighting** (Stage 2): second-order high-pass at ~38 Hz, removing low-frequency
+ *      content that has little contribution to perceived loudness (Revised Low-frequency B-curve).
+ *
+ * After K-weighting, the per-sample power is accumulated into 100 ms blocks:
+ *   - mBlockPower accumulates the sum-of-squares across all channels and samples.
+ *   - When mBlockAccum reaches mBlockSize (= round(fs × 0.1)), onBlockComplete() is called
+ *     with the channel-summed mean-square for that block.
+ *
+ * BS.1770-4 channel weighting: G_i = 1.0 for L/R (stereo). Surround channels use G = 1.41,
+ * but this implementation targets stereo only (no surround weighting applied).
+ *
+ * @note No heap allocation occurs. Real-time safe. Call from the audio thread only.
+ * @see  ITU-R BS.1770-4, §4; EBU R128, §A.1
+ */
 void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -204,6 +224,27 @@ void LoudnessMeter::updateIntegratedAndLRA()
 // computeIntegratedLUFS — two-pass gated loudness algorithm (BS.1770-4).
 // Requires mPrefixSums to be populated by updateIntegratedAndLRA().
 // ---------------------------------------------------------------------------
+/**
+ * @brief Compute integrated loudness using the BS.1770-4 two-pass gating algorithm.
+ *
+ * @details ITU-R BS.1770-4 §4 / EBU R128 §3.2 define integrated loudness as the
+ * mean-square power of audio that passes both an absolute and a relative gate:
+ *
+ *   **Pass 1 — absolute gate (-70 LUFS)**:
+ *     Collect all 400 ms sliding windows (hop = 100 ms) whose mean-square exceeds
+ *     the linear equivalent of -70 LUFS. Compute their mean power (M).
+ *
+ *   **Pass 2 — relative gate (M − 10 LU)**:
+ *     From the pass-1 windows, keep only those also above M − 10 LU (the "relative gate").
+ *     The integrated LUFS is computed from the mean of these double-gated windows.
+ *
+ * Both passes use the pre-built mPrefixSums array (O(1) window sum lookup) and
+ * the pre-allocated mWindowPowers buffer (no allocation per call).
+ *
+ * Returns kNegInf if no windows survive either gate (silence or very short content).
+ *
+ * @see ITU-R BS.1770-4, §4; EBU R128, §3.2
+ */
 float LoudnessMeter::computeIntegratedLUFS()
 {
     const int n = mHistorySize.load(std::memory_order_relaxed);
@@ -264,6 +305,25 @@ float LoudnessMeter::computeIntegratedLUFS()
 // computeLRA — histogram-based loudness range (EBU R128 / BS.1770-4).
 // Requires mPrefixSums to be populated by updateIntegratedAndLRA().
 // ---------------------------------------------------------------------------
+/**
+ * @brief Compute loudness range (LRA) per EBU R128 §3.3 / ITU-R BS.1770-4.
+ *
+ * @details Loudness Range measures the variation of loudness over time, excluding
+ * the extremes of the distribution. The algorithm:
+ *
+ *   1. Build 3 s sliding windows (hop = 100 ms) from the pre-built prefix sums.
+ *   2. Gate windows below -70 LUFS (absolute gate per EBU R128 §4.6).
+ *   3. Populate a fixed 900-bin histogram covering [-70, +20) LUFS at 0.1 LU resolution.
+ *      This replaces a sort-based approach: finding percentiles is O(900) regardless of
+ *      history length, avoiding O(n log n) cost on long sessions.
+ *   4. Find the 10th percentile (L_lo) and 95th percentile (L_hi) by scanning the histogram.
+ *   5. LRA = L_hi − L_lo (in LU).
+ *
+ * Returns 0.0 if fewer than kShortTermBlocks (30) history blocks are available
+ * or if fewer than 2 valid windows exist.
+ *
+ * @see EBU R128, §3.3; ITU-R BS.1770-4, Annex 3
+ */
 float LoudnessMeter::computeLRA()
 {
     const int n = mHistorySize.load(std::memory_order_relaxed);
