@@ -63,8 +63,8 @@ juce::String WaveformDisplay::modeToString (DisplayMode mode)
 
 juce::Rectangle<float> WaveformDisplay::modeSelectorBounds() const noexcept
 {
-    // Top-left corner of the waveform area, small label region
-    return juce::Rectangle<float> (4.0f, 4.0f, 70.0f, 14.0f);
+    // Top-left corner of the waveform content area (after the scale strip)
+    return juce::Rectangle<float> (kScaleWidth + 4.0f, 4.0f, 70.0f, 14.0f);
 }
 
 void WaveformDisplay::mouseDown (const juce::MouseEvent& e)
@@ -195,9 +195,9 @@ void WaveformDisplay::paint (juce::Graphics& g)
         return;
     }
 
-    // Reserve right strip for dB scale
+    // Reserve left strip for dB scale
     auto bounds = getLocalBounds().toFloat();
-    auto scaleArea = bounds.removeFromRight (kScaleWidth);
+    auto scaleArea = bounds.removeFromLeft (kScaleWidth);
     auto displayArea = bounds;
 
     drawBackground     (g, displayArea);
@@ -276,7 +276,7 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
     g.setColour (lineColour);
     g.drawLine (lineX0, y, lineX1, y, 1.5f);
 
-    // Small ceiling label on the right edge of scale area
+    // Small ceiling label on the left scale area
     juce::String label = juce::String (ceilingDB_, 1) + " dB";
     auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 2.0f,
                                               y - 6.0f,
@@ -284,7 +284,7 @@ void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
                                               12.0f);
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (lineColour);
-    g.drawText (label, labelRect, juce::Justification::centredLeft, false);
+    g.drawText (label, labelRect, juce::Justification::centredRight, false);
 }
 
 void WaveformDisplay::drawFilledWaveformPath (juce::Graphics& g,
@@ -413,8 +413,9 @@ void WaveformDisplay::drawScale (juce::Graphics& g,
     g.setColour (MLIMColours::background);
     g.fillRect (area);
 
+    // Border on the right edge of the scale strip, separating it from the waveform
     g.setColour (MLIMColours::panelBorder);
-    g.drawVerticalLine (juce::roundToInt (area.getX()), area.getY(), area.getBottom());
+    g.drawVerticalLine (juce::roundToInt (area.getRight()), area.getY(), area.getBottom());
 
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
 
@@ -432,6 +433,6 @@ void WaveformDisplay::drawScale (juce::Graphics& g,
                                                   area.getWidth() - 4.0f,
                                                   12.0f);
         g.setColour (MLIMColours::textSecondary);
-        g.drawText (label, labelRect, juce::Justification::centredLeft, false);
+        g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 }

@@ -15,7 +15,7 @@
  *  4. Gain reduction bars from top (bright red)
  *  5. Output envelope line (amber/tan single-pixel line at output waveform edge)
  *  6. Peak markers: gold labels at GR peaks
- *  7. Vertical dB scale on right edge
+ *  7. Vertical dB scale on left edge
  *
  * Call pushMeterData() from the UI timer (~60 fps) after draining the FIFO.
  * The component repaints itself via its own juce::Timer at 60 fps.
