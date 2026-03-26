@@ -12,9 +12,6 @@ namespace
     constexpr int   kScaleWidth = 20;
     // Peak hold line thickness
     constexpr float kPeakLineH  = 2.0f;
-    // Segmented LED-strip appearance
-    constexpr float kSegH   = 3.0f;  // segment height in pixels
-    constexpr float kSegGap = 1.0f;  // gap between segments
 }
 
 //==============================================================================
@@ -79,64 +76,33 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     g.setColour (MLIMColours::barTrackBackground);
     g.fillRect (bar);
 
-    // Segment-line texture drawn later, only in the filled region
-
     // --- filled level portion ---
     const float normLevel = dbToNorm (levelDB);
     const float fillH     = barH * normLevel;
     const float fillTop   = barTop + barH - fillH;
 
-    // Split into danger / warning / safe zones
-    const float normWarn   = dbToNorm (kWarnDB);
-    const float normDanger = dbToNorm (kDangerDB);
-
-    const float dangerTop  = barTop;
-    const float dangerBot  = barTop + barH * (1.0f - normDanger);
-    const float warnTop    = dangerBot;
-    const float warnBot    = barTop + barH * (1.0f - normWarn);
-    const float safeBot    = barTop + barH;  // bottom of safe zone = bottom of bar
-
-    // Helper lambda: draw segmented fill between [top, bot) with given colour
-    auto drawSegments = [&] (juce::Colour colour, float top, float bot)
-    {
-        if (top >= bot) return;
-        g.setColour (colour);
-        for (float sy = top; sy < bot; sy += kSegH + kSegGap)
-        {
-            float segBottom = juce::jmin (sy + kSegH, bot);
-            if (segBottom > sy)
-                g.fillRect (bar.withTop (sy).withBottom (segBottom));
-        }
-    };
-
-    // danger zone
-    if (fillTop < dangerBot)
-    {
-        float top = juce::jmax (fillTop, dangerTop);
-        drawSegments (MLIMColours::meterDanger, top, dangerBot);
-    }
-
-    // warning zone
-    if (fillTop < warnBot)
-    {
-        float top = juce::jmax (fillTop, warnTop);
-        float bot = juce::jmin (warnBot, barTop + barH);
-        drawSegments (MLIMColours::meterWarning, top, bot);
-    }
-
-    // safe zone
-    if (fillTop < safeBot)
-    {
-        float top = juce::jmax (fillTop, warnBot);
-        drawSegments (MLIMColours::meterSafe, top, safeBot);
-    }
-
-    // Segment-line texture only in the filled (active level) region
     if (fillH > 0.0f)
     {
-        g.setColour (MLIMColours::barTrackBackground.brighter (0.35f));
-        for (float sy = fillTop; sy < barTop + barH; sy += kSegH + kSegGap)
-            g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
+        // Compute zone boundary Y positions for gradient colour stops
+        const float normWarn   = dbToNorm (kWarnDB);
+        const float normDanger = dbToNorm (kDangerDB);
+        const float dangerBot  = barTop + barH * (1.0f - normDanger);
+        const float warnBot    = barTop + barH * (1.0f - normWarn);
+
+        // Vertical gradient: red at top → yellow at warn threshold → deep blue at bottom
+        juce::ColourGradient gradient (
+            MLIMColours::meterDanger,             0.0f, barTop,
+            MLIMColours::meterSafe.darker (0.3f), 0.0f, barTop + barH,
+            false);
+        gradient.addColour ((dangerBot - barTop) / barH, MLIMColours::meterWarning);
+        gradient.addColour ((warnBot   - barTop) / barH, MLIMColours::meterSafe.brighter (0.15f));
+
+        // Clip to the filled (active level) region and draw solid gradient
+        g.saveState();
+        g.reduceClipRegion (bar.withTop (fillTop).toNearestInt());
+        g.setGradientFill (gradient);
+        g.fillRect (bar);
+        g.restoreState();
     }
 
     // --- peak hold line ---
