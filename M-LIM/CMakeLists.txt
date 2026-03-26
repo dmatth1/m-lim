@@ -70,6 +70,7 @@ target_link_libraries(MLIMLib
         juce::juce_audio_utils
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
+        $<$<BOOL:${ALSA_FOUND}>:${ALSA_LIBRARIES}>
 )
 
 juce_add_plugin(MLIM

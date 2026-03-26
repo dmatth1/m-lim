@@ -22,7 +22,7 @@ namespace MLIMColours
     const juce::Colour inputWaveform        { 0xA84A5E80 };  // darker cooler blue, ~66% alpha
     const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
     const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
-    const juce::Colour gainReduction        { 0xffEE3333 };  // clear red (Pro-L 2 parity)
+    const juce::Colour gainReduction        { 0x80607090 };  // slate-blue at ~50% alpha (Pro-L 2 GR fill parity)
     const juce::Colour waveformGridLine     { 0xff2E3040 };  // horizontal dB grid lines
     const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
     const juce::Colour waveformCeilingLine  { 0xAAFFFFFF };  // dashed ceiling line
