@@ -71,8 +71,8 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     const float barH   = bar.getHeight();
     const float barTop = bar.getY();
 
-    // Background
-    g.setColour (MLIMColours::displayBackground);
+    // Background track
+    g.setColour (MLIMColours::barTrackBackground);
     g.fillRect (bar);
 
     // --- filled level portion ---

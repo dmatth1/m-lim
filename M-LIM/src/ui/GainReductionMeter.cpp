@@ -169,8 +169,8 @@ void GainReductionMeter::drawNumeric (juce::Graphics& g,
     auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
     auto pk  = cur.withY (cur.getBottom());
 
-    g.setFont (juce::Font (MLIMColours::kFontSizeMedium, juce::Font::bold));
-    g.setColour (MLIMColours::gainReduction);
+    g.setFont (juce::Font (MLIMColours::kFontSizeLarge, juce::Font::bold));
+    g.setColour (MLIMColours::textPrimary);
     g.drawText (curStr, cur, juce::Justification::centred, false);
 
     g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
