@@ -1695,3 +1695,91 @@ TEST_CASE("test_cached_knee_threshold_updates_mid_stream", "[TransientLimiter][t
     // And the new limit must actually be tighter than the old one
     REQUIRE(peak2 < peak1);
 }
+
+// ---------------------------------------------------------------------------
+// test_simd_gain_matches_scalar (Task 305)
+//   Feeds identical impulsive audio through two TransientLimiter instances
+//   with IIR attack (not instant-attack) and verifies that the SIMD stereo
+//   path produces per-sample output within 1e-6f of the scalar path.
+//   Both instances use the same algorithm params; the scalar instance is
+//   forced to the scalar code path by being prepared as mono then re-used
+//   in a 1-channel mode, while the SIMD instance is prepared as stereo.
+//   Since internal gain state is floating-point and both paths implement the
+//   same formula, outputs must agree within float rounding error (≤ 1e-6f).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_simd_gain_matches_scalar", "[TransientLimiter][task305][simd]")
+{
+    // Use a realistic sample rate and a non-trivial lookahead so the
+    // sliding-window peak detection exercises the same code path in both.
+    const double sr = 44100.0;
+    const int numSamples = 512;
+
+    // Params that force the IIR (non-instant) attack branch so the SIMD path
+    // activates (transientAttackCoeff < 0.999).
+    AlgorithmParams p{};
+    p.transientAttackCoeff = 0.7f;   // IIR attack, activates SIMD path for stereo
+    p.releaseShape         = 0.5f;
+    p.kneeWidth            = 0.0f;
+    p.saturationAmount     = 0.0f;
+
+    // --- Scalar reference: process L and R channels independently (mono) ---
+    TransientLimiter limL, limR;
+    limL.prepare(sr, numSamples, 1);
+    limL.setAlgorithmParams(p);
+    limL.setLookahead(1.0f);
+    limL.setThreshold(1.0f);
+    limL.setChannelLink(0.0f);
+
+    limR.prepare(sr, numSamples, 1);
+    limR.setAlgorithmParams(p);
+    limR.setLookahead(1.0f);
+    limR.setThreshold(1.0f);
+    limR.setChannelLink(0.0f);
+
+    // --- SIMD stereo instance ---
+    TransientLimiter limStereo;
+    limStereo.prepare(sr, numSamples, 2);
+    limStereo.setAlgorithmParams(p);
+    limStereo.setLookahead(1.0f);
+    limStereo.setThreshold(1.0f);
+    limStereo.setChannelLink(0.0f);  // independent channels so scalar == SIMD per-channel
+
+    // Build an impulsive signal: silence with a single large peak near the middle.
+    std::vector<float> srcL(numSamples, 0.1f);
+    std::vector<float> srcR(numSamples, 0.1f);
+    // L channel: peak at sample 100
+    srcL[100] = 2.5f;
+    // R channel: peak at sample 150 (different position to exercise independent state)
+    srcR[150] = 2.0f;
+
+    // Scalar processing (mono, one channel at a time)
+    std::vector<float> refL(srcL), refR(srcR);
+    {
+        float* pL = refL.data();
+        limL.process(&pL, 1, numSamples);
+    }
+    {
+        float* pR = refR.data();
+        limR.process(&pR, 1, numSamples);
+    }
+
+    // SIMD stereo processing (both channels together)
+    std::vector<float> simdL(srcL), simdR(srcR);
+    {
+        float* ptrs[2] = { simdL.data(), simdR.data() };
+        limStereo.process(ptrs, 2, numSamples);
+    }
+
+    // Verify per-sample agreement within float epsilon
+    constexpr float kTol = 1e-6f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("sample " << i << ": refL=" << refL[i] << " simdL=" << simdL[i]);
+        REQUIRE(std::abs(simdL[i] - refL[i]) <= kTol);
+    }
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("sample " << i << ": refR=" << refR[i] << " simdR=" << simdR[i]);
+        REQUIRE(std::abs(simdR[i] - refR[i]) <= kTol);
+    }
+}

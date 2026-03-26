@@ -1,6 +1,7 @@
 #include "TransientLimiter.h"
 #include "DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
 #include <cmath>
 #include <algorithm>
 #include <numeric>
@@ -343,31 +344,91 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         // This avoids two transcendental calls (log10 + pow) per sample per
         // channel in the release branch, which at 32x oversampling would
         // execute millions of times per second.
-        for (int ch = 0; ch < chCount; ++ch)
+        //
+        // SIMD path (stereo only): both channels are processed simultaneously
+        // using a branchless formulation with SSE/NEON 4-wide float SIMD.
+        // Instant-attack fast path (transientAttackCoeff >= 0.999) remains as a
+        // scalar pre-check to avoid SIMD overhead in that common edge case.
+#if JUCE_USE_SIMD
+        using SIMDf     = juce::dsp::SIMDRegister<float>;
+        using vMaskType = typename SIMDf::vMaskType;
+        using MaskType  = typename SIMDf::MaskType;
+        if (chCount == 2 && SIMDf::SIMDNumElements >= 4
+            && mParams.transientAttackCoeff < 0.999f)
         {
-            float& g = mGainState[ch];
-            const float target = perChRequiredGain[ch];
+            // Load current gain states and targets into the low two lanes.
+            // We use a 4-wide register; lanes 2 and 3 are unused (set to 1.0
+            // for gain / 0 for any difference, so they don't corrupt the clamp).
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float gArr[4]  =
+                { mGainState[0], mGainState[1], 1.0f, 1.0f };
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float tArr[4]  =
+                { perChRequiredGain[0], perChRequiredGain[1], 1.0f, 1.0f };
 
-            if (target < g)
+            SIMDf g      = SIMDf::fromRawArray(gArr);
+            SIMDf target = SIMDf::fromRawArray(tArr);
+
+            const float alpha       = mParams.transientAttackCoeff;
+            const float releaseCoef = mReleaseCoeff;
+
+            // Attack: g*(1-alpha) + target*alpha
+            SIMDf attackGain  = g * SIMDf::expand(1.0f - alpha)
+                              + target * SIMDf::expand(alpha);
+            // Release: g*releaseCoef + target*(1-releaseCoef)
+            SIMDf releaseGain = g * SIMDf::expand(releaseCoef)
+                              + target * SIMDf::expand(1.0f - releaseCoef);
+
+            // Branchless blend: use attack where target < g, else release.
+            // Technique: mask out each term and ADD the results.
+            // Where mask=0xFFFFFFFF: attack is preserved, release is zeroed.
+            // Where mask=0x00000000: attack is zeroed, release is preserved.
+            // The two sets are disjoint so addition = bitwise-OR.
+            vMaskType useAttack  = SIMDf::lessThan(target, g);
+            vMaskType notAttack  = useAttack ^ vMaskType::expand(MaskType(0xFFFFFFFFu));
+
+            // Cast vMaskType back to float-domain via SIMDf::operator&(vMaskType)
+            SIMDf newG = (attackGain  & useAttack)
+                       + (releaseGain & notAttack);
+
+            // Clamp to [kDspUtilMinGain, 1.0f]
+            newG = SIMDf::max(newG, SIMDf::expand(kDspUtilMinGain));
+            newG = SIMDf::min(newG, SIMDf::expand(1.0f));
+
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float outArr[4];
+            newG.copyToRawArray(outArr);
+            mGainState[0] = outArr[0];
+            mGainState[1] = outArr[1];
+        }
+        else
+#endif // JUCE_USE_SIMD
+        {
+            // Scalar path: used for mono/surround, instant-attack, or
+            // platforms without SIMD support.
+            for (int ch = 0; ch < chCount; ++ch)
             {
-                if (mParams.transientAttackCoeff >= 0.999f)
+                float& g = mGainState[ch];
+                const float target = perChRequiredGain[ch];
+
+                if (target < g)
                 {
-                    g = target;  // instant attack at coefficient = 1
+                    if (mParams.transientAttackCoeff >= 0.999f)
+                    {
+                        g = target;  // instant attack at coefficient = 1
+                    }
+                    else
+                    {
+                        // Interpolate: 0 = very slow IIR snap, 1 = instant snap
+                        const float alpha = mParams.transientAttackCoeff;
+                        g = g * (1.0f - alpha) + target * alpha;
+                    }
                 }
                 else
                 {
-                    // Interpolate: 0 = very slow IIR snap, 1 = instant snap
-                    const float alpha = mParams.transientAttackCoeff;
-                    g = g * (1.0f - alpha) + target * alpha;
+                    // Release: linear-domain IIR toward target (usually 1.0, i.e. 0 dB)
+                    g = g * mReleaseCoeff + target * (1.0f - mReleaseCoeff);
                 }
-            }
-            else
-            {
-                // Release: linear-domain IIR toward target (usually 1.0, i.e. 0 dB)
-                g = g * mReleaseCoeff + target * (1.0f - mReleaseCoeff);
-            }
 
-            g = std::clamp(g, kDspUtilMinGain, 1.0f);
+                g = std::clamp(g, kDspUtilMinGain, 1.0f);
+            }
         }
 
         // Optionally apply adaptive release: when gain is dropping fast, shorten
