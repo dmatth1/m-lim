@@ -20,7 +20,7 @@ void Dither::prepare(double sampleRate)
         // 48 kHz range: near-DC-null second-order noise shaping.
         // Choose c2 = -(|z|^2) = -0.82 so pole magnitude |z| = sqrt(0.82) ≈ 0.906 < 1 (strictly stable).
         // c1 = 1 + c2 + ε ≈ 1.80 gives near-DC-null: N(1) = 1 - c1 - c2 = 0.02 (-34 dB attenuation).
-        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.62 (~22 dB above white noise), pushing
+        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.62 (~11 dB above white noise floor), pushing
         // quantisation noise energy well above 10 kHz where the ear is less sensitive.
         mCoeff1 = 1.80f;
         mCoeff2 = -0.82f;
@@ -30,7 +30,7 @@ void Dither::prepare(double sampleRate)
         // 44.1 kHz range: near-DC-null second-order noise shaping.
         // Choose c2 = -(|z|^2) = -0.91 so pole magnitude |z| = sqrt(0.91) ≈ 0.954 < 1 (strictly stable).
         // c1 = 1 + c2 + ε ≈ 1.90 gives near-DC-null: N(1) = 1 - c1 - c2 = 0.01 (-40 dB attenuation).
-        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.81 (~22 dB above white noise), pushing
+        // Nyquist gain: |N(-1)| = |1 + c1 - c2| = 3.81 (~12 dB above white noise floor), pushing
         // quantisation noise energy well above 10 kHz where the ear is less sensitive.
         mCoeff1 = 1.90f;
         mCoeff2 = -0.91f;
