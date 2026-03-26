@@ -220,7 +220,7 @@ void WaveformDisplay::drawModeSelector (juce::Graphics& g) const
 
     juce::Colour textCol = modeSelectorHovered_
         ? MLIMColours::textPrimary.withAlpha (0.9f)
-        : MLIMColours::textSecondary.withAlpha (0.7f);
+        : MLIMColours::textSecondary.withAlpha (0.0f);
 
     // Subtle background pill on hover
     if (modeSelectorHovered_)
