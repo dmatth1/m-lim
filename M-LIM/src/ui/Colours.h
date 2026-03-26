@@ -15,17 +15,17 @@ namespace MLIMColours
     const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
 
     // Waveform display gradient colours
-    const juce::Colour displayGradientTop   { 0xff0E1020 };  // very dark navy (Pro-L 2 parity)
-    const juce::Colour displayGradientBottom{ 0xff161C30 };  // medium dark navy
+    const juce::Colour displayGradientTop   { 0xff141218 };  // very dark, warm-neutral (matches Pro-L 2 empty waveform BG ~#1E1C1F)
+    const juce::Colour displayGradientBottom{ 0xff1C1A28 };  // slightly warmer dark (less blue-navy bias)
 
     // Waveform colours (with alpha)
-    const juce::Colour inputWaveform        { 0xA84A5E80 };  // darker cooler blue, ~66% alpha
+    const juce::Colour inputWaveform        { 0xCC6878A0 };  // lighter steel-blue, ~80% alpha (composites to ~#5A6A8A matching reference)
     const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
     const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
-    const juce::Colour gainReduction        { 0x80607090 };  // slate-blue at ~50% alpha (Pro-L 2 GR fill parity)
-    const juce::Colour waveformGridLine     { 0xff2E3040 };  // horizontal dB grid lines
+    const juce::Colour gainReduction        { 0xffEE3333 };  // clear red (Pro-L 2 parity — GR fill is red in reference)
+    const juce::Colour waveformGridLine     { 0xff252538 };  // horizontal dB grid lines (slightly lighter for visibility)
     const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
-    const juce::Colour waveformCeilingLine  { 0xAAFFFFFF };  // dashed ceiling line
+    const juce::Colour waveformCeilingLine  { 0xCCDD4444 };  // ceiling line — warm red, ~80% alpha (matches Pro-L 2 red ceiling)
 
     // Label colours
     const juce::Colour peakLabel        { 0xffFFD700 };  // gold/yellow
@@ -52,8 +52,8 @@ namespace MLIMColours
     const juce::Colour lufsReadoutGood  { 0xffE8C040 };  // warm golden-yellow for LUFS readout (below target)
 
     // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff353845 };  // medium blue-gray (top)
-    const juce::Colour controlStripBottom { 0xff252835 };  // darker blue-gray (bottom)
+    const juce::Colour controlStripTop    { 0xff75809A };  // medium blue-gray top — matches reference #7D87A2
+    const juce::Colour controlStripBottom { 0xff3E4255 };  // darker blue-gray bottom
 
     // Button colours
     const juce::Colour buttonBackground         { 0xff242424 };  // default button/toggle background
