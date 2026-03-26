@@ -49,4 +49,4 @@ g.drawText (label, labelRect, juce::Justification::centredRight, false);
 (Exact variable names may differ — search for the justification enum or the label rect construction.)
 
 ## Dependencies
-Requires active task 306 (waveform-db-labels-reduce-opacity) to complete first
+None (task 306 waveform-db-labels-reduce-opacity is complete; opacity is now 0.35f)
