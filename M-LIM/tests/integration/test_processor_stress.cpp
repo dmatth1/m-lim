@@ -10,7 +10,9 @@
 #include "Parameters.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
 #include <cmath>
+#include <thread>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -315,4 +317,111 @@ TEST_CASE("test_sample_rate_switch", "[ProcessorStress]")
             REQUIRE (allFinite (buffer));
         }
     }
+}
+
+// ============================================================================
+// test_concurrent_param_changes_during_processing
+// Simulates the real DAW usage pattern: one thread calling processBlock()
+// continuously while another thread changes parameters via APVTS concurrently.
+// Verifies no crash, no NaN/Inf, no data races.
+// ============================================================================
+TEST_CASE("test_concurrent_param_changes_during_processing", "[ProcessorStress]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Parameter IDs to randomize from the UI thread (exclude oversamplingFactor
+    // as its changes are deferred to the next prepareToPlay via AsyncUpdater)
+    const std::vector<juce::String> paramIDs {
+        ParamID::inputGain,
+        ParamID::outputCeiling,
+        ParamID::algorithm,
+        ParamID::lookahead,
+        ParamID::attack,
+        ParamID::release,
+        ParamID::channelLinkTransients,
+        ParamID::channelLinkRelease,
+        ParamID::truePeakEnabled,
+        ParamID::dcFilterEnabled,
+        ParamID::ditherEnabled,
+        ParamID::ditherBitDepth,
+        ParamID::ditherNoiseShaping,
+        ParamID::bypass,
+        ParamID::unityGainMode,
+        ParamID::sidechainHPFreq,
+        ParamID::sidechainLPFreq,
+        ParamID::sidechainTilt,
+        ParamID::delta,
+        ParamID::displayMode,
+        ParamID::loudnessTarget
+    };
+
+    std::atomic<bool> keepRunning { true };
+    std::exception_ptr audioThreadException { nullptr };
+    std::exception_ptr uiThreadException   { nullptr };
+
+    juce::AudioBuffer<float> lastBuffer (kNumChannels, kBlockSize);
+
+    // --- Audio thread: runs 500 processBlock() calls ---
+    auto audioThread = std::thread ([&]()
+    {
+        try
+        {
+            juce::Random rng (1234);
+            juce::AudioBuffer<float> buffer (kNumChannels, kBlockSize);
+            juce::MidiBuffer midiBuffer;
+
+            for (int block = 0; block < 500; ++block)
+            {
+                fillPinkNoise (buffer, 0.9f, rng);
+                proc.processBlock (buffer, midiBuffer);
+                // Copy last buffer for post-join validation
+                if (block == 499)
+                    lastBuffer = buffer;
+            }
+
+            keepRunning.store (false);
+        }
+        catch (...)
+        {
+            keepRunning.store (false);
+            audioThreadException = std::current_exception();
+        }
+    });
+
+    // --- UI thread: continuously randomizes parameters while audio runs ---
+    auto uiThread = std::thread ([&]()
+    {
+        try
+        {
+            juce::Random rng (5678);
+
+            while (keepRunning.load())
+            {
+                for (const auto& id : paramIDs)
+                {
+                    if (!keepRunning.load())
+                        break;
+                    if (auto* param = proc.apvts.getParameter (id))
+                        param->setValueNotifyingHost (rng.nextFloat());
+                }
+            }
+        }
+        catch (...)
+        {
+            uiThreadException = std::current_exception();
+        }
+    });
+
+    audioThread.join();
+    uiThread.join();
+
+    // Re-throw any exceptions caught on background threads
+    if (audioThreadException)
+        std::rethrow_exception (audioThreadException);
+    if (uiThreadException)
+        std::rethrow_exception (uiThreadException);
+
+    // Output must remain finite after concurrent parameter churn
+    REQUIRE (allFinite (lastBuffer));
 }
