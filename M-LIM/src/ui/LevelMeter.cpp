@@ -4,7 +4,8 @@
 namespace
 {
     // Width of each channel bar relative to available width
-    constexpr float kBarWidthRatio = 0.42f;
+    // 0.46 * 2 + 0.08 = 1.0 → bars fill the full component width
+    constexpr float kBarWidthRatio = 0.46f;
     // Gap between the two bars
     constexpr float kGapRatio = 0.08f;
     // Width reserved for scale labels on the right (0 = no label strip; labels moved to waveform overlay)
