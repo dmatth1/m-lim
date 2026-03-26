@@ -25,8 +25,6 @@ namespace
     static constexpr int kOutLevelLblW     = 88;
     static constexpr int kStatusGap        = 4;
 
-    // Advanced button width (narrow vertical strip)
-    static constexpr int kAdvancedBtnW = 18;
 }
 
 ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
@@ -86,22 +84,6 @@ ControlStrip::ControlStrip (juce::AudioProcessorValueTreeState& apvts)
     addAndMakeVisible (channelLinkReleaseKnob_);
     addAndMakeVisible (outputCeilingSlider_);
     addAndMakeVisible (outputCeilingLabel_);
-
-    // ── Advanced toggle button (narrow vertical strip — text drawn in paint()) ─
-    advancedButton_.setButtonText ("");
-    advancedButton_.setClickingTogglesState (true);
-    advancedButton_.setColour (juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::textColourOffId,  juce::Colours::transparentBlack);
-    advancedButton_.setColour (juce::TextButton::textColourOnId,   juce::Colours::transparentBlack);
-    addAndMakeVisible (advancedButton_);
-
-    advancedButton_.onClick = [this]
-    {
-        isAdvancedExpanded_ = advancedButton_.getToggleState();
-        repaint();
-        resized();
-    };
 
     // ── APVTS-bound controls (hidden — kept only for parameter attachments) ─
     addChildComponent (oversamplingBox_);
@@ -398,32 +380,6 @@ void ControlStrip::paint (juce::Graphics& g)
                     juce::Justification::centred, false);
     }
 
-    // Draw ADVANCED button as narrow vertical strip with rotated text
-    {
-        auto advB = advancedButton_.getBounds();
-        juce::Graphics::ScopedSaveState ss (g);
-        g.addTransform (juce::AffineTransform::rotation (
-            -juce::MathConstants<float>::halfPi,
-            (float) advB.getCentreX(), (float) advB.getCentreY()));
-
-        // Rotated rect: same centre, width/height swapped
-        auto rotatedR = juce::Rectangle<float> (
-            (float) advB.getCentreX() - advB.getHeight() / 2.0f,
-            (float) advB.getCentreY() - advB.getWidth() / 2.0f,
-            (float) advB.getHeight(),
-            (float) advB.getWidth());
-
-        // Background fill
-        g.setColour (isAdvancedExpanded_ ? MLIMColours::accentBlue.withAlpha (0.7f)
-                                         : MLIMColours::algoButtonInactive);
-        g.fillRoundedRectangle (rotatedR, 3.0f);
-
-        // Text
-        g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
-        g.setColour (isAdvancedExpanded_ ? MLIMColours::textPrimary : MLIMColours::textSecondary);
-        g.drawText ("ADVANCED", rotatedR, juce::Justification::centred, false);
-    }
-
     // "CHANNEL LINKING" label above the knobs (no surrounding box — matches Pro-L 2)
     {
         auto linkBounds = channelLinkTransientsKnob_.getBounds()
@@ -460,8 +416,8 @@ void ControlStrip::resized()
     auto knobRow = bounds.removeFromTop (kKnobRowH);
 
     // 7 equal knob slots: 2 (algo) + 1 (lookahead) + 1 (attack) + 1 (release) + 1 (cl-transients) + 1 (cl-release)
-    // ADVANCED button gets its fixed width on the right
-    int knobW = (knobRow.getWidth() - kAdvancedBtnW - kPadding) / 7;
+    // (ADVANCED button moved to PluginEditor's left-edge strip — freed space used by knobs)
+    int knobW = knobRow.getWidth() / 7;
     algorithmSelector_.setBounds (knobRow.removeFromLeft (knobW * 2));
 
     // Basic knobs: Lookahead, Attack, Release
@@ -471,10 +427,7 @@ void ControlStrip::resized()
 
     // Channel linking knobs: always visible (Pro-L 2 parity)
     channelLinkTransientsKnob_.setBounds (knobRow.removeFromLeft (knobW));
-    channelLinkReleaseKnob_.setBounds    (knobRow.removeFromLeft (knobW));
-
-    // ADVANCED button in remaining space
-    advancedButton_.setBounds (knobRow);
+    channelLinkReleaseKnob_.setBounds    (knobRow);
 
     // ── Status bar row ────────────────────────────────────────────────────
     bounds.removeFromTop (kPadding); // gap after separator

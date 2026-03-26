@@ -36,14 +36,8 @@ public:
     /** Update the "Out: X.X dBTP" readout in the status bar. */
     void setOutputLevel (float dBTPValue);
 
-    /** Returns true when the Advanced (channel linking) panel is expanded. */
-    bool isAdvancedExpanded() const noexcept { return isAdvancedExpanded_; }
-
 private:
     juce::AudioProcessorValueTreeState& apvts_;
-
-    // ── Expanded state ─────────────────────────────────────────────────────────
-    bool isAdvancedExpanded_ { false };
 
     // ── Top row: knobs ────────────────────────────────────────────────────────
     // Note: inputGain lives in PluginEditor as a waveform-overlay slider, not here.
@@ -58,9 +52,6 @@ private:
     juce::Slider outputCeilingSlider_   { juce::Slider::LinearVertical,
                                          juce::Slider::TextBoxBelow };
     juce::Label  outputCeilingLabel_;
-
-    // ── Advanced toggle button ─────────────────────────────────────────────────
-    juce::TextButton advancedButton_;
 
     // ── APVTS-bound controls (hidden but attached for parameter sync) ─────────
     juce::ComboBox   oversamplingBox_;
