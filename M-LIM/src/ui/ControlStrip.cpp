@@ -3,17 +3,17 @@
 namespace
 {
     // Heights for each row
-    static constexpr int kKnobRowH    = 70;
-    static constexpr int kBtnRowH     = 24;
+    static constexpr int kKnobRowH    = 56;
+    static constexpr int kBtnRowH     = 20;
     static constexpr int kPadding     = 4;
-    static constexpr int kKnobLabelH  = 12;  // headroom above knob row for section labels
+    static constexpr int kKnobLabelH  = 10;  // headroom above knob row for section labels
 
     // Knob column width (equal slices in the top row)
     static constexpr int kNumKnobs  = 7;   // algo(x2) + 5 knobs; inputGain is on waveform edge, outputCeiling is separate vertical slider
     // Width reserved for the output ceiling vertical slider on the far right
     static constexpr int kOutputSliderW = 40;
     // Label height above the output ceiling slider
-    static constexpr int kOutputLabelH  = 14;
+    static constexpr int kOutputLabelH  = 12;
 
     // Status bar element widths
     static constexpr int kMidiLearnW       = 76;
