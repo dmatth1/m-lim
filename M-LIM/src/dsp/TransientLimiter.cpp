@@ -67,11 +67,24 @@ void TransientLimiter::setLookahead(float ms)
 }
 
 // ---------------------------------------------------------------------------
+// updateKneeCache  (private)
+// ---------------------------------------------------------------------------
+void TransientLimiter::updateKneeCache()
+{
+    mThresholdDb           = gainToDecibels(mThreshold);
+    const float kneeHalf   = mParams.kneeWidth * 0.5f;
+    mLowerKneeDb           = mThresholdDb - kneeHalf;
+    mUpperKneeDb           = mThresholdDb + kneeHalf;
+    mLinearLowerKneeThresh = decibelsToGain(mLowerKneeDb);
+}
+
+// ---------------------------------------------------------------------------
 // setThreshold
 // ---------------------------------------------------------------------------
 void TransientLimiter::setThreshold(float linear)
 {
     mThreshold = clampThreshold(linear);
+    updateKneeCache();
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +106,8 @@ void TransientLimiter::setAlgorithmParams(const AlgorithmParams& params)
     // Higher releaseShape = longer release (smoother/more transparent)
     const float releaseMs = kReleaseMinMs + params.releaseShape * (kReleaseMaxMs - kReleaseMinMs);
     mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(mSampleRate)));
+
+    updateKneeCache();
 }
 
 // ---------------------------------------------------------------------------
@@ -158,29 +173,27 @@ float TransientLimiter::computeRequiredGain(float peakAbs) const
 
     if (kneeHalf < 0.01f)
     {
-        // Hard knee
+        // Hard knee — no log10 needed
         return (peakAbs > mThreshold) ? (mThreshold / peakAbs) : 1.0f;
     }
 
-    // Convert to dB for soft-knee calculation
-    const float peakDb  = gainToDecibels(peakAbs);
-    const float threshDb = gainToDecibels(mThreshold);
-    const float lowerDb  = threshDb - kneeHalf;
-    const float upperDb  = threshDb + kneeHalf;
+    // Linear-domain early exit: below lower knee → no reduction (no log10 call).
+    // mLinearLowerKneeThresh is pre-computed by updateKneeCache().
+    if (peakAbs <= mLinearLowerKneeThresh)
+        return 1.0f;
 
-    if (peakDb <= lowerDb)
-        return 1.0f;  // below knee — no reduction
+    // At this point we are in or above the knee — log10 is justified.
+    const float peakDb = gainToDecibels(peakAbs);
 
-    if (peakDb >= upperDb)
+    if (peakDb >= mUpperKneeDb)
     {
-        // Above knee — full limiting
+        // Above knee — hard limit
         return mThreshold / peakAbs;
     }
 
     // Within knee: quadratic interpolation of gain in dB
-    const float t = (peakDb - lowerDb) / mParams.kneeWidth;  // 0–1 across knee
-    // At t=0: 0 dB gain change; at t=1: (threshDb - peakDb) dB gain change
-    const float gainDb = (threshDb - upperDb) * t * t;
+    const float t      = (peakDb - mLowerKneeDb) / mParams.kneeWidth;  // 0–1 across knee
+    const float gainDb = (mThresholdDb - mUpperKneeDb) * t * t;
     return std::pow(10.0f, gainDb / 20.0f);
 }
 

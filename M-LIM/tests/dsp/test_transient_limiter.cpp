@@ -1592,3 +1592,106 @@ TEST_CASE("test_saturation_formula_direct", "[TransientLimiter]")
     // Just verify it's within a reasonable range of the input.
     REQUIRE(outSmall == Catch::Approx(smallAmp).epsilon(0.05f));
 }
+
+// ---------------------------------------------------------------------------
+// Task 284: cached knee threshold — correctness across knee widths
+// ---------------------------------------------------------------------------
+TEST_CASE("test_cached_knee_threshold_correctness", "[TransientLimiter][task284]")
+{
+    // Verify that after setThreshold(0.891f) the output is correctly limited
+    // to ≤ 0.891 for a full-scale 1 kHz sine at all knee widths (0, 3, 6, 12 dB).
+    // This exercises the cached mThresholdDb / mLinearLowerKneeThresh path.
+
+    const float threshold = 0.891f;  // ≈ -1 dBFS
+    const double sr = 44100.0;
+    const int numChannels = 1;
+    const int numSamples = static_cast<int>(sr * 0.1);  // 100 ms
+
+    // Generate a 1 kHz full-scale sine
+    std::vector<float> sine(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        sine[i] = std::sin(2.0 * M_PI * 1000.0 * i / sr);
+
+    const float kneeWidths[] = {0.0f, 3.0f, 6.0f, 12.0f};
+    for (float kw : kneeWidths)
+    {
+        TransientLimiter limiter;
+        AlgorithmParams p{};
+        p.kneeWidth          = kw;
+        p.releaseShape       = 0.0f;
+        p.transientAttackCoeff = 1.0f;  // instant attack
+        p.saturationAmount   = 0.0f;
+
+        limiter.prepare(sr, numSamples, numChannels);
+        limiter.setThreshold(threshold);
+        limiter.setAlgorithmParams(p);
+        limiter.setLookahead(0.0f);  // no latency for simpler testing
+
+        std::vector<float> buf(sine.begin(), sine.end());
+        float* ptr = buf.data();
+
+        // Warm-up block
+        limiter.process(&ptr, numChannels, numSamples);
+
+        // Reset buf to fresh sine and process again (post-warmup)
+        std::copy(sine.begin(), sine.end(), buf.begin());
+        limiter.process(&ptr, numChannels, numSamples);
+
+        const float peak = blockPeak(buf);
+        // Allow 0.5 dB headroom above threshold for knee transition
+        INFO("kneeWidth=" << kw << " peak=" << peak << " threshold=" << threshold);
+        REQUIRE(peak <= threshold * 1.06f);  // ≤ +0.5 dB tolerance
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 284: cached knee threshold updates correctly mid-stream
+// ---------------------------------------------------------------------------
+TEST_CASE("test_cached_knee_threshold_updates_mid_stream", "[TransientLimiter][task284]")
+{
+    // Verify that calling setThreshold() mid-stream correctly updates the cache
+    // and the new threshold is respected from the first sample of the next block.
+
+    const double sr = 44100.0;
+    const int numChannels = 1;
+    const int numSamples = 512;
+
+    TransientLimiter limiter;
+    AlgorithmParams p{};
+    p.kneeWidth          = 6.0f;   // soft knee to exercise the cache
+    p.releaseShape       = 0.0f;
+    p.transientAttackCoeff = 1.0f;
+    p.saturationAmount   = 0.0f;
+
+    const float threshold1 = 0.5f;   // -6 dBFS
+    const float threshold2 = 0.25f;  // -12 dBFS (tighter limit)
+
+    limiter.prepare(sr, numSamples, numChannels);
+    limiter.setThreshold(threshold1);
+    limiter.setAlgorithmParams(p);
+    limiter.setLookahead(0.0f);
+
+    // Block 1: constant signal just above threshold1
+    std::vector<float> buf1(numSamples, 0.6f);
+    float* ptr = buf1.data();
+    limiter.process(&ptr, numChannels, numSamples);
+    const float peak1 = blockPeak(buf1);
+
+    // Block 1 should be limited to roughly threshold1
+    REQUIRE(peak1 <= threshold1 * 1.15f);
+
+    // Change threshold to tighter value mid-stream
+    limiter.setThreshold(threshold2);
+
+    // Block 2: same constant signal — should now be limited to threshold2
+    std::vector<float> buf2(numSamples, 0.6f);
+    ptr = buf2.data();
+    limiter.process(&ptr, numChannels, numSamples);
+    const float peak2 = blockPeak(buf2);
+
+    // New tighter threshold must be enforced (with tolerance)
+    INFO("peak2=" << peak2 << " threshold2=" << threshold2);
+    REQUIRE(peak2 <= threshold2 * 1.15f);
+    // And the new limit must actually be tighter than the old one
+    REQUIRE(peak2 < peak1);
+}

@@ -76,6 +76,17 @@ private:
     float  mThreshold     = 1.0f;   // linear ceiling (default 0 dBFS)
     AlgorithmParams mParams{};
 
+    // Cached dB/linear knee thresholds — updated by updateKneeCache().
+    // Avoids redundant gainToDecibels(mThreshold) calls in the per-sample inner loop.
+    float mThresholdDb           = 0.0f;  // gainToDecibels(mThreshold)
+    float mLowerKneeDb           = 0.0f;  // mThresholdDb - kneeHalf
+    float mUpperKneeDb           = 0.0f;  // mThresholdDb + kneeHalf
+    float mLinearLowerKneeThresh = 1.0f;  // decibelsToGain(mLowerKneeDb)
+
+    /** Recompute all cached knee/threshold values. Call after any change to
+     *  mThreshold or mParams.kneeWidth. */
+    void updateKneeCache();
+
     // Per-channel circular delay buffers for main audio (size = mMaxLookaheadSamples + 1)
     std::vector<std::vector<float>> mDelayBuffers;
     std::vector<int> mWritePos;
