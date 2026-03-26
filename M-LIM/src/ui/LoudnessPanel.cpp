@@ -430,7 +430,7 @@ void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
         valColour = MLIMColours::lufsReadoutGood;                     // comfortably below: golden
 
     // Value in large bold font — occupies the upper 2/3 of the strip
-    g.setFont (juce::Font (28.0f, juce::Font::bold));
+    g.setFont (juce::Font (38.0f, juce::Font::bold));
     g.setColour (valColour);
     g.drawText (valStr,
                 bounds.withTrimmedBottom (bounds.getHeight() / 3),
@@ -438,7 +438,7 @@ void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
                 false);
 
     // "LUFS" unit label in smaller font — occupies the lower 1/3
-    g.setFont (juce::Font (MLIMColours::kFontSizeMedium));
+    g.setFont (juce::Font (12.0f));
     g.setColour (MLIMColours::textSecondary);
     g.drawText ("LUFS",
                 bounds.withTrimmedTop (bounds.getHeight() * 2 / 3),

@@ -121,7 +121,7 @@ private:
     static constexpr int kLabelW        = 72;
     static constexpr int kValueW        = 52;
     static constexpr int kBtnW          = 28;
-    static constexpr int kLargeReadoutH = 48;  // height of large-number strip at bottom
+    static constexpr int kLargeReadoutH = 62;  // height of large-number strip at bottom
     static constexpr int kMeasureBtnRowH = 24; // height of pause/mode button row below large readout
     static constexpr float kMinLUFS     = -60.0f;
 
