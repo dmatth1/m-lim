@@ -15,9 +15,12 @@ namespace MLIMColours
     const juce::Colour barTrackBackground       { 0xff181818 };  // background track behind progress bars
 
     // Waveform display gradient colours
-    // Reference samples from Pro-L 2: top ~#8992AB, middle ~#6F7790 (measured from v1-0005.png)
-    const juce::Colour displayGradientTop   { 0xff8992AB };  // steel-blue/gray, matches ref top (#8992AB measured from v1-0005.png)
-    const juce::Colour displayGradientBottom{ 0xff687090 };  // steel-blue at bottom, brightened toward reference #7A809B
+    // These approximate the composite appearance of Pro-L 2 waveform with active audio.
+    // Reference background pure color is lighter (~#8992AB) but the composite with
+    // input/output waveform fills appears as a darker neutral-warm gray at top
+    // and blue-saturated gray at bottom. Task-317 values gave 20.00% waveform RMSE.
+    const juce::Colour displayGradientTop   { 0xff686468 };  // neutral/warm gray, best composite match
+    const juce::Colour displayGradientBottom{ 0xff506090 };  // blue-saturated, matches ref composite bottom
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform        { 0xCC6878A0 };  // lighter steel-blue, ~80% alpha (composites to ~#5A6A8A matching reference)
