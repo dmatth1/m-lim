@@ -134,7 +134,7 @@ void MLIMLookAndFeel::drawComboBox (juce::Graphics& g,
 
 void MLIMLookAndFeel::drawButtonBackground (juce::Graphics& g,
                                              juce::Button& button,
-                                             const juce::Colour& /*backgroundColour*/,
+                                             const juce::Colour& backgroundColour,
                                              bool shouldDrawButtonAsHighlighted,
                                              bool shouldDrawButtonAsDown)
 {
@@ -147,7 +147,7 @@ void MLIMLookAndFeel::drawButtonBackground (juce::Graphics& g,
         fillColour = MLIMColours::displayBackground.brighter (0.15f);
 
     if (button.getToggleState())
-        fillColour = MLIMColours::accentBlue.withAlpha (0.8f);
+        fillColour = backgroundColour;
 
     g.setColour (fillColour);
     g.fillRoundedRectangle (bounds, 4.0f);
