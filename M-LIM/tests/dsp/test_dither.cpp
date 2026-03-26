@@ -386,6 +386,96 @@ TEST_CASE("test_process_without_prepare_finite_output", "[Dither]")
         REQUIRE(std::isfinite(signal[i]));
 }
 
+TEST_CASE("test_invalid_bitdepth_no_nan", "[Dither]")
+{
+    // setBitDepth() does not clamp: it computes step = 2^(1-bits) for any input.
+    // For bits=0 → step=2.0, bits=-1 → step=4.0, bits=33 → step≈2.3e-10.
+    // All are valid floats; output must remain finite (no NaN/Inf).
+
+    const int numSamples = 512;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * static_cast<float>(i) / 44100.0f);
+
+    for (int invalidBits : {0, -1, 33})
+    {
+        Dither dither;
+        dither.prepare(kSampleRate);
+        dither.setBitDepth(invalidBits);
+        dither.setNoiseShaping(0);
+
+        std::vector<float> buf(signal);
+        dither.process(buf.data(), numSamples);
+
+        for (int i = 0; i < numSamples; ++i)
+            REQUIRE(std::isfinite(buf[i]));
+    }
+}
+
+TEST_CASE("test_silence_input_dither_noise_bounded", "[Dither]")
+{
+    // With 16-bit depth and silence input, TPDF dither should add low-level noise:
+    //   - RMS > 0 (dither is actually added)
+    //   - RMS < 2 LSBs (bounded; 1 LSB at 16-bit = 2^(1-16) = 1/32768 ≈ 3.05e-5)
+
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(16);
+    dither.setNoiseShaping(0); // Basic: no error feedback, pure TPDF
+
+    const int numSamples = 1024;
+    std::vector<float> signal(numSamples, 0.0f);
+    dither.process(signal.data(), numSamples);
+
+    double sumSq = 0.0;
+    for (float s : signal)
+        sumSq += static_cast<double>(s) * static_cast<double>(s);
+    const float rms = static_cast<float>(std::sqrt(sumSq / numSamples));
+
+    const float oneLSB = std::pow(2.0f, 1.0f - 16.0f); // ~3.05e-5
+    const float twoLSB = 2.0f * oneLSB;                 // ~6.10e-5
+
+    REQUIRE(rms > 0.0f);     // dither adds noise to silence
+    REQUIRE(rms < twoLSB);   // bounded to 2 LSBs
+}
+
+TEST_CASE("test_input_at_ceiling_no_crash", "[Dither]")
+{
+    // Process 1024 samples at exactly 1.0f with 24-bit depth and noise shaping mode 1.
+    // With TPDF dither added, output could theoretically exceed 1.0, but must be finite.
+
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(24);
+    dither.setNoiseShaping(1); // Optimized first-order feedback
+
+    const int numSamples = 1024;
+    std::vector<float> signal(numSamples, 1.0f);
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(std::isfinite(signal[i]));
+}
+
+TEST_CASE("test_32bit_depth_quantization_minimal_noise", "[Dither]")
+{
+    // At 32-bit depth the quantization step is 2^(1-32) ≈ 4.65e-10.
+    // TPDF dither noise is bounded to ±step, so deviation from input is negligible.
+    // For an input of 0.5f, all output samples must stay within 1e-6 of 0.5f.
+
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(32);
+    dither.setNoiseShaping(0);
+
+    const int numSamples = 1000;
+    std::vector<float> signal(numSamples, 0.5f);
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(std::abs(signal[i] - 0.5f) < 1e-6f);
+}
+
 TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
 {
     // At >=88.2kHz, Weighted mode (mode 2) uses zero noise-shaping coefficients.
