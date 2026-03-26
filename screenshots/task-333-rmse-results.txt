@@ -1,0 +1,67 @@
+Task 333: RMSE Remeasure After Visual Tasks 328–332
+===================================================
+Date: 2026-03-26
+Build: Latest (tasks 328–332 merged and rebuilt, plus task 334 algorithm selector)
+
+Methodology
+-----------
+- M-LIM standalone rebuilt from latest main
+- Launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome)
+- Forced resize to 900x496 (aspect-preserving gives 900x496)
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, forced resize to 900x496
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 324):       0.2314 (23.14%)
+Current (task 333):        0.2239 (22.39%)
+Change from 324:           -0.0075 (-0.75 pp improvement)
+Target:                    0.220 (22.0%)
+Status:                    NEAR-MISS — 0.2239 vs 0.220 target; 0.39 pp above threshold
+                           Significant improvement from 23.14% baseline
+
+Sub-Region RMSE
+---------------
+Left level meters (30x374 at x=0, y=30):   0.2330 (23.30%)  [was 23.71% at task 324 — -0.41 pp]
+Waveform area (600x395 at x=150, y=50):     0.2053 (20.53%)  [was 22.08% at task 324 — -1.55 pp]
+Right panel (100x395 at x=800, y=50):       0.3115 (31.15%)  [was 29.66% at task 324 — +1.49 pp regression]
+Control strip (900x56 at x=0, y=440):       0.2203 (22.03%)  [was 23.40% at task 324 — -1.37 pp]
+
+Analysis
+--------
+Overall: improvement of 0.75 pp from task 324 baseline (23.14% → 22.39%).
+Target of < 22.0% is not yet reached (22.39% vs 22.0% threshold).
+
+Tasks covered (328–332):
+- 328: Revert kKnobRowH to 56, kControlStripH to 92 — significant control strip improvement (-1.37 pp)
+- 329: Revert output meter width kOutputMeterW 80→58 — contributed to layout improvements
+- 330: Waveform gradient colors (displayGradientTop, displayGradientBottom) — waveform improvement
+- 331: Darken loudness panel background (#2B2729 → #1E1C21) — right panel slight change
+- 332: Loudness histogram row heights adjusted
+
+Key observations:
+- Waveform area improved significantly: 22.08% → 20.53% (-1.55 pp) from gradient color fixes
+- Control strip improved significantly: 23.40% → 22.03% (-1.37 pp) from knob height revert
+- Left meters slight improvement: 23.71% → 23.30% (-0.41 pp)
+- Right panel regression: 29.66% → 31.15% (+1.49 pp) — likely from loudness panel background
+  darkening (#1E1C21) which makes the right panel darker than reference at rest state.
+  The static background now differs from the reference mid-gray right panel appearance.
+
+Comparison Table
+----------------
+Region              | Task 317 | Task 321 | Task 324 | Task 333 | Change (324→333)
+Left level meters   |  23.45%  |  23.71%  |  23.71%  |  23.30%  |  -0.41 pp
+Waveform area       |  20.00%  |  21.10%  |  22.08%  |  20.53%  |  -1.55 pp
+Right panel         |  29.61%  |  29.66%  |  29.66%  |  31.15%  |  +1.49 pp
+Control strip       |  22.57%  |  23.40%  |  23.40%  |  22.03%  |  -1.37 pp
+FULL IMAGE          |  21.97%  |  22.67%  |  23.14%  |  22.39%  |  -0.75 pp
+
+Files Saved
+-----------
+screenshots/task-333-raw.png               — Full 1920x1080 desktop capture
+screenshots/task-333-mlim-cropped.png      — M-LIM plugin area (900x496)
+screenshots/task-333-ref-cropped.png       — Pro-L 2 reference (900x496)
+screenshots/task-333-diff-full.png         — ImageMagick diff visualization
+screenshots/task-333-rmse-results.txt      — This file
