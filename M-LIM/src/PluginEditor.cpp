@@ -20,6 +20,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (topBar_);
     addAndMakeVisible (waveformDisplay_);
     addAndMakeVisible (inputMeter_);
+    inputMeter_.setVisible (false);
     addAndMakeVisible (outputMeter_);
     addAndMakeVisible (grMeter_);
     addAndMakeVisible (loudnessPanel_);
