@@ -7,8 +7,8 @@ namespace
     constexpr float kBarWidthRatio = 0.42f;
     // Gap between the two bars
     constexpr float kGapRatio = 0.08f;
-    // Width reserved for scale labels on the right
-    constexpr int   kScaleWidth = 18;
+    // Width reserved for scale labels on the right (0 = no label strip; labels moved to waveform overlay)
+    constexpr int   kScaleWidth = 0;
     // Peak hold line thickness
     constexpr float kPeakLineH  = 2.0f;
     // Segmented LED-strip appearance
@@ -234,5 +234,4 @@ void LevelMeter::paint (juce::Graphics& g)
     drawPeakLabel (g, peakLabelR, peakR_);
     drawChannel (g, barL, levelL_, peakL_, clipL_);
     drawChannel (g, barR, levelR_, peakR_, clipR_);
-    drawScale (g, barL.getY(), barL.getHeight());
 }

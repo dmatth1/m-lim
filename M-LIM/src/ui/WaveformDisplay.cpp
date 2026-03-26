@@ -257,6 +257,28 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         if (y >= area.getY() && y <= area.getBottom())
             g.drawHorizontalLine (juce::roundToInt (y), area.getX(), area.getRight());
     }
+
+    // dB overlay labels — right-aligned on the waveform right edge (Pro-L 2 style)
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+    for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
+    {
+        const float db  = MLIMColours::kMeterGridDB[gi];
+        float frac      = (-db) / kMaxGRdB;
+        float y         = area.getY() + frac * area.getHeight();
+        if (y < area.getY() || y > area.getBottom()) continue;
+
+        juce::String label = (db == 0.0f) ? "0 dB"
+                                          : juce::String (juce::roundToInt (db)) + " dB";
+        const float labelW = 40.0f;
+        auto labelRect = juce::Rectangle<float> (
+            area.getRight() - labelW - 4.0f,
+            y - 6.0f,
+            labelW,
+            12.0f);
+        float alpha = (gi % 2 == 0) ? 0.70f : 0.45f;
+        g.setColour (MLIMColours::textSecondary.withAlpha (alpha));
+        g.drawText (label, labelRect, juce::Justification::centredRight, false);
+    }
 }
 
 void WaveformDisplay::drawCeilingLine (juce::Graphics& g,

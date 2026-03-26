@@ -62,7 +62,7 @@ private:
     static constexpr int kDefaultHeight  = 500;
     static constexpr int kTopBarH        = 30;
     static constexpr int kControlStripH  = 92;
-    static constexpr int kInputMeterW    = 48;
+    static constexpr int kInputMeterW    = 30;
     static constexpr int kGRMeterW       = 50;
     static constexpr int kOutputMeterW   = 38;
     static constexpr int kLoudnessPanelW = 140;
