@@ -1,0 +1,60 @@
+Task 281: RMSE Re-Measure After Tasks 276–280
+==============================================
+Date: 2026-03-26
+Build: Latest (tasks 276, 277, 278, 280 merged; task 279 not found/skipped)
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Raw window bounds: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Full-Image RMSE
+---------------
+Baseline (task 268): 0.2659 (26.59%)
+Current            : 0.2617 (26.17%)
+Change             : -0.0042 (-0.42 pp improvement)
+Target             : 0.15 (15%)
+Remaining gap      : 11.17 pp
+
+Sub-Region RMSE
+---------------
+Control strip (900x92 at y=408):   0.2304 (23.04%)
+Waveform area (900x378 at y=30):   0.2633 (26.33%)
+Left level meters (30x378 at x=0): 0.2946 (29.46%)
+Right panel (200x378 at x=700):    0.2302 (23.02%)
+
+Top Remaining Visual Differences
+---------------------------------
+1. LEFT LEVEL METERS (29.46%) — Highest sub-region RMSE
+   - Pro-L 2 shows active segmented LED-style bars with color zones
+   - M-LIM shows empty gray bars (no audio input playing during capture)
+   - Structural difference: segment count, colors, glow effects
+
+2. WAVEFORM AREA (26.33%)
+   - Pro-L 2 waveform is filled with blue/white audio content and GR overlay
+   - M-LIM shows a flat gray background (no audio → no waveform data)
+   - NOTE: Much of this RMSE is due to absence of audio content, not structural errors
+
+3. TOPBAR (top ~30px)
+   - Pro-L 2 has FabFilter branding, preset name, different layout
+   - M-LIM has "M-LIM" text, A/B, Copy, undo/redo buttons
+   - Different logos and text labels contribute to mismatch
+
+4. CONTROL STRIP (23.04%) — Improved from earlier
+   - Algorithm selector style now compact (‹ TRANSPARENT ›) — matches Pro-L 2
+   - Remaining: knob visual differences, label positions, font weight
+
+5. RIGHT PANEL — GR + Loudness (23.02%)
+   - Pro-L 2 shows active GR meter with colored bars
+   - M-LIM loudness panel has correct layout but no audio data
+   - LUFS readout style slightly different
+
+Files Saved
+-----------
+screenshots/task-281-mlim-cropped.png  — M-LIM plugin area (900x500)
+screenshots/task-281-ref-cropped.png   — Pro-L 2 reference (900x500)
+screenshots/task-281-diff-full.png     — ImageMagick diff visualization
