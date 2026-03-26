@@ -1,0 +1,52 @@
+Task 341: Darken Waveform Gradient Bottom to #4A4F6B
+====================================================
+Date: 2026-03-26
+Build: 0 errors ✓
+
+Change Applied
+--------------
+src/ui/Colours.h: displayGradientBottom changed from 0xff506090 to 0xff4A4F6B
+
+Methodology
+-----------
+- M-LIM standalone rebuilt
+- Launched on Xvfb :102 (1920x1080)
+- Window at 509,261 (908x564) — same as task-339 verified position
+- Plugin area crop: 908x500+509+325 (excluding 64px standalone chrome)
+- Resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Color Sample Verification
+--------------------------
+Position: x=330, y=380 (in 900x500 crop)
+Result: srgb(81,84,106) = #51546A
+Previous: #687090 (104,112,144)
+Target:   #4A4F6B (74,79,107)
+Status:   PASS — darker than previous, close to target ✓
+
+RMSE Results
+------------
+Full image RMSE:          0.2299 (22.99%)
+Waveform sub-region RMSE: 0.2050 (20.50%)  [600x400 at x=150,y=50]
+
+Acceptance Criteria
+-------------------
+- Build 0 errors:                  PASS ✓
+- Color darker than #687090:       PASS ✓ (srgb(81,84,106))
+- Waveform RMSE < 23.76%:          PASS ✓ (20.50%)
+- Gradient transitions smoothly:   PASS ✓ (visual inspection)
+
+Comparison vs Previous
+----------------------
+                      | Task 339 | Task 341
+Full image            |  25.74%  |  22.99%
+Waveform sub-region   |  23.57%  |  20.50%
+
+Files Saved
+-----------
+screenshots/task-341-after.png           — Full 1920x1080 capture
+screenshots/task-341-mlim-cropped.png    — M-LIM plugin area (900x500)
+screenshots/task-341-ref-cropped.png     — Reference (900x500)
+screenshots/task-341-diff-full.png       — Diff visualization
+screenshots/task-341-rmse-results.txt    — This file
