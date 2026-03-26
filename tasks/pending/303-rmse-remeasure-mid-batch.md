@@ -1,7 +1,9 @@
-# Task 297: RMSE Re-Measure After Tasks 293–296
+# Task 303: RMSE Re-Measure After Tasks 294, 296, 301, 302
 
 ## Description
-After visual parity tasks 293 (ADVANCED button position fix), 294 (remove left input meter), 295 (waveform gradient darken), and 296 (level meter visual improvements) are complete, measure updated RMSE to quantify progress and identify next improvements.
+After visual parity tasks 294 (remove left input meter), 296 (level meter right panel), 301 (topbar
+height reduction), and 302 (waveform gradient further darken) are complete, measure updated RMSE to
+quantify progress and identify next improvements. Note: task 293 (ADVANCED button) is already done.
 
 **Steps:**
 1. Build latest code.
@@ -12,16 +14,14 @@ After visual parity tasks 293 (ADVANCED button position fix), 294 (remove left i
    - Crop reference `-crop 1712x1073+97+32`, resize to 900x500
 4. Run `compare -metric RMSE` on full image and sub-regions.
 5. Document results and list top remaining visual differences.
-6. Save to `screenshots/task-297-rmse-results.txt`.
+6. Save to `screenshots/task-303-rmse-results.txt`.
 
-**Baseline from task 288:**
-- Full image: 25.70% (0.2570)
-- Control strip: 23.26%
-- Waveform: 25.79%
-- Left level meter: 33.36% (regressed — target fix via task 293/294)
+**Baseline from task 293 (most recent measurement):**
+- Full image: ~25.70% (0.2570)
+- Left level meter: 29.46% (post-task-293 improvement)
 - Right panel: 22.78%
 
-**Target after tasks 293–296:** full image RMSE ≤ 23% (0.23).
+**Target after tasks 294/296/301/302:** full image RMSE ≤ 23% (0.23).
 
 ## Produces
 None
@@ -32,12 +32,12 @@ None
 ## Relevant Files
 Read: `/reference-docs/reference-screenshots/prol2-main-ui.jpg` — reference
 Read: `screenshots/task-288-rmse-results.txt` — baseline
-Create: `screenshots/task-297-rmse-results.txt` — new results
+Create: `screenshots/task-303-rmse-results.txt` — new results
 
 ## Acceptance Criteria
-- [ ] Run: `cat screenshots/task-297-rmse-results.txt` → Expected: file exists with full-image and sub-region RMSE values
+- [ ] Run: `cat screenshots/task-303-rmse-results.txt` → Expected: file exists with full-image and sub-region RMSE values
 - [ ] Run: full-image RMSE on 900x500 → Expected: ≤ 0.25 (improvement from 0.2570 baseline)
-- [ ] Run: left-meter RMSE `30x378+0+30` → Expected: ≤ 0.30 (recovery from 0.3336 regression)
+- [ ] Run: left-meter RMSE `30x378+0+30` → Expected: ≤ 0.29 (improvement from 0.2946 post-293)
 
 ## Tests
 None
@@ -56,4 +56,4 @@ compare -metric RMSE /tmp/mlim-900.png /tmp/ref-900.png /tmp/diff-full.png 2>&1
 ```
 
 ## Dependencies
-Requires tasks 293, 294, 295, 296
+Requires tasks 294, 296, 301, 302

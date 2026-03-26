@@ -1,4 +1,4 @@
-# Task 295: TopBar Height — Reduce from 30 px to 24 px
+# Task 301: TopBar Height — Reduce from 30 px to 24 px
 
 ## Description
 The current `kTopBarH = 30` in PluginEditor.h gives M-LIM a top bar that is taller than in the

@@ -1,13 +1,15 @@
-# Task 299: RMSE Re-Measure After Tasks 293–298
+# Task 299: RMSE Re-Measure After All Pending Visual Tasks
 
 ## Description
 Re-measure the RMSE between M-LIM and the Pro-L 2 reference after the following tasks:
-- Task 293: ADVANCED button returned to control strip (regression fix)
-- Task 294: Input meter width reduced (30 → 16 px)
-- Task 295: TopBar height reduced (30 → 24 px)
-- Task 296: Waveform background gradient darkened
+- Task 293: ADVANCED button returned to control strip (DONE)
+- Task 294: Remove input meter from left layout
+- Task 296: Level meter right panel visual match (active)
 - Task 297: Level meter inactive background darkened
 - Task 298: Waveform dB labels contrast increased
+- Task 300: Algorithm selector compact single slot
+- Task 301: TopBar height reduced (30 → 24 px)
+- Task 302: Waveform background gradient further darkened
 
 Report full-image RMSE and sub-region breakdowns.
 
@@ -66,4 +68,4 @@ compare -metric RMSE <(convert screenshots/task-299-ref-cropped.png -crop 30x378
 Save results summary to `screenshots/task-299-rmse-results.txt`.
 
 ## Dependencies
-Requires tasks 293, 294, 295, 296, 297, 298
+Requires tasks 294, 296, 297, 298, 300, 301, 302
