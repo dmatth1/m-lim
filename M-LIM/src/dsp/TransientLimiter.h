@@ -49,9 +49,11 @@ public:
     /** Returns current gain reduction in dB (0 = no reduction, negative = reducing). */
     float getGainReduction() const;
 
-    /** Returns the lookahead delay introduced by this stage in samples.
-     *  This equals the plugin latency that must be reported to the host via
-     *  AudioProcessor::setLatencySamples(). Returns 0 when lookahead is disabled. */
+    /** Returns the lookahead delay in samples **at the rate this instance was prepared with**.
+     *  When the limiter is prepared at an oversampled rate (as done by LimiterEngine),
+     *  this value is in upsampled-domain samples, NOT original-rate samples.
+     *  Do NOT use this value directly for host latency reporting.
+     *  Use LimiterEngine::getLatencySamples() for the host-facing latency. */
     int getLatencyInSamples() const;
 
     /** Reset the sliding-window deques and write counters to start at the given
