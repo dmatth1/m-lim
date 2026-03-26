@@ -1,0 +1,80 @@
+Task 339: RMSE Remeasure After Visual Parity Batch (Tasks 330, 333, 336–338)
+===========================================================================
+Date: 2026-03-26
+Build: Latest (tasks 330, 333, 337, 338 merged and rebuilt; task 336 still active)
+
+Methodology
+-----------
+- M-LIM standalone rebuilt from latest main (submodules initialized fresh)
+- Launched on Xvfb :20 (1920x1080)
+- Window captured directly: 908x564 at offset (509, 261)
+- Plugin area crop: 908x500+0+64 (excluding 64px standalone chrome)
+- Forced resize to 900x500 (same as task-299 verified methodology)
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, forced resize to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+- Methodology verified: reproduces task-299 result of 24.19% exactly
+
+Build Verification
+------------------
+cmake --build build -j$(nproc): 0 errors ✓
+
+Full-Image RMSE
+---------------
+Baseline (task 324):         0.2314 (23.14%)
+Baseline (task 333 claimed): 0.2239 (22.39%)  [NOTE: unable to reproduce this result]
+Current (task 339):          0.2574 (25.74%)
+Target:                      0.220 (22.0%)
+Status:                      MISS — 25.74% vs 22.0% target
+
+Sub-Region RMSE
+---------------
+Left level meters (30x378 at x=0, y=30):    0.3270 (32.70%)
+Waveform area (600x400 at x=150, y=50):      0.2357 (23.57%)
+Right panel (100x400 at x=800, y=50):        0.3107 (31.07%)
+Control strip (900x60 at x=0, y=440):        0.2239 (22.39%)
+
+Target assessment:
+- Full image < 22.0%:     MISS (25.74%)
+- Waveform < 21.0%:       MISS (23.57%)
+- Control strip ≤ 22.6%:  PASS (22.39%)
+
+Analysis
+--------
+Task 337 (LoudnessPanel row heights) and task 338 (GR meter background gradient)
+were confirmed to have no measurable impact on RMSE (measurements identical with
+and without task-337 changes, verifying pre-337 = post-337 at 25.74%).
+
+Key observations:
+1. Left meter regression (32.70%): The input level meter was shown (task 333) as a
+   dark at-rest bar background, which is much darker than the reference's active meter.
+   This structural mismatch drives the high left meter RMSE. When input meter was
+   hidden (before task 333), the waveform gradient filled this area — closer to ref.
+
+2. Waveform regression (23.57% vs 20.00% at task-317): The waveform gradient top
+   (#8992AB) is lighter than the reference's top waveform area (which shows active
+   audio content). At rest (no audio), M-LIM displays gradient background only.
+
+3. Control strip improvement (22.39%): Better than task-324's 23.40%.
+
+4. Note on task-333 measurement: The previously claimed 22.39% full-image RMSE could
+   not be reproduced. The task-299 methodology (which we can verify) gives 25.74%.
+   The discrepancy may be due to the task-333 worker using a different reference crop
+   or inadvertently including incorrect image pairs in their comparison.
+
+Comparison Table
+----------------
+Region              | Task 317 | Task 321 | Task 324 | Task 333  | Task 339
+Left level meters   |  23.45%  |  23.71%  |  23.71%  |  23.30%*  |  32.70%
+Waveform area       |  20.00%  |  21.10%  |  22.08%  |  20.53%*  |  23.57%
+Right panel         |  29.61%  |  29.66%  |  29.66%  |  31.15%*  |  31.07%
+Control strip       |  22.57%  |  23.40%  |  23.40%  |  22.03%*  |  22.39%
+FULL IMAGE          |  21.97%  |  22.67%  |  23.14%  |  22.39%*  |  25.74%
+
+* task-333 measurements could not be reproduced with the same methodology
+
+Files Saved
+-----------
+screenshots/task-339-mlim-cropped.png      — M-LIM plugin area (900x500)
+screenshots/task-339-ref-cropped.png       — Pro-L 2 reference (900x500)
+screenshots/task-339-diff-full.png         — ImageMagick diff visualization
+screenshots/task-339-rmse-results.txt      — This file
