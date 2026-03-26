@@ -144,6 +144,8 @@ void GainReductionMeter::drawPeakTick (juce::Graphics& g,
 void GainReductionMeter::drawScale (juce::Graphics& g,
                                      const juce::Rectangle<float>& scaleArea) const
 {
+    if (kScaleW <= 0) return;
+
     g.setColour (MLIMColours::background);
     g.fillRect (scaleArea);
 
@@ -189,11 +191,11 @@ void GainReductionMeter::drawNumeric (juce::Graphics& g,
     auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
     auto pk  = cur.withY (cur.getBottom());
 
-    g.setFont (juce::Font (MLIMColours::kFontSizeLarge, juce::Font::bold));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
     g.setColour (MLIMColours::textPrimary);
     g.drawText (curStr, cur, juce::Justification::centred, false);
 
-    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+    g.setFont (juce::Font (8.0f));
     g.setColour (MLIMColours::peakLabel);
     g.drawText (pkStr, pk, juce::Justification::centred, false);
 }

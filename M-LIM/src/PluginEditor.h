@@ -64,7 +64,7 @@ private:
     static constexpr int kTopBarH        = 24;
     static constexpr int kControlStripH  = 92;
     static constexpr int kInputMeterW    = 30;
-    static constexpr int kGRMeterW       = 50;
+    static constexpr int kGRMeterW       = 12;
     static constexpr int kOutputMeterW   = 38;
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
