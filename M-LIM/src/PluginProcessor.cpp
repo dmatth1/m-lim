@@ -257,7 +257,7 @@ void MLIMAudioProcessor::pushAllParametersToEngine()
     if (pTruePeakEnabled)       limiterEngine.setTruePeakEnabled      (pTruePeakEnabled->load() >= 0.5f);
     if (pDCFilterEnabled)       limiterEngine.setDCFilterEnabled      (pDCFilterEnabled->load() >= 0.5f);
     if (pDitherEnabled)         limiterEngine.setDitherEnabled        (pDitherEnabled->load() >= 0.5f);
-    if (pDitherBitDepth)        limiterEngine.setDitherBitDepth       (static_cast<int> (pDitherBitDepth->load()) + 1);
+    if (pDitherBitDepth)        limiterEngine.setDitherBitDepth       (16 + static_cast<int> (pDitherBitDepth->load()) * 2);
     if (pDitherNoiseShaping)    limiterEngine.setDitherNoiseShaping   (static_cast<int> (pDitherNoiseShaping->load()));
     if (pBypass)                limiterEngine.setBypass               (pBypass->load() >= 0.5f);
     if (pUnityGainMode)         limiterEngine.setUnityGain            (pUnityGainMode->load() >= 0.5f);
