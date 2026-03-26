@@ -29,6 +29,9 @@ public:
     /** Set the full-scale range in dB (default 24 dB). */
     void setRange (float maxGRdB);
 
+    /** Set the input level for both channels (dBFS). Called from the UI timer. */
+    void setInputLevel (float leftDB, float rightDB);
+
     void paint      (juce::Graphics& g) override;
     void resized    () override;
     void mouseDown  (const juce::MouseEvent& e) override;
@@ -38,19 +41,26 @@ public:
 private:
     /** Returns the rectangle used for the peak numeric readout. */
     juce::Rectangle<float> peakLabelArea() const;
-    float currentGR_ = 0.0f;   // positive dB, 0 = no reduction
-    float peakGR_    = 0.0f;   // positive dB
-    float maxGRdB_   = 24.0f;  // full-scale range
+    float currentGR_   = 0.0f;   // positive dB, 0 = no reduction
+    float peakGR_      = 0.0f;   // positive dB
+    float maxGRdB_     = 24.0f;  // full-scale range
+    float inputLevelL_ = -96.0f; // dBFS
+    float inputLevelR_ = -96.0f; // dBFS
+
+    static constexpr float kInputMinDB = -30.0f;
+    static constexpr float kInputMaxDB =   0.0f;
 
     static constexpr int kScaleW  = 16;  // width of dB scale labels
     static constexpr int kNumericH = 28; // height reserved for numeric readout below bar
 
-    void drawBar       (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
-    void drawPeakTick  (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
-    void drawScale     (juce::Graphics& g, const juce::Rectangle<float>& scaleArea) const;
-    void drawNumeric   (juce::Graphics& g, const juce::Rectangle<float>& numArea) const;
+    void drawInputLevel (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
+    void drawBar        (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
+    void drawPeakTick   (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
+    void drawScale      (juce::Graphics& g, const juce::Rectangle<float>& scaleArea) const;
+    void drawNumeric    (juce::Graphics& g, const juce::Rectangle<float>& numArea) const;
 
-    float grToFrac (float grDB) const noexcept;
+    float grToFrac        (float grDB) const noexcept;
+    float inputLevelToFrac (float dBFS) const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GainReductionMeter)
 };

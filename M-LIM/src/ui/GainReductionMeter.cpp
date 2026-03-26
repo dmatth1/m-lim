@@ -30,6 +30,13 @@ void GainReductionMeter::setRange (float maxGRdB)
     repaint();
 }
 
+void GainReductionMeter::setInputLevel (float leftDB, float rightDB)
+{
+    inputLevelL_ = leftDB;
+    inputLevelR_ = rightDB;
+    repaint();
+}
+
 void GainReductionMeter::resized() {}
 
 juce::Rectangle<float> GainReductionMeter::peakLabelArea() const
@@ -67,6 +74,13 @@ float GainReductionMeter::grToFrac (float grDB) const noexcept
     return juce::jlimit (0.0f, 1.0f, grDB / maxGRdB_);
 }
 
+float GainReductionMeter::inputLevelToFrac (float dBFS) const noexcept
+{
+    // Maps kInputMinDB → 0.0 (empty) and kInputMaxDB → 1.0 (full height from bottom)
+    return juce::jlimit (0.0f, 1.0f,
+        (dBFS - kInputMinDB) / (kInputMaxDB - kInputMinDB));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 void GainReductionMeter::paint (juce::Graphics& g)
@@ -83,10 +97,38 @@ void GainReductionMeter::paint (juce::Graphics& g)
     g.setColour (MLIMColours::displayBackground);
     g.fillRect (barArea);
 
-    drawBar      (g, barArea);
-    drawPeakTick (g, barArea);
-    drawScale    (g, scaleArea);
-    drawNumeric  (g, numArea);
+    drawInputLevel (g, barArea);
+    drawBar        (g, barArea);
+    drawPeakTick   (g, barArea);
+    drawScale      (g, scaleArea);
+    drawNumeric    (g, numArea);
+}
+
+void GainReductionMeter::drawInputLevel (juce::Graphics& g,
+                                          const juce::Rectangle<float>& barArea) const
+{
+    // Draw L and R input level bars rising from the bottom, each occupying half the bar width
+    const float halfW = barArea.getWidth() * 0.5f;
+
+    auto drawChannel = [&] (float dBFS, float xOffset)
+    {
+        float frac = inputLevelToFrac (dBFS);
+        if (frac <= 0.0f)
+            return;
+
+        float fillH = frac * barArea.getHeight();
+        auto filled = juce::Rectangle<float> (
+            barArea.getX() + xOffset,
+            barArea.getBottom() - fillH,
+            halfW,
+            fillH);
+
+        g.setColour (MLIMColours::meterSafe);
+        g.fillRect (filled);
+    };
+
+    drawChannel (inputLevelL_, 0.0f);
+    drawChannel (inputLevelR_, halfW);
 }
 
 void GainReductionMeter::drawBar (juce::Graphics& g,
@@ -97,11 +139,13 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
     float fillH = grToFrac (currentGR_) * barArea.getHeight();
     auto filled = barArea.withHeight (fillH);   // top-anchored
 
-    // Gradient: slightly brighter at top where GR is highest
+    // Gradient: slightly brighter at top where GR is highest; ~0.8 alpha to overlay input level bars
+    auto grColour    = MLIMColours::gainReduction.withAlpha (0.8f);
+    auto grColourDim = MLIMColours::gainReduction.darker (0.3f).withAlpha (0.8f);
     juce::ColourGradient grad (
-        MLIMColours::gainReduction,
+        grColour,
         filled.getTopLeft(),
-        MLIMColours::gainReduction.darker (0.3f),
+        grColourDim,
         filled.getBottomLeft(),
         false);
     g.setGradientFill (grad);
