@@ -1,4 +1,4 @@
-# Task 286: Add "GAIN" Static Label Below Input Gain Badge
+# Task 291: Add "GAIN" Static Label Below Input Gain Badge
 
 ## Description
 The Pro-L 2 reference (visible in `v1-0009.png` bottom-left of waveform) shows a small "GAIN" text

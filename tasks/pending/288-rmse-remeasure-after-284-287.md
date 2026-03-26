@@ -1,8 +1,10 @@
-# Task 288: RMSE Re-Measure After Tasks 284–287
+# Task 288: RMSE Re-Measure After Recent Visual Parity Tasks
 
 ## Description
-After the visual parity improvements from tasks 284–287 are complete
-(GR meter LED segments, top bar preset contrast, rotary knob range labels, waveform peak readouts),
+After the visual parity improvements from the current batch of tasks are complete
+(ControlStrip channel-linking box removal [285], rotary knob range labels [286],
+GR meter LED segments [289], waveform dB labels move to left edge [290],
+GAIN label below badge [291], ADVANCED button left-edge strip [292]),
 measure the updated RMSE to quantify progress and identify remaining top contributors.
 
 **Steps:**
@@ -76,4 +78,4 @@ compare -metric RMSE /tmp/mlim-right.png /tmp/ref-right.png /dev/null 2>&1
 Save screenshots: task-288-mlim-cropped.png, task-288-ref-cropped.png, task-288-diff-full.png
 
 ## Dependencies
-Requires tasks 284, 285, 286, 287
+Requires tasks 285, 286, 289, 290, 291, 292

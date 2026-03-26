@@ -1,4 +1,4 @@
-# Task 287: ADVANCED Button — Move to Left Edge of Plugin (Full-Height Vertical Strip)
+# Task 292: ADVANCED Button — Move to Left Edge of Plugin (Full-Height Vertical Strip)
 
 ## Description
 In the Pro-L 2 reference (visible in `v1-0009.png`), the "ADVANCED" toggle is a narrow full-height

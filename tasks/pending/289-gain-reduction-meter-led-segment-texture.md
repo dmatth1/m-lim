@@ -1,4 +1,4 @@
-# Task 284: GainReductionMeter — LED Segment Texture on Empty Bar and Segmented Fill
+# Task 289: GainReductionMeter — LED Segment Texture on Empty Bar and Segmented Fill
 
 ## Description
 The GainReductionMeter currently renders two ways that differ from Pro-L 2:

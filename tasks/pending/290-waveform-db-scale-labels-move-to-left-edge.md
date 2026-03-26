@@ -1,4 +1,4 @@
-# Task 284: Waveform dB Scale Labels — Move to Left Edge
+# Task 290: Waveform dB Scale Labels — Move to Left Edge
 
 ## Description
 The dB scale labels overlaid on the waveform are currently drawn on the **right edge** of the waveform
