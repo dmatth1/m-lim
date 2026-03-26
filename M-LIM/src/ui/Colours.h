@@ -12,7 +12,7 @@ namespace MLIMColours
     const juce::Colour peakLabelBackground      { 0xff1A1A1A };  // dark background behind peak labels
     const juce::Colour topBarPresetBackground   { 0xff2D2D2D };  // noticeably lighter than bar bg (0xff252525)
     const juce::Colour accentDarkBackground     { 0xff1E1E2A };  // dark navy tint for accent buttons
-    const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
+    const juce::Colour barTrackBackground       { 0xff181818 };  // background track behind progress bars
 
     // Waveform display gradient colours
     // Reference samples from Pro-L 2: top ~#8992AB, middle ~#6F7790 (measured from v1-0005.png)
