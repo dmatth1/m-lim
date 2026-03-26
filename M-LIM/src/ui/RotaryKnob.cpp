@@ -32,7 +32,7 @@ void RotaryKnob::paint (juce::Graphics& g)
     const float radius  = knobSize * 0.5f - 4.0f;
 
     // Knob face — 3D sphere gradient (lighter top-left, darker bottom-right)
-    const float faceRadius = radius * 0.78f;
+    const float faceRadius = radius * 0.80f;
     {
         juce::ColourGradient gradient (
             MLIMColours::knobFaceHighlight,
@@ -45,30 +45,6 @@ void RotaryKnob::paint (juce::Graphics& g)
                        faceRadius * 2.0f, faceRadius * 2.0f);
     }
 
-    // Graduation tick marks (behind arcs, above knob face)
-    {
-        const int numTicks = 25;  // 25 ticks = 24 intervals, major every 6th
-        for (int i = 0; i < numTicks; ++i)
-        {
-            const float proportion = static_cast<float> (i) / static_cast<float> (numTicks - 1);
-            const float angle = kRotaryStartAngle + proportion * (kRotaryEndAngle - kRotaryStartAngle);
-
-            const bool isMajor = (i % 6 == 0);
-            const float outerR    = radius * 0.97f;
-            const float innerR    = outerR - (isMajor ? 5.0f : 3.0f);
-            const float thickness = isMajor ? 1.5f : 1.0f;
-            const float alpha     = isMajor ? 0.6f : 0.4f;
-
-            const float sinA = std::sin (angle);
-            const float cosA = std::cos (angle);
-
-            g.setColour (MLIMColours::knobArcDim.withAlpha (alpha));
-            g.drawLine (centreX + sinA * innerR, centreY - cosA * innerR,
-                        centreX + sinA * outerR,  centreY - cosA * outerR,
-                        thickness);
-        }
-    }
-
     // Track background arc
     {
         juce::Path trackPath;
@@ -76,7 +52,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                           radius * 2.0f, radius * 2.0f,
                           kRotaryStartAngle, kRotaryEndAngle, true);
         g.setColour (MLIMColours::panelBorder);
-        g.strokePath (trackPath, juce::PathStrokeType (3.0f,
+        g.strokePath (trackPath, juce::PathStrokeType (2.0f,
                       juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
@@ -95,7 +71,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                             radius * 2.0f, radius * 2.0f,
                             kRotaryStartAngle, angle, true);
             g.setColour (MLIMColours::knobArc);
-            g.strokePath (arcPath, juce::PathStrokeType (3.0f,
+            g.strokePath (arcPath, juce::PathStrokeType (2.5f,
                           juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
     }
@@ -107,7 +83,7 @@ void RotaryKnob::paint (juce::Graphics& g)
         const float angle = kRotaryStartAngle
                             + static_cast<float>(proportion)
                               * (kRotaryEndAngle - kRotaryStartAngle);
-        const float pointerLength    = faceRadius * 0.55f;
+        const float pointerLength    = faceRadius * 0.50f;
         const float pointerThickness = 2.5f;
 
         juce::Path pointer;
@@ -121,7 +97,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     // Label text ABOVE the knob
     g.setColour (MLIMColours::textSecondary);
-    g.setFont (juce::Font (MLIMColours::kFontSizeLarge));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall, juce::Font::bold));
     g.drawFittedText (labelText,
                       juce::Rectangle<int> ((int)knobX, (int)bounds.getY(),
                                             (int)knobSize, (int)labelH),
@@ -129,7 +105,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     // Value + suffix text BELOW the knob (cached; updated only on value/suffix change)
     g.setColour (MLIMColours::textPrimary);
-    g.setFont (juce::Font (MLIMColours::kFontSizeLarge));
+    g.setFont (juce::Font (MLIMColours::kFontSizeMedium));
     g.drawFittedText (cachedValueStr_,
                       juce::Rectangle<int> ((int)knobX, (int)(knobY + knobSize + 2),
                                             (int)knobSize, (int)valueH),
