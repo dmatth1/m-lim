@@ -15,11 +15,11 @@ namespace MLIMColours
     const juce::Colour barTrackBackground       { 0xff222222 };  // background track behind progress bars
 
     // Waveform display gradient colours
-    const juce::Colour displayGradientTop   { 0xff141828 };  // dark navy
-    const juce::Colour displayGradientBottom{ 0xff1E2438 };  // medium dark blue
+    const juce::Colour displayGradientTop   { 0xff0E1020 };  // very dark navy (Pro-L 2 parity)
+    const juce::Colour displayGradientBottom{ 0xff161C30 };  // medium dark navy
 
     // Waveform colours (with alpha)
-    const juce::Colour inputWaveform        { 0xA8607898 };  // medium blue-purple, ~66% alpha
+    const juce::Colour inputWaveform        { 0xA84A5E80 };  // darker cooler blue, ~66% alpha
     const juce::Colour outputWaveform       { 0x804060A0 };  // slightly deeper blue, ~50% alpha
     const juce::Colour outputEnvelope       { 0xCCE8C878 };  // warm amber/cream, ~80% alpha
     const juce::Colour gainReduction        { 0xffFF4444 };  // bright red
