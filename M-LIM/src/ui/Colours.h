@@ -20,7 +20,7 @@ namespace MLIMColours
     // input/output waveform fills appears as a darker neutral-warm gray at top
     // and blue-saturated gray at bottom. Task-317 values gave 20.00% waveform RMSE.
     const juce::Colour displayGradientTop   { 0xff686468 };  // neutral/warm gray, best composite match
-    const juce::Colour displayGradientBottom{ 0xff4A4F6B };  // darkened per task-341: closer to reference bottom ~#464B67
+    const juce::Colour displayGradientBottom{ 0xff506090 };  // blue-saturated, matches ref composite bottom (task-341 revert: #4A4F6B caused regression 22.05%→22.99%)
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform        { 0xCC6878A0 };  // lighter steel-blue, ~80% alpha (composites to ~#5A6A8A matching reference)

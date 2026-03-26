@@ -1,0 +1,61 @@
+Task 345: RMSE Remeasure After Task 341
+========================================
+Date: 2026-03-26
+Build: M-LIM standalone (task-341 color change applied, then reverted after regression confirmed)
+
+Methodology
+-----------
+- M-LIM standalone rebuilt with task-341 change: displayGradientBottom 0xff506090 → 0xff4A4F6B
+- Launched on Xvfb :99 (1920x1080)
+- Full 1920x1080 scrot
+- Plugin crop: 908x500+509+325 +repage, forced resize to 900x500 (exact task-299/339/343 methodology)
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32 +repage, forced resize to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Task 341 Color Change Tested
+-----------------------------
+Change: displayGradientBottom 0xff506090 (80,96,144) → 0xff4A4F6B (74,79,107)
+Rendered pixel at waveform bottom (x=330, y=380):
+  M-LIM with 0xff4A4F6B: #4B506A (75,80,106)
+  Reference at y=380:    #7A809B (122,128,155)  ← LIGHTER than our render
+
+Finding: The reference at y=380 is #7A809B (lighter steel blue), not #464B67 as task-341
+analysis assumed. The value 0xff4A4F6B moves M-LIM FURTHER from the reference bottom.
+The existing 0xff506090 (80,96,144) is closer to reference (122,128,155) than 0xff4A4F6B (74,79,107).
+
+Full-Image RMSE Results
+-----------------------
+Task-343 baseline (0xff506090): 0.2205 (22.05%)
+Task-345 with 0xff4A4F6B:       0.2299 (22.99%)
+DELTA:                          +0.94% WORSE — REGRESSION
+
+Sub-Region RMSE
+---------------
+Region              | Task-343 baseline | Task-345 (0xff4A4F6B) | Delta
+Waveform 600x400    |  20.20%           |  21.97%               | +1.77% worse
+Left meters 30x378  |  23.33%           |  23.77%               | +0.44% worse
+Right panel 100x400 |  29.56%           |  29.56%               | same
+Control strip 900x60|  22.39%           |  22.39%               | same
+
+Acceptance Criteria
+-------------------
+Full image ≤ task-343 (22.05%):    FAIL — 22.99% > 22.05%
+Waveform ≤ task-343 (20.20%):      FAIL — 21.97% > 20.20%
+
+Decision
+--------
+Task-341 change (0xff506090 → 0xff4A4F6B) caused a regression across all regions.
+The task-341 analysis assumed reference bottom was ~#464B67 but actual reference
+composite pixel at y=380 is #7A809B (lighter). The pre-existing value 0xff506090
+was empirically better matched to the reference composite appearance.
+
+Action: Reverted displayGradientBottom to 0xff506090 (pre-task-341 value).
+The current codebase maintains the task-343 best of 22.05% full-image RMSE.
+
+Files Saved
+-----------
+screenshots/task-345-screen-1774561507.png  — M-LIM raw screenshot (1920x1080)
+screenshots/task-345-mlim-cropped.png       — M-LIM plugin area (900x500)
+screenshots/task-345-ref-cropped.png        — Pro-L 2 reference (900x500)
+screenshots/task-345-diff-full.png          — ImageMagick diff visualization
+screenshots/task-345-rmse-results.txt       — This file
