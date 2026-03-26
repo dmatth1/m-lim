@@ -3,7 +3,7 @@
 namespace
 {
     // Heights for each row
-    static constexpr int kKnobRowH    = 72;
+    static constexpr int kKnobRowH    = 56;
     static constexpr int kBtnRowH     = 20;
     static constexpr int kPadding     = 4;
     static constexpr int kKnobLabelH  = 10;  // headroom above knob row for section labels
