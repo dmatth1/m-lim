@@ -282,8 +282,8 @@ float LoudnessMeter::computeLRA()
                          - mPrefixSums[static_cast<size_t>(i)];
         const float l = powerToLUFS(sum / kShortTermBlocks);
 
-        // Gate: above absolute threshold (use a 1 LU margin for numerical safety)
-        if (l > static_cast<float>(kAbsGateLUFS) - 1.0f)
+        // Gate: above absolute threshold per EBU R128 §4.6 / ITU-R BS.1770-4 (-70 LUFS)
+        if (l > static_cast<float>(kAbsGateLUFS))
         {
             int bin = static_cast<int>((l - kLraHistoMinLUFS) / kLraBinWidth);
             bin = std::clamp(bin, 0, kLraHistoBins - 1);
