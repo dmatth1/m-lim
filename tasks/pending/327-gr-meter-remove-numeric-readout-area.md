@@ -1,4 +1,4 @@
-# Task 320: GR Meter — Remove Cramped Numeric Readout Area
+# Task 327: GR Meter — Remove Cramped Numeric Readout Area
 
 ## Description
 The `GainReductionMeter` reserves 16px at the top (`kNumericH = 16`) for a numeric readout

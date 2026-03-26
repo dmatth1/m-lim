@@ -1,4 +1,4 @@
-# Task 319: Loudness Histogram Scale — Don't Skip Labels Near Target
+# Task 326: Loudness Histogram Scale — Don't Skip Labels Near Target
 
 ## Description
 The loudness histogram scale in `LoudnessPanel::drawHistogram()` skips dB labels that are

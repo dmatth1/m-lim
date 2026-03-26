@@ -1,4 +1,4 @@
-# Task 318: Loudness Histogram Bar Color — Blue-Gray for Below-Target Bins
+# Task 325: Loudness Histogram Bar Color — Blue-Gray for Below-Target Bins
 
 ## Description
 The loudness histogram in `LoudnessPanel` currently uses golden/warm colors (`lufsReadoutGood` = #E8C040)
