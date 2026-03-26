@@ -13,6 +13,11 @@ endif()
 # JUCE
 add_subdirectory(libs/JUCE)
 
+# ALSA (Linux MIDI support)
+if(UNIX AND NOT APPLE)
+    find_package(ALSA QUIET)
+endif()
+
 # clap-juce-extensions (optional, skip if not present)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/clap-juce-extensions/CMakeLists.txt")
     add_subdirectory(libs/clap-juce-extensions)
@@ -123,6 +128,7 @@ target_link_libraries(MLIM
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
+        $<$<BOOL:${ALSA_FOUND}>:${ALSA_LIBRARIES}>
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

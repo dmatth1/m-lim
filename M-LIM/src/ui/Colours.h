@@ -5,10 +5,10 @@
 namespace MLIMColours
 {
     // Background colours
-    const juce::Colour background               { 0xff1E1E1E };
-    const juce::Colour displayBackground        { 0xff141414 };
+    const juce::Colour background               { 0xff1A1A1A };
+    const juce::Colour displayBackground        { 0xff111118 };
     const juce::Colour panelBorder              { 0xff333333 };
-    const juce::Colour widgetBackground         { 0xff2A2A2A };  // combo boxes, tooltips, etc.
+    const juce::Colour widgetBackground         { 0xff222230 };  // combo boxes, tooltips, etc.
     const juce::Colour peakLabelBackground      { 0xff1A1A1A };  // dark background behind peak labels
     const juce::Colour topBarPresetBackground   { 0xff232323 };  // slightly lighter background for preset label
     const juce::Colour accentDarkBackground     { 0xff1E1E2A };  // dark navy tint for accent buttons
@@ -31,13 +31,13 @@ namespace MLIMColours
     const juce::Colour peakLabel        { 0xffFFD700 };  // gold/yellow
 
     // Knob colours
-    const juce::Colour knobFace         { 0xff505872 };  // steel blue-grey (was 3A3A3A)
+    const juce::Colour knobFace         { 0xff4A526A };  // steel blue-grey (was 3A3A3A)
     const juce::Colour knobFaceHighlight{ 0xff7080A0 };  // knob highlight for 3D gradient
     const juce::Colour knobFaceShadow   { 0xff303448 };  // knob shadow for 3D gradient
     const juce::Colour knobArc          { 0xff4888C8 };  // medium blue arc for clear value visibility
     const juce::Colour knobArcDim       { 0xff555555 };  // dim grey for inactive/minimum arc tick marks
     const juce::Colour knobPointer      { 0xffFFFFFF };
-    const juce::Colour sliderFill       { 0xff2196F3 };  // accent blue for linear slider fills
+    const juce::Colour sliderFill       { 0xff2D7EE8 };  // accent blue for linear slider fills
 
     // Text colours
     const juce::Colour textPrimary      { 0xffE0E0E0 };
@@ -52,8 +52,8 @@ namespace MLIMColours
     const juce::Colour lufsReadoutGood  { 0xffE8C040 };  // warm golden-yellow for LUFS readout (below target)
 
     // Control strip gradient background (blue-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff3A3D4A };  // medium blue-gray (top)
-    const juce::Colour controlStripBottom { 0xff2A2D3A };  // darker blue-gray (bottom)
+    const juce::Colour controlStripTop    { 0xff353845 };  // medium blue-gray (top)
+    const juce::Colour controlStripBottom { 0xff252835 };  // darker blue-gray (bottom)
 
     // Button colours
     const juce::Colour buttonBackground         { 0xff242424 };  // default button/toggle background
@@ -65,7 +65,7 @@ namespace MLIMColours
     const juce::Colour panelOverlay      { 0x20FFFFFF };  // semi-transparent overlay for panels
 
     // Accent
-    const juce::Colour accentBlue       { 0xff2196F3 };
+    const juce::Colour accentBlue       { 0xff2D7EE8 };
 
     // Font sizes
     static constexpr float kFontSizeSmall  = 9.0f;
