@@ -712,3 +712,43 @@ TEST_CASE("test_inplace_coefficients_correctness", "[SidechainFilter]")
         REQUIRE(allFinite);
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_hp_cutoff_change_no_discontinuity
+// Verifies that changing the HP cutoff mid-signal does not cause a hard reset
+// (step to near-zero) in the filter output.  Before the fix, updateCoefficients()
+// called reset() on all IIR states, producing a zero-discontinuity that caused
+// false GR transients.  With the fix the filter state persists and the output
+// at the sample immediately after the coefficient change must remain close to
+// the output just before it (within ±0.1).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_hp_cutoff_change_no_discontinuity", "[SidechainFilter]")
+{
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, 512);
+
+    // Start with a 100 Hz HP cutoff.
+    filter.setHighPassFreq(100.0f);
+
+    // Build up filter state: process 512 samples of 1 kHz sine.
+    auto buildUp = makeSine(1000.0, 0.5, 512, kSampleRate);
+    filter.process(buildUp);
+
+    // Process one more sample to capture the last output value before the change.
+    auto beforeBuf = makeSine(1000.0, 0.5, 1, kSampleRate);
+    filter.process(beforeBuf);
+    const float lastBefore = beforeBuf.getReadPointer(0)[0];
+
+    // Change HP cutoff to 200 Hz — this triggers updateCoefficients().
+    filter.setHighPassFreq(200.0f);
+
+    // Process one sample after the change.
+    auto afterBuf = makeSine(1000.0, 0.5, 1, kSampleRate);
+    filter.process(afterBuf);
+    const float firstAfter = afterBuf.getReadPointer(0)[0];
+
+    // The output must not jump discontinuously (i.e. not reset to near-zero).
+    // A hard state reset would push firstAfter close to 0 while lastBefore is ~0.5.
+    const float jump = std::abs(firstAfter - lastBefore);
+    REQUIRE(jump < 0.1f);
+}
