@@ -209,7 +209,7 @@ void LoudnessPanel::resized()
 void LoudnessPanel::paint (juce::Graphics& g)
 {
     // Panel background
-    g.setColour (MLIMColours::displayBackground);
+    g.setColour (MLIMColours::loudnessPanelBackground);
     g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);
 
     g.setColour (MLIMColours::panelBorder);
