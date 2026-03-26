@@ -67,10 +67,11 @@ private:
 
         float process(float x) noexcept
         {
+            constexpr double kDenormalFix = 1e-25; // above double denormal, below -500 dBFS
             double xd = static_cast<double>(x);
             double y  = b0 * xd + z1;
-            z1 = b1 * xd - a1 * y + z2;
-            z2 = b2 * xd - a2 * y;
+            z1 = b1 * xd - a1 * y + z2 + kDenormalFix;
+            z2 = b2 * xd - a2 * y - kDenormalFix;
             return static_cast<float>(y);
         }
 
