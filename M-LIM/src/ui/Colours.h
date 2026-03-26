@@ -16,8 +16,8 @@ namespace MLIMColours
 
     // Waveform display gradient colours
     // Reference samples from Pro-L 2: top ~#8992AB, middle ~#6F7790 (measured from v1-0005.png)
-    const juce::Colour displayGradientTop   { 0xff6E7A9A };  // darkened to match reference ~#6E7A9A
-    const juce::Colour displayGradientBottom{ 0xff565E70 };  // darkened to match reference lower half
+    const juce::Colour displayGradientTop   { 0xff72808A };  // reduce blue saturation, slightly darker
+    const juce::Colour displayGradientBottom{ 0xff505870 };  // slightly darker bottom
 
     // Waveform colours (with alpha)
     const juce::Colour inputWaveform        { 0xCC6878A0 };  // lighter steel-blue, ~80% alpha (composites to ~#5A6A8A matching reference)
