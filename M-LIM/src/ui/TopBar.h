@@ -44,6 +44,7 @@ private:
     juce::TextButton abCopyButton_  { "Copy" };
     juce::TextButton undoButton_    { juce::CharPointer_UTF8 ("\xe2\x86\xa9") };  // ↩
     juce::TextButton redoButton_    { juce::CharPointer_UTF8 ("\xe2\x86\xaa") };  // ↪
+    juce::TextButton helpButton_    { "?" };
 
     static void styleBarButton (juce::TextButton& btn);
 

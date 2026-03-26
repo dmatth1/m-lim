@@ -5,8 +5,8 @@ TopBar::TopBar()
 {
     // Logo label
     logoLabel_.setText ("M-LIM", juce::dontSendNotification);
-    logoLabel_.setFont (juce::Font (14.0f, juce::Font::bold));
-    logoLabel_.setColour (juce::Label::textColourId, MLIMColours::accentBlue);
+    logoLabel_.setFont (juce::Font (16.0f, juce::Font::bold));
+    logoLabel_.setColour (juce::Label::textColourId, MLIMColours::textPrimary);
     logoLabel_.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (logoLabel_);
 
@@ -46,6 +46,10 @@ TopBar::TopBar()
     redoButton_.onClick = [this] { if (onRedo) onRedo(); };
     addAndMakeVisible (undoButton_);
     addAndMakeVisible (redoButton_);
+
+    // Help button (far right, visual only)
+    styleBarButton (helpButton_);
+    addAndMakeVisible (helpButton_);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,7 +78,13 @@ void TopBar::styleBarButton (juce::TextButton& btn)
 
 void TopBar::paint (juce::Graphics& g)
 {
-    g.fillAll (MLIMColours::peakLabelBackground);
+    // Gradient background: slight depth matching Pro-L 2 top bar
+    auto bounds = getLocalBounds().toFloat();
+    juce::ColourGradient bg (juce::Colour (0xff252525), 0.0f, 0.0f,
+                             juce::Colour (0xff1F1F1F), 0.0f, bounds.getHeight(),
+                             false);
+    g.setGradientFill (bg);
+    g.fillRect (bounds);
 
     // Bottom separator line
     g.setColour (MLIMColours::panelBorder);
@@ -85,15 +95,20 @@ void TopBar::resized()
 {
     auto bounds = getLocalBounds().reduced (4, 2);
 
-    static constexpr int kLogoW   = 54;
+    static constexpr int kLogoW   = 60;
     static constexpr int kArrowW  = 20;
     static constexpr int kBtnW    = 38;
     static constexpr int kBtnWide = 44;
+    static constexpr int kHelpW   = 22;
     static constexpr int kGap     = 3;
 
     // Left: logo
     logoLabel_.setBounds (bounds.removeFromLeft (kLogoW));
     bounds.removeFromLeft (kGap);
+
+    // Far right: Help button
+    helpButton_.setBounds (bounds.removeFromRight (kHelpW));
+    bounds.removeFromRight (kGap);
 
     // Right section: Redo Undo A→B A/B (remove from right)
     redoButton_.setBounds    (bounds.removeFromRight (kBtnW));
