@@ -5,13 +5,12 @@
 #include <functional>
 
 /**
- * Algorithm selector UI component — displays 8 segmented TextButtons (2 rows
- * of 4) representing the 8 limiter algorithms. The selected button is
- * highlighted in accentBlue; all others use the dark buttonBackground colour.
+ * Algorithm selector UI component — compact single-row navigation widget:
+ * [ ‹ ] [ ALGORITHM NAME ] [ › ]
  *
  * The underlying juce::ComboBox is kept hidden and acts as the APVTS
- * attachment point (via getComboBox()). All selection logic routes through it
- * so parameter state stays consistent.
+ * attachment point (via getComboBox()). Prev/next buttons cycle through
+ * algorithms 0–7 with wrap-around.
  */
 class AlgorithmSelector : public juce::Component
 {
@@ -39,20 +38,14 @@ private:
     /** Hidden ComboBox — APVTS attachment point only. */
     juce::ComboBox comboBox;
 
-    /** One TextButton per algorithm (8 total, laid out as 2 rows of 4). */
-    juce::TextButton transparentButton_;
-    juce::TextButton punchyButton_;
-    juce::TextButton dynamicButton_;
-    juce::TextButton aggressiveButton_;
-    juce::TextButton allroundButton_;
-    juce::TextButton busButton_;
-    juce::TextButton safeButton_;
-    juce::TextButton modernButton_;
+    /** Navigation buttons. */
+    juce::TextButton prevButton_;
+    juce::TextButton nextButton_;
 
-    /** Convenience array pointing to the 8 buttons above (populated in ctor). */
-    juce::TextButton* algoButtons_[8];
+    /** Displays the current algorithm name. */
+    juce::Label nameLabel_;
 
-    /** Refresh all button colours to reflect current comboBox selection. */
+    /** Refresh label text to reflect current comboBox selection. */
     void updateButtonStates();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AlgorithmSelector)

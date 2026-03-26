@@ -2,13 +2,13 @@
 #include "Colours.h"
 #include "../dsp/LimiterAlgorithm.h"
 
+// Short display names for the compact navigation widget (ALL CAPS).
 static constexpr const char* kAlgorithmButtonLabels[] = {
-    "Trans", "Punch", "Dyn", "Aggr", "Allrnd", "Bus", "Safe", "Mod"
+    "TRANSPARENT", "PUNCHY", "DYNAMIC", "AGGRESSIVE",
+    "ALLROUND", "BUS", "SAFE", "MODERN"
 };
 
 AlgorithmSelector::AlgorithmSelector()
-    : algoButtons_{ &transparentButton_, &punchyButton_, &dynamicButton_, &aggressiveButton_,
-                    &allroundButton_,   &busButton_,    &safeButton_,    &modernButton_ }
 {
     // Populate the hidden ComboBox (IDs are 1-based per JUCE convention).
     for (int i = 0; i < kNumAlgorithms; ++i)
@@ -16,8 +16,7 @@ AlgorithmSelector::AlgorithmSelector()
 
     comboBox.setSelectedId(1, juce::dontSendNotification);
 
-    // Route ComboBox changes (from APVTS or button clicks) to our callback
-    // and keep button highlight states in sync.
+    // Route ComboBox changes (from APVTS or button clicks) to our callback.
     comboBox.onChange = [this]
     {
         updateButtonStates();
@@ -25,23 +24,43 @@ AlgorithmSelector::AlgorithmSelector()
             onAlgorithmChanged(comboBox.getSelectedId() - 1);
     };
 
-    // The ComboBox is never visible — it's only here as an APVTS hook.
+    // The ComboBox is never visible — only here as an APVTS hook.
     addChildComponent(comboBox);
 
-    // Configure each button and wire its click to the ComboBox.
-    for (int i = 0; i < kNumAlgorithms; ++i)
+    // Prev button: cycle backwards.
+    prevButton_.setButtonText(juce::CharPointer_UTF8("\xe2\x80\xb9"));  // ‹
+    prevButton_.onClick = [this]
     {
-        algoButtons_[i]->setButtonText(kAlgorithmButtonLabels[i]);
-        algoButtons_[i]->setClickingTogglesState(false);
+        const int cur  = comboBox.getSelectedId() - 1;
+        const int next = (cur - 1 + kNumAlgorithms) % kNumAlgorithms;
+        comboBox.setSelectedId(next + 1, juce::sendNotificationSync);
+    };
 
-        const int idx = i;
-        algoButtons_[i]->onClick = [this, idx]
-        {
-            comboBox.setSelectedId(idx + 1, juce::sendNotificationSync);
-        };
+    // Next button: cycle forwards.
+    nextButton_.setButtonText(juce::CharPointer_UTF8("\xe2\x80\xba"));  // ›
+    nextButton_.onClick = [this]
+    {
+        const int cur  = comboBox.getSelectedId() - 1;
+        const int next = (cur + 1) % kNumAlgorithms;
+        comboBox.setSelectedId(next + 1, juce::sendNotificationSync);
+    };
 
-        addAndMakeVisible(*algoButtons_[i]);
+    // Style the nav buttons.
+    for (auto* btn : { &prevButton_, &nextButton_ })
+    {
+        btn->setColour(juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
+        btn->setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+        btn->setColour(juce::TextButton::textColourOffId,  MLIMColours::textPrimary);
+        btn->setColour(juce::TextButton::textColourOnId,   MLIMColours::textPrimary);
+        addAndMakeVisible(*btn);
     }
+
+    // Style the name label.
+    nameLabel_.setFont(juce::Font(MLIMColours::kFontSizeMedium, juce::Font::bold));
+    nameLabel_.setColour(juce::Label::textColourId, MLIMColours::textPrimary);
+    nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
+    nameLabel_.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(nameLabel_);
 
     updateButtonStates();
 }
@@ -59,28 +78,13 @@ int AlgorithmSelector::getAlgorithm() const
 
 void AlgorithmSelector::updateButtonStates()
 {
-    const int selected = comboBox.getSelectedId() - 1;  // 0-based
-
-    for (int i = 0; i < kNumAlgorithms; ++i)
-    {
-        const bool isSelected = (i == selected);
-
-        algoButtons_[i]->setColour(juce::TextButton::buttonColourId,
-                                   isSelected ? MLIMColours::accentBlue
-                                              : MLIMColours::algoButtonInactive);
-        algoButtons_[i]->setColour(juce::TextButton::buttonOnColourId,
-                                   MLIMColours::accentBlue);
-        algoButtons_[i]->setColour(juce::TextButton::textColourOffId,
-                                   isSelected ? MLIMColours::textPrimary
-                                              : MLIMColours::textSecondary);
-        algoButtons_[i]->setColour(juce::TextButton::textColourOnId,
-                                   MLIMColours::textPrimary);
-    }
+    const int selected = juce::jlimit(0, kNumAlgorithms - 1, comboBox.getSelectedId() - 1);
+    nameLabel_.setText(kAlgorithmButtonLabels[selected], juce::dontSendNotification);
 }
 
 void AlgorithmSelector::paint(juce::Graphics& g)
 {
-    // Draw a subtle rounded background behind the whole component.
+    // Subtle rounded background behind the whole component.
     auto bounds = getLocalBounds().toFloat();
     g.setColour(MLIMColours::displayBackground);
     g.fillRoundedRectangle(bounds, 4.0f);
@@ -91,23 +95,8 @@ void AlgorithmSelector::paint(juce::Graphics& g)
 
 void AlgorithmSelector::resized()
 {
-    const int w = getWidth();
-    const int h = getHeight();
-    const int gap = 2;
-
-    // Two rows of 4 buttons.
-    const int rowH = (h - gap) / 2;
-    const int colW = w / 4;
-
-    for (int i = 0; i < kNumAlgorithms; ++i)
-    {
-        const int row = i / 4;
-        const int col = i % 4;
-
-        const int x = col * colW;
-        const int y = row * (rowH + gap);
-        const int bw = (col == 3) ? (w - x) : colW;  // last column takes the remainder
-
-        algoButtons_[i]->setBounds(x, y, bw, rowH);
-    }
+    auto b = getLocalBounds();
+    prevButton_.setBounds(b.removeFromLeft(20));
+    nextButton_.setBounds(b.removeFromRight(20));
+    nameLabel_.setBounds(b);
 }
