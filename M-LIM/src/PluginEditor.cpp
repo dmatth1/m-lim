@@ -211,7 +211,6 @@ void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
     // gainReduction in MeterData is negative dB (0 = no GR, -3 = 3 dB reduction)
     const float grPositive = -data.gainReduction;
     grMeter_.setGainReduction (grPositive > 0.0f ? grPositive : 0.0f);
-    grMeter_.setInputLevel (inL, inR);
 
     inputMeter_.setClip  (data.inputLevelL  >= 1.0f, data.inputLevelR  >= 1.0f);
     outputMeter_.setClip (data.outputLevelL >= 1.0f, data.outputLevelR >= 1.0f);
