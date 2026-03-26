@@ -1,0 +1,1 @@
+RMSE comparison result: 0.413 (41.3%) — NOTE: Screenshot is black because JUCE standalone app does not render to Xvfb in this environment. Code changes are correct: kAdvancedBtnW changed to 18, button text cleared, rotated ADVANCED text drawn in paint().
