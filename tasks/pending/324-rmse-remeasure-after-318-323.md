@@ -57,4 +57,4 @@ Save full results (baseline, current, per-region) to `screenshots/task-322-rmse-
 Optimize screenshots: `find screenshots/ -name "*.png" -exec optipng -o2 -fix -quiet {} \;`
 
 ## Dependencies
-Requires tasks 318, 319, 320, 321
+Requires tasks 318, 319, 320, 323
