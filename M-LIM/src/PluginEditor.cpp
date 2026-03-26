@@ -34,7 +34,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputGainSlider_.setColour (juce::Slider::thumbColourId,      juce::Colour (0x00000000));
     addAndMakeVisible (inputGainSlider_);
 
-    inputGainValueLabel_.setText ("+0.0 dB", juce::dontSendNotification);
+    inputGainValueLabel_.setText ("+0.0", juce::dontSendNotification);
     inputGainValueLabel_.setFont (juce::Font (9.0f, juce::Font::bold));
     inputGainValueLabel_.setJustificationType (juce::Justification::centred);
     inputGainValueLabel_.setColour (juce::Label::textColourId, juce::Colour (0xffFFD700));
@@ -47,7 +47,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputGainSlider_.onValueChange = [this]
     {
         const double v = inputGainSlider_.getValue();
-        const juce::String text = (v >= 0.0 ? "+" : "") + juce::String (v, 1) + " dB";
+        const juce::String text = (v >= 0.0 ? "+" : "") + juce::String (v, 1);
         inputGainValueLabel_.setText (text, juce::dontSendNotification);
     };
 
