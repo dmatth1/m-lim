@@ -1,0 +1,55 @@
+Task 350: Dim Waveform Ceiling Line to Reduce Top-Area Artifact
+===============================================================
+Date: 2026-03-27
+Build: 0 errors ✓
+
+Change Applied
+--------------
+src/ui/Colours.h: waveformCeilingLine alpha changed from 0xCC (80%) to 0x50 (31%)
+  Before: 0xCCDD4444 — warm red, ~80% alpha (too saturated/bright)
+  After:  0x50DD4444 — warm red, ~31% alpha — subtler, closer to Pro-L 2 reference
+
+Methodology
+-----------
+- M-LIM standalone rebuilt (binary was 0-byte placeholder; manually linked via link.txt)
+- Launched on Xvfb :97 (1920x1080)
+- Full 1920x1080 scrot → screenshots/task-350-after.png
+- Plugin crop: 908x500+509+325, forced resize to 900x500 (same as task 348)
+- Reference: prol2-main-ui.jpg forced resize to 900x500 (-geometry 900x500!)
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Ceiling Line Pixel Check (y=21, x=450 in 900x500 crop)
+--------------------------------------------------------
+Result:   srgb(140,89,92)
+Red:      140  ≤ 160  PASS ✓  (was 197 at 80% alpha)
+Green:     89  ≥  70  PASS ✓  (was 74 at 80% alpha)
+Net:      muted warm pink — less saturated than reference ceiling (47,42,46 dark)
+Status:   PASS ✓ — visually much more subtle
+
+RMSE Results
+------------
+Full image RMSE:          0.2294 (22.94%)  — slight improvement from 22.98% baseline ✓
+Waveform sub-region RMSE: 0.1963 (19.63%) — no regression from 19.63% baseline ✓
+  [600x400 at x=150, y=50]
+
+Acceptance Criteria
+-------------------
+- Build 0 errors:                  PASS ✓
+- Screenshot captured:             PASS ✓ (screenshots/task-350-after.png)
+- Red channel ≤ 160:               PASS ✓ (140)
+- Green channel ≥ 70:              PASS ✓ (89)
+- Waveform RMSE ≤ 0.210:           PASS ✓ (0.1963)
+
+Comparison vs Baseline
+-----------------------
+                      | Task 348 (baseline) | Task 350
+Full image RMSE       |       22.98%        |  22.94%  (slight improvement)
+Waveform sub-region   |       19.63%        |  19.63%  (no change)
+
+Files Saved
+-----------
+screenshots/task-350-after.png          — Full 1920x1080 capture
+screenshots/task-350-mlim-cropped.png   — M-LIM plugin area (900x500)
+screenshots/task-350-ref-cropped.png    — Pro-L 2 reference (900x500)
+screenshots/task-350-diff-full.png      — Diff visualization
+screenshots/task-350-rmse-results.txt   — This file
