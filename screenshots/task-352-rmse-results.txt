@@ -1,0 +1,53 @@
+Task 352: RMSE Re-Baseline With Correct Reference Crop
+========================================================
+Date: 2026-03-27
+
+PURPOSE: Establish correct baseline RMSE measurements, invalidating task-348 which
+used an incorrect reference (full 1900×1184 image squished to 900x500, including
+macOS chrome and desktop background).
+
+METHODOLOGY
+-----------
+Reference command (correct crop matching task-343):
+  convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
+      -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref352.png
+  → Verified: 900x500 PNG
+
+M-LIM capture:
+  Display: Xvfb :99 (1920x1080)
+  scrot /tmp/task-352-raw.png → 1920x1080
+  convert raw.png -crop 908x500+509+325 +repage -resize 900x500! mlim-cropped.png
+  → Verified: 900x500 PNG
+
+Build state: Tasks 346, 347, 349, 350, 351, 353 complete (active: 350 worker-3)
+
+RESULTS
+-------
+Full image RMSE:   22.19%  (0.221907)
+Waveform region:   20.58%  (0.20581)
+Left meters:       23.33%  (0.233294)
+Right panel:       29.56%  (0.295578)
+Control strip:     22.42%  (0.224165)
+
+NOTES
+-----
+- These results use the CORRECT reference crop (1712x1073+97+32 → 900x500), matching
+  the methodology established in task-343.
+
+- TASK-348 RESULTS ARE INVALID. Task-348 used:
+    convert prol2-main-ui.jpg -resize 900x500!
+  which squishes the FULL 1900×1184 image (including macOS window chrome and desktop
+  background) to 900x500. This produced inflated RMSE values (~+0.78% full-image)
+  and unreliable sub-region comparisons.
+
+- Full-image RMSE of 22.19% is consistent with task-343's baseline of 22.05%.
+  The small delta (~0.14%) is within expected variation from the changes in tasks
+  346, 347, 349, 350, 351, 353.
+
+COMPARISON TO PRIOR CORRECT BASELINES
+--------------------------------------
+task-343 (correct):   22.05% full-image
+task-345 (correct):   22.20% full-image  (after task-341 darken waveform gradient)
+task-352 (correct):   22.19% full-image  (current, post tasks 346+347+349+350+351+353)
+
+task-348 (INVALID):   22.98% (incorrect methodology - do not use)
