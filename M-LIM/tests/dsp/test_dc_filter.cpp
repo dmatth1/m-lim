@@ -104,3 +104,70 @@ TEST_CASE("test_process_zero_samples_no_crash", "[DCFilter]")
     // DC should be near zero — state was not corrupted by the zero-length call
     REQUIRE(std::abs(dc) < 1e-3);
 }
+
+TEST_CASE("test_high_samplerate_dc_removed_192khz", "[DCFilter]")
+{
+    constexpr double sr = 192000.0;
+    DCFilter filter;
+    filter.prepare(sr);
+
+    const int numSamples = static_cast<int>(sr); // 1 second at 192 kHz
+    std::vector<float> signal(numSamples, 0.5f); // pure DC
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure DC in the latter half — should be removed
+    double sum = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sum += signal[i];
+    double dc = sum / (numSamples - start);
+
+    REQUIRE(std::abs(dc) < 1e-3);
+}
+
+TEST_CASE("test_reprepare_clears_state", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(44100.0);
+
+    // Prime the filter with DC=1.0
+    std::vector<float> dc(1000, 1.0f);
+    filter.process(dc.data(), static_cast<int>(dc.size()));
+
+    // Re-prepare at different sample rate — should flush state
+    filter.prepare(48000.0);
+
+    // Process 100 zero samples
+    std::vector<float> zeros(100, 0.0f);
+    filter.process(zeros.data(), static_cast<int>(zeros.size()));
+
+    // Last output should be ~0 since state was cleared and input is zero
+    REQUIRE(std::abs(zeros[99]) < 1e-5f);
+}
+
+TEST_CASE("test_single_sample_blocks", "[DCFilter]")
+{
+    constexpr double sr = 44100.0;
+    DCFilter filter;
+    filter.prepare(sr);
+
+    const int numSamples = static_cast<int>(sr); // 1 second
+    std::vector<float> output(numSamples);
+
+    // Process one sample at a time with DC=0.5
+    for (int i = 0; i < numSamples; ++i)
+    {
+        output[i] = 0.5f;
+        filter.process(&output[i], 1);
+    }
+
+    // Measure DC in the latter half — should be removed
+    double sum = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sum += output[i];
+    double dc = sum / (numSamples - start);
+
+    REQUIRE(std::abs(dc) < 1e-3);
+}
