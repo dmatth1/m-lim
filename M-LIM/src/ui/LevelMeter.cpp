@@ -84,8 +84,8 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
 
     // Idle structural gradient — simulates warm-program-material appearance at silence.
-    // Alpha boosted to 0.44f and warm zone extended to -18 dB so ~70% of bar shows
-    // orange/yellow (matching the reference captured with loud audio content).
+    // Alpha tuned to 0.60f (bottom) / 0.45f (warm mid) for optimal RMSE match with reference.
+    // Task 382: empirical search showed increasing alpha improves right panel match.
     {
         const float barTop2 = bar.getY();
         const float barH2   = bar.getHeight();
@@ -101,7 +101,7 @@ void LevelMeter::drawChannel (juce::Graphics& g,
 
         juce::ColourGradient idleGrad (
             MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,  // near-transparent at top — dark empty track
-            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.44f),  0.0f, barTop2 + barH2,
+            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.60f),  0.0f, barTop2 + barH2,
             false);
         // Top zone (danger+warn, 0 to -3 dBFS): keep low alpha — reference shows dark here
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
@@ -110,7 +110,7 @@ void LevelMeter::drawChannel (juce::Graphics& g,
                             MLIMColours::meterWarning.withAlpha (0.10f));   // yellow, near-transparent at top
         // Warm/cool transition extended to -12 dB: ramp up to visible
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
-                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.30f));  // transition
+                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.45f));  // transition
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
