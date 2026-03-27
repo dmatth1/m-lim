@@ -393,7 +393,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     }
 
     // Horizontal dB grid lines
-    g.setColour (MLIMColours::waveformGridLine.withAlpha (0.35f));
+    g.setColour (MLIMColours::waveformGridLine.withAlpha (0.25f));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
         const float db = MLIMColours::kMeterGridDB[gi];
@@ -405,7 +405,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     }
 
     // dB overlay labels — left-aligned on the waveform left edge (Pro-L 2 style)
-    g.setFont (juce::Font (10.0f));
+    g.setFont (juce::Font (MLIMColours::kFontSizeSmall - 1.0f));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
         const float db  = MLIMColours::kMeterGridDB[gi];
@@ -421,8 +421,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             y - 6.0f,
             labelW,
             12.0f);
-        float alpha = 0.35f;
-        g.setColour (MLIMColours::textPrimary.withAlpha (alpha));
+        g.setColour (MLIMColours::textSecondary.withAlpha (0.55f));
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 
