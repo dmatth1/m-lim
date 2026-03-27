@@ -1,0 +1,43 @@
+Task 364: RMSE Remeasure After Wave 14 Changes
+===============================================
+Date: 2026-03-27
+
+Wave 14 tasks completed:
+  - Task 361: Revert waveform grid alpha regression
+  - Task 362: Output meter right panel visual improvement
+  - Task 363: Left meter region waveform edge improvement
+
+RMSE Results:
+
+=== Full image RMSE ===
+  Wave 13 baseline (task-358): 22.33%
+  After Wave 14:               22.25%  IMPROVED ✓
+
+=== Waveform (600x400+150+50) ===
+  Wave 13 baseline (task-358): 21.87% (regression — task 357 had caused it)
+  After task 361 (revert):     21.44%
+  After Wave 14:               21.45%  IMPROVED (from 21.87%) — delta vs task-361: stable
+  Target: ≤21.00% — NOT MET (21.45% vs 21.00%)
+
+=== Left Meters (30x378+0+30) ===
+  Wave 13 baseline (task-358): 23.50%
+  After Wave 14 (task 363):    20.85%  SIGNIFICANTLY IMPROVED ✓
+  Target: met (20.85% << 22.50%)
+
+=== Right Panel (100x400+800+50) ===
+  Wave 13 baseline (task-358): 29.59%
+  After task 362:              29.26%  (via output meter improvements)
+  After Wave 14:               29.26%  IMPROVED ✓
+  Target: ≤28.50% — NOT MET (29.26% vs 28.50%)
+
+=== Control Strip (900x60+0+440) ===
+  Wave 13 baseline (task-358): 20.74%
+  After Wave 14:               20.74%  UNCHANGED ✓
+
+Summary:
+  All metrics improved or held stable vs wave 13 baseline.
+  Full image: 22.33% → 22.25% ✓
+  Waveform: 21.87% → 21.45% (improved but target 21.00% not met)
+  Left Meters: 23.50% → 20.85% (major improvement — target 22.50% met)
+  Right Panel: 29.59% → 29.26% (improved but target 28.50% not met)
+  Control Strip: 20.74% → 20.74% (stable)
