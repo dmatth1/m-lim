@@ -876,6 +876,11 @@
       "at": "2026-03-27T19:30:00Z",
       "action": "PM-36 complete \u2014 29 tasks 421-449 created for wave 24",
       "reason": "wave 23 official RMSE Full=19.23%; top priorities: barTrackBackground, output meter, topbar"
+    },
+    {
+      "at": "2026-03-27T20:00:00Z",
+      "action": "added visual parity task priority to EXTRA_GUIDANCE",
+      "reason": "workers keep picking test tasks over visual parity tasks 421-429"
     }
   ],
   "learnings": [
@@ -899,5 +904,5 @@
     "Wave 21 final: Full=19.46%, Wave=16.72%, Left=28.71%, Right=23.09% (still regressed), Control=21.02% (still regressed). Waveform keeps improving. Right/Control need dedicated fix wave.",
     "ccache defaults to /home/swarm/.cache/ccache (container-local, lost on exit). Must set CCACHE_DIR=/build-cache/ccache to use the shared build-cache volume."
   ],
-  "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved. Set CCACHE_DIR=/build-cache/ccache so ccache persists across container restarts."
+  "extra_guidance": "PRIORITY: Always pick tasks 421-429 first (visual parity tasks) over test/code tasks \u2014 these directly improve RMSE toward the 15% target. Only pick test tasks when no visual parity tasks remain. Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved. Set CCACHE_DIR=/build-cache/ccache so ccache persists across container restarts."
 }
