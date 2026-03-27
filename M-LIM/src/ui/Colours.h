@@ -65,8 +65,8 @@ namespace MLIMColours
     const juce::Colour loudnessHistogramBottom { 0xff3A3133 };  // warm brownish mid-tone (task-374)
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff5C5870 };  // +5R+4G+8B from task-375 — task-387
-    const juce::Colour controlStripBottom { 0xff4A4858 };  // +5R+5G+8B from task-375 — task-387
+    const juce::Colour controlStripTop    { 0xff696578 };  // +13 brightening from task-387 value — task-392
+    const juce::Colour controlStripBottom { 0xff565362 };  // +12 brightening from task-387 value — task-392
 
     // Button colours
     const juce::Colour algoButtonInactive       { 0xff3C4455 };  // +12 units from 0xff303848 — task-387

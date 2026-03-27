@@ -1,0 +1,16 @@
+Task 392: Control Strip Gradient — Additional +13 Brightening
+=============================================================
+Changes: controlStripTop 0xff5C5870 → 0xff696578, controlStripBottom 0xff4A4858 → 0xff565362
+
+Full RMSE:          20.28% (0.202805)  [baseline 20.29%, no regression]
+Control strip RMSE: 21.02% (0.21022)
+Wave RMSE:          18.02% (0.18023)
+
+Pixel at y=445:
+  M-LIM:     615F6E
+  Reference: 686C80  (closer than pre-392)
+
+Acceptance criteria:
+  [x] Full RMSE ≤ 20.74% (no regression) — 20.28% ✓
+  [x] Control strip pixel closer to 686C80 — 615F6E vs 686C80 (improved from ~555462)
+  [x] Visual: control strip brighter without washed out appearance
