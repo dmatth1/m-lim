@@ -881,6 +881,11 @@
       "at": "2026-03-27T20:00:00Z",
       "action": "added visual parity task priority to EXTRA_GUIDANCE",
       "reason": "workers keep picking test tasks over visual parity tasks 421-429"
+    },
+    {
+      "at": "2026-03-27T20:43:00Z",
+      "action": "respawned all 3 workers with refreshed OAuth token",
+      "reason": "401 auth errors \u2014 token rotated; workers 1/3 hit max iterations, worker-2 stopped early; unstuck tasks 424, 429, 421; fixed spawn command (removed erroneous /workspace mount)"
     }
   ],
   "learnings": [
