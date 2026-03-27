@@ -1,0 +1,17 @@
+Task 396: Waveform Top Gradient Darken Results
+==============================================
+Change: displayGradientTop 0xff332A2D → 0xff28242A
+
+Pixel check at y=50, x=320: #2A262E (target: ≤ #2E2830) ✓
+
+RMSE Results:
+=== Full image RMSE ===
+12985.2 (0.198142) = 19.81%  [baseline 19.82%] ✓
+
+=== Wave region ===
+11329.3 (0.172874) = 17.29%  [baseline 17.29%] ✓
+
+=== Control strip ===
+13776.8 (0.21022)  = 21.02%  [baseline 21.02%] ✓
+
+All acceptance criteria met.
