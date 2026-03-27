@@ -1,0 +1,9 @@
+Task 389: Waveform Display Gradient — Brighten Bottom Color
+Change: displayGradientBottom 0xff506090 → 0xff606898
+
+Results:
+- Full RMSE:  19.68% (was 20.74% — improved by 1.06pp)
+- Wave RMSE:  17.25% (was 18.96% — improved by 1.71pp)
+- Bottom pixel at y=330: 737D9D (was 6E799A, target 8C92AE)
+
+Verdict: KEEP — both metrics improved significantly
