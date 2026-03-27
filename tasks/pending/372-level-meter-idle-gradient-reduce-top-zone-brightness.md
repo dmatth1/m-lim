@@ -1,4 +1,4 @@
-# Task: Level Meter — Reduce Top Zone Brightness of Idle Gradient
+# Task 372: Level Meter — Reduce Top Zone Brightness of Idle Gradient
 
 ## Description
 

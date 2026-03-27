@@ -1,4 +1,4 @@
-# Task: RMSE Remeasure — Wave 16 Baseline
+# Task 373: RMSE Remeasure — Wave 16 Baseline
 
 ## Description
 Measure full and sub-region RMSE after all wave 16 tasks complete. Establish new baselines
@@ -89,4 +89,4 @@ Save text results to `screenshots/task-NNN-rmse-results.txt`.
 Save plugin screenshot to `screenshots/task-NNN-wave16-crop.png`.
 
 ## Dependencies
-Requires all wave 16 tasks
+Requires tasks 371, 372

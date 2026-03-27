@@ -1,4 +1,4 @@
-# Task: Fix Left Meter Regression — Brighten Loudness Panel Histogram Background
+# Task 371: Fix Left Meter Regression — Brighten Loudness Panel Histogram Background
 
 ## Description
 
