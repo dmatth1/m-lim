@@ -1,0 +1,14 @@
+Task 408: Increase displayGradientBottom Warmth
+================================================
+Color change: 0xff708AB4 → 0xff9E9EC4 (+46R, +20G, +16B)
+
+RMSE Results:
+  Full RMSE:  19.38% (baseline: 19.46% → improved)
+  Wave RMSE:  16.59% (baseline: 19.31% → improved by 2.72pp)
+
+Lower zone pixel analysis (crop 650x80+0+300 from 900x500):
+  M-LIM before: (103, 119, 154)
+  M-LIM after:  (116, 124, 159)
+  Reference:    (132, 138, 166)
+  
+Improvement: R+13 (↑), G+5 (↑), B+5 (↑) — all channels moved toward reference.
