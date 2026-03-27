@@ -36,9 +36,9 @@ void RotaryKnob::paint (juce::Graphics& g)
     {
         juce::ColourGradient gradient (
             MLIMColours::knobFaceHighlight,
-            centreX - faceRadius * 0.3f, centreY - faceRadius * 0.3f,
+            centreX - faceRadius * 0.4f, centreY - faceRadius * 0.4f,
             MLIMColours::knobFaceShadow,
-            centreX + faceRadius * 0.4f, centreY + faceRadius * 0.4f,
+            centreX + faceRadius * 0.5f, centreY + faceRadius * 0.5f,
             true);
         g.setGradientFill (gradient);
         g.fillEllipse (centreX - faceRadius, centreY - faceRadius,
