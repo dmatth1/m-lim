@@ -811,6 +811,11 @@
       "at": "2026-03-27T09:45:34Z",
       "action": "sweep 19 complete, wave 17+18 tasks 374-383 groomed by PM-27, workers claimed 374-376",
       "reason": "UIParityAuditor-25 + VisualParityAuditor-26 proposed 9 tasks; PM-27 numbered and moved to pending"
+    },
+    {
+      "at": "2026-03-27T10:21:02Z",
+      "action": "unblocked tasks 378 and 382 (both had no real dependencies)",
+      "reason": "workers incorrectly blocked tasks due to false dependency reasoning on Colours.h edits"
     }
   ],
   "learnings": [
@@ -830,5 +835,5 @@
     "loudnessHistogramTop/Bottom constants are now decoupled from displayGradientTop/Bottom. Current values match displayGradient colors (0xff3A3540/0xff506090) which are optimal for left RMSE.",
     "Left meter RMSE floor ~28% is structural: M-LIM JUCE TopBar (R=32) occupies y=0-35 of left crop vs Pro-L2 bright level meter bars (R=123). No color/gradient change can close this gap without audio playback."
   ],
-  "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime."
+  "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved."
 }
