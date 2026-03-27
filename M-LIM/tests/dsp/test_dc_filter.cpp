@@ -3,6 +3,7 @@
 #include <cmath>
 #include <vector>
 #include <numeric>
+#include <cfloat>
 
 static constexpr double kSampleRate = 44100.0;
 static constexpr double kTwoPi = 6.283185307179586;
@@ -144,6 +145,35 @@ TEST_CASE("test_reprepare_clears_state", "[DCFilter]")
 
     // Last output should be ~0 since state was cleared and input is zero
     REQUIRE(std::abs(zeros[99]) < 1e-5f);
+}
+
+TEST_CASE("test_denormal_after_silence", "[DCFilter]")
+{
+    // Process 10000 samples of silence and verify outputs are not denormal.
+    // This exercises the denormal protection added to yPrev.
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // Prime the filter with a small signal to push state away from zero
+    std::vector<float> prime(100, 1e-10f);
+    filter.process(prime.data(), static_cast<int>(prime.size()));
+
+    // Process 10000 samples of silence
+    std::vector<float> silence(10000, 0.0f);
+    filter.process(silence.data(), static_cast<int>(silence.size()));
+
+    // All output samples should be either zero or normal (not denormal)
+    for (int i = 0; i < 10000; ++i)
+    {
+        float v = silence[i];
+        bool isNormalOrZero = (v == 0.0f) || std::isnormal(v);
+        REQUIRE(isNormalOrZero);
+    }
+
+    // After silence, processing one more sample should also produce a non-denormal
+    float probe = 0.5f;
+    filter.process(&probe, 1);
+    REQUIRE((probe == 0.0f || std::isnormal(probe)));
 }
 
 TEST_CASE("test_single_sample_blocks", "[DCFilter]")
