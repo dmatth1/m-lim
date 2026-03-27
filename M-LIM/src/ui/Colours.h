@@ -99,4 +99,15 @@ const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover 
         -15.0f, -18.0f, -21.0f, -24.0f, -27.0f, -30.0f
     };
     static constexpr int kMeterGridDBCount = 11;
+
+    // Shared helper: draws LED-style segment separator lines across a bar area.
+    // Call after setting no colour — this sets its own colour via sepColour.
+    inline void drawSegmentSeparators (juce::Graphics& g,
+                                       float x, float barTop, float barH, float barW,
+                                       float segH, float segGap, juce::Colour sepColour)
+    {
+        g.setColour (sepColour);
+        for (float sy = barTop; sy < barTop + barH; sy += segH + segGap)
+            g.fillRect (x, sy + segH, barW, segGap);
+    }
 }

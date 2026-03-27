@@ -79,9 +79,9 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     // LED segment separator lines (matches GainReductionMeter pattern)
     static constexpr float kSegH   = 3.0f;
     static constexpr float kSegGap = 1.0f;
-    g.setColour (MLIMColours::barTrackBackground.brighter (0.25f));
-    for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
-        g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
+    MLIMColours::drawSegmentSeparators (g, bar.getX(), barTop, barH, bar.getWidth(),
+                                        kSegH, kSegGap,
+                                        MLIMColours::barTrackBackground.brighter (0.25f));
 
     // Idle structural gradient — simulates warm-program-material appearance at silence.
     // Alpha tuned to 0.60f (bottom) / 0.45f (warm mid) for optimal RMSE match with reference.

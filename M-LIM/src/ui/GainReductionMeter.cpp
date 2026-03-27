@@ -80,11 +80,11 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
     g.fillRect (barArea);
 
     // 2. Segment-separator texture across full bar height (LED strip look even at idle)
-    g.setColour (MLIMColours::barTrackBackground.brighter (0.35f));
     const float barTop = barArea.getY();
     const float barH   = barArea.getHeight();
-    for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
-        g.fillRect (barArea.getX(), sy + kSegH, barArea.getWidth(), kSegGap);
+    MLIMColours::drawSegmentSeparators (g, barArea.getX(), barTop, barH, barArea.getWidth(),
+                                        kSegH, kSegGap,
+                                        MLIMColours::barTrackBackground.brighter (0.35f));
 
     if (currentGR_ <= 0.0f) return;
 
