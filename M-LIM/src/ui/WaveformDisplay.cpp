@@ -431,8 +431,8 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     // at bottom (~48%). Strip covers full 30px crop area for best RMSE match.
     const float edgeW = 28.0f;
     juce::ColourGradient edgeGrad (
-        juce::Colours::black.withAlpha (0.50f),          0.0f, area.getY(),      // darken top to ~20%
-        juce::Colour (0xffC8B090).withAlpha (0.32f),      0.0f, area.getBottom(), // warm lift at bottom
+        juce::Colours::black.withAlpha (0.10f),          0.0f, area.getY(),      // slight top darkening
+        juce::Colour (0xffD8ACD0).withAlpha (0.52f),      0.0f, area.getBottom(), // redder cool-blue at bottom
         false);
     g.setGradientFill (edgeGrad);
     g.fillRect (area.getX(), area.getY(), edgeW, area.getHeight());
