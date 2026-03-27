@@ -21,7 +21,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     // Reserve space: label row above, value row below
     const float labelH     = 10.0f;
-    const float valueH     =  8.0f;
+    const float valueH     = 10.0f;
     const float textHeight = labelH + valueH;
     const float knobSize   = juce::jmin (bounds.getWidth(), bounds.getHeight() - textHeight);
     const float knobX      = bounds.getCentreX() - knobSize * 0.5f;
@@ -29,7 +29,7 @@ void RotaryKnob::paint (juce::Graphics& g)
 
     const float centreX = knobX + knobSize * 0.5f;
     const float centreY = knobY + knobSize * 0.5f;
-    const float radius  = knobSize * 0.5f - 4.0f;
+    const float radius  = knobSize * 0.5f - 2.0f;
 
     // Knob face — 3D sphere gradient (lighter top-left, darker bottom-right)
     const float faceRadius = radius * 0.80f;
@@ -138,7 +138,7 @@ void RotaryKnob::resized()
 {
     const auto bounds = getLocalBounds();
     const float labelH     = 10.0f;
-    const float textHeight = labelH + 8.0f;
+    const float textHeight = labelH + 10.0f;
     const float knobSize   = juce::jmin ((float)bounds.getWidth(),
                                          (float)bounds.getHeight() - textHeight);
     const int knobX        = bounds.getCentreX() - (int)(knobSize * 0.5f);
