@@ -426,16 +426,8 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 
-    // Left-edge idle gradient — simulates input meter region (dark at top, lighter warm-gray at bottom)
-    // Reference shows very dark unfilled meter zone at top (~20%) and lighter steel-gray fill
-    // at bottom (~48%). Strip covers full 30px crop area for best RMSE match.
-    const float edgeW = 28.0f;
-    juce::ColourGradient edgeGrad (
-        juce::Colours::black.withAlpha (0.10f),          0.0f, area.getY(),      // slight top darkening
-        juce::Colour (0xffD8ACD0).withAlpha (0.52f),      0.0f, area.getBottom(), // redder cool-blue at bottom
-        false);
-    g.setGradientFill (edgeGrad);
-    g.fillRect (area.getX(), area.getY(), edgeW, area.getHeight());
+    // Left-edge idle gradient removed (task-423): the pink-lavender 0xffD8ACD0 tint
+    // didn't match reference (neutral blue-gray). Removal eliminates visible pink cast.
 }
 
 void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
