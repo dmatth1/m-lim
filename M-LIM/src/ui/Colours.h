@@ -58,7 +58,7 @@ namespace MLIMColours
     const juce::Colour lufsReadoutGood  { 0xffE8C040 };  // warm golden-yellow for LUFS readout (below target)
 
     // Loudness panel background (dark purple-gray, matches Pro-L 2 right panel ~#2B2729)
-    const juce::Colour loudnessPanelBackground { 0xff2B2729 };  // dark purple-gray; reverted from 0xff1E1C21 (task-331) which worsened right panel RMSE
+    const juce::Colour loudnessPanelBackground { 0xff464356 };  // lightened for right panel brightness match (task-410): was 0xff2B2729
 
     // Loudness panel histogram area gradient (decoupled from waveform gradient so each can be tuned independently)
     const juce::Colour loudnessHistogramTop    { 0xff2E2A2C };  // warm dark (task-374: decoupled from waveform, warm tone to match Pro-L 2 right panel)

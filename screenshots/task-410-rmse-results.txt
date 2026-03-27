@@ -1,0 +1,26 @@
+Task 410: Lighten loudnessPanelBackground
+
+Change: loudnessPanelBackground 0xff2B2729 → 0xff464356
+
+Wave-21 baseline (task-397):
+  Full:    19.46%
+  Wave:    16.72%
+  Left:    28.71%
+  Right:   23.09%
+  Control: 21.02%
+
+Wave-22 stated baseline (task-410 description):
+  Right:   23.95%
+
+Task-410 results:
+  Full:    19.36%  (improved -0.10%)
+  Wave:    16.72%  (same)
+  Left:    26.58%  (improved -2.13%)
+  Right:   23.76%  (improved vs 23.95% wave-22 baseline: -0.19%)
+  Control: 21.02%  (no change)
+
+Acceptance criteria:
+  - Build: PASS (MLIM_Standalone built successfully)
+  - Right panel avg (190x400+660+0): M-LIM=(59,55,63) vs Reference=(64,57,63)
+    Was: (52,46,47). Now closer to reference. PASS
+  - Right RMSE: 23.76% < 23.95% baseline. PASS

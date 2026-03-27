@@ -73,6 +73,10 @@ target_link_libraries(MLIMLib
         $<$<BOOL:${ALSA_FOUND}>:${ALSA_LIBRARIES}>
 )
 
+if(ALSA_FOUND AND UNIX AND NOT APPLE)
+    target_link_libraries(MLIMLib PUBLIC ${ALSA_LIBRARIES})
+endif()
+
 juce_add_plugin(MLIM
     VERSION "1.0.0"
     COMPANY_NAME "MLIMaudio"
