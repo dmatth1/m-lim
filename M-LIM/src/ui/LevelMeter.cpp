@@ -103,14 +103,14 @@ void LevelMeter::drawChannel (juce::Graphics& g,
             MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,  // near-transparent at top — dark empty track
             MLIMColours::meterSafe.darker (0.3f).withAlpha (0.80f),  0.0f, barTop2 + barH2,
             false);
-        // Top zone (danger+warn, 0 to -3 dBFS): keep low alpha — reference shows dark here
+        // Top zone (danger+warn, 0 to -3 dBFS): boost warm zone alphas to match reference amber tone
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::grMeterMid.withAlpha (0.10f));     // orange #FF8C00, near-transparent
+                            MLIMColours::grMeterMid.withAlpha (0.28f));     // orange #FF8C00, boosted (was 0.10)
         idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.10f));   // yellow, near-transparent at top
-        // Warm/cool transition extended to -12 dB: ramp up to visible
+                            MLIMColours::meterWarning.withAlpha (0.25f));   // yellow, boosted (was 0.10)
+        // Warm/cool transition extended to -12 dB: warm yellow replaces cool blue
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
-                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.45f));  // transition
+                            MLIMColours::grMeterLow.withAlpha (0.20f));     // warm yellow at -12 dB transition (was cool meterSafe.brighter 0.45)
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
