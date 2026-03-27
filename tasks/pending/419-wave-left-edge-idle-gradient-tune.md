@@ -1,12 +1,8 @@
-# Task: Tune Wave Left-Edge Idle Gradient Brightness
+# Task 419: Tune Wave Left-Edge Idle Gradient Brightness (Wave Zone RMSE)
 
 ## Description
 The WaveformDisplay draws a 28px-wide "left-edge idle gradient" strip at the left edge
 of the waveform area to simulate the input level meter visible in the reference screenshot.
-
-Current rendering (`WaveformDisplay.cpp` lines ~429–438):
-- Top: black at 50% alpha → too dark at the left edge
-- Bottom: warm-gray 0xffC8B090 at 32% alpha
 
 Pixel analysis of the left 28px of the wave zone (x=0–28, y=40–440):
 - M-LIM: R=88, G=88, B=96  (too dark and too warm/neutral)
@@ -16,13 +12,7 @@ The black overlay at 50% alpha at the top is pulling the gradient too dark. The 
 shows the left edge is actually *brighter* and bluer than the main waveform at that position,
 suggesting it represents an active level meter display, not a dark shadow.
 
-Proposed changes to `WaveformDisplay.cpp` drawBackground():
-1. Reduce top black alpha from 0.50f to 0.30f (less darkening at top)
-2. Change the bottom warm-gray colour from 0xffC8B090 to 0xffA0A8C8 (more blue, cooler)
-   and increase its alpha from 0.32f to 0.42f
-
-These changes should raise the left-edge average from R=88 to approximately R=96–100
-while shifting the hue from warm to cool-blue, better matching the reference.
+Wave-22 baseline Wave zone RMSE = 16.51%.
 
 ## Produces
 None
@@ -44,6 +34,7 @@ None
 
 ## Technical Details
 The block to change in `WaveformDisplay.cpp::drawBackground()`:
+
 ```cpp
 // BEFORE:
 const float edgeW = 28.0f;
@@ -60,11 +51,22 @@ juce::ColourGradient edgeGrad (
     false);
 ```
 
-Pixel verification:
+Changes:
+1. Reduce top black alpha from 0.50f to 0.30f (less darkening at top)
+2. Change bottom warm-gray 0xffC8B090 to cool-blue 0xffA0A8C8 and increase alpha 0.32→0.42
+
+Pixel verification after change:
 ```bash
 convert /tmp/task-mlim.png -crop 28x400+0+40 +repage -resize 1x1! \
   -format "%[fx:255*p{0,0}.r],%[fx:255*p{0,0}.g],%[fx:255*p{0,0}.b]" info:
 # Target: R ≈ 96, G ≈ 93, B ≈ 111 (matching reference R=98, G=94, B=112)
+```
+
+Wave zone RMSE measurement:
+```bash
+convert /tmp/task-mlim.png -crop 640x500+0+0 +repage /tmp/cur-wave.png
+convert /tmp/task-ref.png  -crop 640x500+0+0 +repage /tmp/ref-wave.png
+compare -metric RMSE /tmp/ref-wave.png /tmp/cur-wave.png /dev/null 2>&1
 ```
 
 ## Dependencies

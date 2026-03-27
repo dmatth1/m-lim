@@ -1,4 +1,4 @@
-# Task: Widen GR Meter to Improve Left Zone Visual Parity
+# Task 414: Widen GR Meter to Improve Left Zone Visual Parity
 
 ## Description
 The GainReductionMeter is currently only 12px wide (`kGRMeterW=12` in `PluginEditor.h`).
@@ -12,14 +12,13 @@ Left zone pixel averages (x=640–720, y=20–420):
 - M-LIM: R=63, G=58, B=66  (very dark from 12px GR meter + LoudnessPanel)
 - Reference: R=95, G=97, B=117 (bright from active stereo level meter)
 
-Increase `kGRMeterW` from 12 to 28 px and reduce `kLoudnessPanelW` from 140 to 124 px to
+Increase `kGRMeterW` from 12 to 28px and reduce `kLoudnessPanelW` from 140 to 124px to
 compensate. Also enable scale labels on the GR meter (`kScaleW` in `GainReductionMeter.h`
 from 0 to 16) to show dB values matching the reference's dB scale.
 
-Separately, the `barTrackBackground` color (0xff231417 = R=35, G=20, B=23) used for the GR
-bar track is very dark/warm-red. The reference left zone idle background is a medium dark
-blue-grey. Consider lightening `barTrackBackground` to something like 0xff2A2530 (R=42,
-G=37, B=48) to add blue tint and reduce the warm-red cast that diverges from reference.
+Additionally, the `barTrackBackground` color (0xff231417 = R=35, G=20, B=23) used for the GR
+bar track is very dark/warm-red. Consider lightening to 0xff2A2530 (R=42, G=37, B=48) to
+add blue tint and reduce warm-red cast diverging from reference.
 
 ## Produces
 None
@@ -54,7 +53,7 @@ waveformDisplay_.setBounds (bounds);                                   // 648px 
 After change: grMeter_=28px, loudnessPanel_=124px, total right panels=252px (unchanged).
 The waveform width remains 648px — no change to Wave zone RMSE expected.
 
-RMSE methodology — use the same 5-zone measurement as wave-22:
+Left zone RMSE measurement:
 ```bash
 convert /tmp/task-mlim.png -crop 80x500+640+0  +repage /tmp/cur-left.png
 convert /tmp/task-ref.png  -crop 80x500+640+0  +repage /tmp/ref-left.png
@@ -62,4 +61,4 @@ compare -metric RMSE /tmp/ref-left.png /tmp/cur-left.png /dev/null 2>&1
 ```
 
 ## Dependencies
-None
+Requires task 413
