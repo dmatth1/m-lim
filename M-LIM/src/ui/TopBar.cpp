@@ -81,8 +81,8 @@ void TopBar::paint (juce::Graphics& g)
 {
     // Gradient background: slight depth matching Pro-L 2 top bar
     auto bounds = getLocalBounds().toFloat();
-    juce::ColourGradient bg (juce::Colour (0xff252525), 0.0f, 0.0f,
-                             juce::Colour (0xff1F1F1F), 0.0f, bounds.getHeight(),
+    juce::ColourGradient bg (juce::Colour (0xff252228), 0.0f, 0.0f,  // slight purple tint
+                             juce::Colour (0xff1F1C22), 0.0f, bounds.getHeight(),
                              false);
     g.setGradientFill (bg);
     g.fillRect (bounds);
