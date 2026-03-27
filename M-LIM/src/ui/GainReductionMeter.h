@@ -36,19 +36,12 @@ public:
     void mouseExit  (const juce::MouseEvent& e) override;
 
 private:
-    /** Returns the rectangle used for the peak numeric readout. */
-    juce::Rectangle<float> peakLabelArea() const;
     float currentGR_   = 0.0f;   // positive dB, 0 = no reduction
     float peakGR_      = 0.0f;   // positive dB
     float maxGRdB_     = 24.0f;  // full-scale range
 
-    static constexpr int kScaleW  = 0;   // width of dB scale labels (0 = hidden)
-    static constexpr int kNumericH = 0;  // numeric readout removed (was 16)
-
     void drawBar        (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
     void drawPeakTick   (juce::Graphics& g, const juce::Rectangle<float>& barArea) const;
-    void drawScale      (juce::Graphics& g, const juce::Rectangle<float>& scaleArea) const;
-    void drawNumeric    (juce::Graphics& g, const juce::Rectangle<float>& numArea) const;
 
     float grToFrac (float grDB) const noexcept;
 

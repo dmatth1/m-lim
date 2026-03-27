@@ -32,27 +32,14 @@ void GainReductionMeter::setRange (float maxGRdB)
 
 void GainReductionMeter::resized() {}
 
-juce::Rectangle<float> GainReductionMeter::peakLabelArea() const
+void GainReductionMeter::mouseDown (const juce::MouseEvent&)
 {
-    auto bounds  = getLocalBounds().toFloat();
-    auto numArea = bounds.removeFromTop (static_cast<float> (kNumericH));
-    // The peak readout occupies the lower half of numArea (matches drawNumeric)
-    return numArea.withHeight (numArea.getHeight() * 0.5f)
-                  .translated (0.0f, numArea.getHeight() * 0.5f);
+    resetPeakGR();
 }
 
-void GainReductionMeter::mouseDown (const juce::MouseEvent& e)
+void GainReductionMeter::mouseMove (const juce::MouseEvent&)
 {
-    if (peakLabelArea().contains (e.position))
-        resetPeakGR();
-}
-
-void GainReductionMeter::mouseMove (const juce::MouseEvent& e)
-{
-    if (peakLabelArea().contains (e.position))
-        setMouseCursor (juce::MouseCursor::PointingHandCursor);
-    else
-        setMouseCursor (juce::MouseCursor::NormalCursor);
+    setMouseCursor (juce::MouseCursor::PointingHandCursor);
 }
 
 void GainReductionMeter::mouseExit (const juce::MouseEvent&)
@@ -71,22 +58,14 @@ float GainReductionMeter::grToFrac (float grDB) const noexcept
 
 void GainReductionMeter::paint (juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
-
-    // Numeric readout at top
-    auto numArea   = bounds.removeFromTop (static_cast<float> (kNumericH));
-    // Scale labels on the right
-    auto scaleArea = bounds.removeFromRight  (static_cast<float> (kScaleW));
-    auto barArea   = bounds;
+    auto barArea = getLocalBounds().toFloat();
 
     // Background — dark fill matching reference Pro-L 2 (~#241B20 ≈ barTrackBackground)
     g.setColour (MLIMColours::barTrackBackground);
     g.fillRect (barArea);
 
-    drawBar (g, barArea);
-    drawPeakTick   (g, barArea);
-    drawScale      (g, scaleArea);
-    drawNumeric    (g, numArea);
+    drawBar      (g, barArea);
+    drawPeakTick (g, barArea);
 }
 
 void GainReductionMeter::drawBar (juce::Graphics& g,
@@ -148,61 +127,3 @@ void GainReductionMeter::drawPeakTick (juce::Graphics& g,
                           barArea.getRight());
 }
 
-void GainReductionMeter::drawScale (juce::Graphics& g,
-                                     const juce::Rectangle<float>& scaleArea) const
-{
-    if (kScaleW <= 0) return;
-
-    g.setColour (MLIMColours::background);
-    g.fillRect (scaleArea);
-
-    g.setColour (MLIMColours::panelBorder);
-    g.drawVerticalLine (juce::roundToInt (scaleArea.getX()),
-                        scaleArea.getY(), scaleArea.getBottom());
-
-    g.setFont (juce::Font (8.0f));
-
-    // Marks at 0, -3, -6, -9, -12, -18, -24 dB (labels shown without leading minus)
-    static const float kMarks[] = { 0.0f, 3.0f, 6.0f, 9.0f, 12.0f, 18.0f, 24.0f };
-    for (float mark : kMarks)
-    {
-        if (mark > maxGRdB_) break;
-        float frac = grToFrac (mark);
-        float y    = scaleArea.getY() + frac * scaleArea.getHeight();
-        juce::String label = juce::String (juce::roundToInt (mark));
-        auto labelRect = juce::Rectangle<float> (scaleArea.getX() + 1.0f,
-                                                  y - 5.0f,
-                                                  scaleArea.getWidth() - 2.0f,
-                                                  10.0f);
-        g.setColour (MLIMColours::textSecondary);
-        g.drawText (label, labelRect, juce::Justification::centredLeft, false);
-    }
-}
-
-void GainReductionMeter::drawNumeric (juce::Graphics& g,
-                                       const juce::Rectangle<float>& numArea) const
-{
-    g.setColour (MLIMColours::peakLabelBackground);
-    g.fillRect (numArea);
-
-    // Current GR
-    juce::String curStr = (currentGR_ > 0.0f)
-                        ? "-" + juce::String (currentGR_, 1)
-                        : "0.0";
-
-    // Peak GR
-    juce::String pkStr  = (peakGR_ > 0.0f)
-                        ? "-" + juce::String (peakGR_, 1)
-                        : "0.0";
-
-    auto cur = numArea.withHeight (numArea.getHeight() * 0.5f);
-    auto pk  = cur.withY (cur.getBottom());
-
-    g.setFont (juce::Font (MLIMColours::kFontSizeSmall));
-    g.setColour (MLIMColours::textPrimary);
-    g.drawText (curStr, cur, juce::Justification::centred, false);
-
-    g.setFont (juce::Font (8.0f));
-    g.setColour (MLIMColours::peakLabel);
-    g.drawText (pkStr, pk, juce::Justification::centred, false);
-}
