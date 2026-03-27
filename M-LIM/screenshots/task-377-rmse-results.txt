@@ -1,0 +1,24 @@
+=== Wave 17 RMSE Baseline (Task 377) ===
+
+Wave 16 baseline (task-373):
+  Full:    21.22%
+  Wave:    19.44%
+  Left:    28.11% (structural floor, not targeted)
+  Right:   23.57%
+  Control: 20.65%
+
+Wave 17 results:
+  Full:    20.81%  ✓ (target: ≤21.22%)
+  Wave:    19.04%  ✓ (target: ≤19.44%)
+  Left:    28.99%  ~ (structural floor, not targeted)
+  Right:   22.43%  ✓ (target: ≤23.57%)
+  Control: 20.13%  ✓ (target: ≤20.65%)
+
+All targeted regions improved or held. Wave 17 tasks successful.
+
+Raw compare output:
+  Full:    13639 (0.208117)
+  Wave:    12479.3 (0.190421)
+  Left:    18997.5 (0.289883)
+  Right:   14696.6 (0.224256)
+  Control: 13189.5 (0.201258)
