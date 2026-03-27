@@ -1,0 +1,21 @@
+Task 397: Wave 21 RMSE Baseline
+
+Wave-20 Baseline (task-393):
+  Full:    19.82%
+  Wave:    17.29%
+  Left:    28.75%
+  Right:   23.09%
+  Control: 21.02%
+
+Wave-21 Results (tasks 394+395+396):
+  Full:    19.46%  (improved -0.36%)
+  Wave:    16.72%  (improved -0.57%)
+  Left:    28.71%  (improved -0.04%)
+  Right:   23.09%  (no change)
+  Control: 21.02%  (no change)
+
+All regions met or improved vs wave-20 baseline.
+Changes applied:
+  - Task 394: Waveform mid-zone boost shifted down to 58%, alphas 0.80/0.65
+  - Task 395: displayGradientBottom 0xff606898 -> 0xff708AB4
+  - Task 396: displayGradientTop 0xff332A2D -> 0xff28242A
