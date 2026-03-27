@@ -1519,3 +1519,132 @@ TEST_CASE("test_reset_no_allocation", "[LimiterEngine]")
     engine.process(buf2);
     REQUIRE(maxAbsValue(buf2) <= 1.0f + 1e-4f);
 }
+
+// ============================================================================
+// test_all_algorithms_valid_output_through_engine
+//   For each of the 8 algorithms: prepare a fresh engine, set the algorithm,
+//   process 20 blocks of +6 dBFS signal. All output samples must be finite,
+//   max output must not exceed ceiling + 0.01, and GR must be non-trivial
+//   (< -0.5 dB, i.e. some gain reduction was applied).
+// ============================================================================
+TEST_CASE("test_all_algorithms_valid_output_through_engine", "[LimiterEngine]")
+{
+    static const LimiterAlgorithm kAlgorithms[] = {
+        LimiterAlgorithm::Transparent,
+        LimiterAlgorithm::Punchy,
+        LimiterAlgorithm::Dynamic,
+        LimiterAlgorithm::Aggressive,
+        LimiterAlgorithm::Allround,
+        LimiterAlgorithm::Bus,
+        LimiterAlgorithm::Safe,
+        LimiterAlgorithm::Modern,
+    };
+
+    const float kCeilingLinear = 1.0f;  // 0 dBFS
+    const float kInputAmp = 2.0f;       // +6 dBFS
+
+    for (auto algo : kAlgorithms)
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);  // 0 dBFS
+        engine.setAlgorithm(algo);
+
+        float maxOut = 0.0f;
+
+        for (int block = 0; block < 20; ++block)
+        {
+            juce::AudioBuffer<float> buf = makeSine(kInputAmp, kBlockSize);
+            engine.process(buf);
+
+            for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+            {
+                const float* data = buf.getReadPointer(ch);
+                for (int s = 0; s < buf.getNumSamples(); ++s)
+                {
+                    INFO("algo=" << static_cast<int>(algo) << " ch=" << ch << " s=" << s);
+                    REQUIRE(std::isfinite(data[s]));
+                    maxOut = std::max(maxOut, std::abs(data[s]));
+                }
+            }
+        }
+
+        // Ceiling respected
+        INFO("algo=" << static_cast<int>(algo) << " maxOut=" << maxOut);
+        REQUIRE(maxOut <= kCeilingLinear + 0.01f);
+
+        // GR was applied (hot signal must trigger limiting)
+        INFO("algo=" << static_cast<int>(algo) << " GR=" << engine.getGainReduction());
+        REQUIRE(engine.getGainReduction() < -0.5f);
+    }
+}
+
+// ============================================================================
+// test_all_algorithms_distinct_output_through_engine
+//   Process the same +6 dBFS sine through all 8 algorithms and collect the
+//   RMS of the settled output (last block). At least 6 of 8 algorithms should
+//   produce distinct RMS values (differing by more than 0.01 dB).
+// ============================================================================
+TEST_CASE("test_all_algorithms_distinct_output_through_engine", "[LimiterEngine]")
+{
+    static const LimiterAlgorithm kAlgorithms[] = {
+        LimiterAlgorithm::Transparent,
+        LimiterAlgorithm::Punchy,
+        LimiterAlgorithm::Dynamic,
+        LimiterAlgorithm::Aggressive,
+        LimiterAlgorithm::Allround,
+        LimiterAlgorithm::Bus,
+        LimiterAlgorithm::Safe,
+        LimiterAlgorithm::Modern,
+    };
+    constexpr int kNumAlgos = 8;
+    const float kInputAmp = 2.0f;  // +6 dBFS
+
+    float rmsValues[kNumAlgos] = {};
+
+    for (int ai = 0; ai < kNumAlgos; ++ai)
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);
+        engine.setAlgorithm(kAlgorithms[ai]);
+
+        // Warm up
+        for (int block = 0; block < 19; ++block)
+        {
+            juce::AudioBuffer<float> buf = makeSine(kInputAmp, kBlockSize);
+            engine.process(buf);
+        }
+
+        // Measure last block
+        juce::AudioBuffer<float> buf = makeSine(kInputAmp, kBlockSize);
+        engine.process(buf);
+
+        double sumSq = 0.0;
+        const float* data = buf.getReadPointer(0);
+        for (int s = 0; s < kBlockSize; ++s)
+            sumSq += static_cast<double>(data[s]) * data[s];
+        rmsValues[ai] = static_cast<float>(std::sqrt(sumSq / kBlockSize));
+    }
+
+    // Count distinct RMS values (0.01 dB tolerance ≈ factor 1.00115)
+    int distinctCount = 0;
+    for (int i = 0; i < kNumAlgos; ++i)
+    {
+        bool unique = true;
+        for (int j = 0; j < i; ++j)
+        {
+            float ratiodB = std::abs(20.0f * static_cast<float>(std::log10(rmsValues[i] / (rmsValues[j] + 1e-9f))));
+            if (ratiodB < 0.01f)
+            {
+                unique = false;
+                break;
+            }
+        }
+        if (unique)
+            ++distinctCount;
+    }
+
+    INFO("Distinct algorithm RMS count: " << distinctCount);
+    REQUIRE(distinctCount >= 6);
+}
