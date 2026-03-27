@@ -61,8 +61,8 @@ namespace MLIMColours
     const juce::Colour loudnessPanelBackground { 0xff464356 };  // lightened for right panel brightness match (task-410): was 0xff2B2729
 
     // Loudness panel histogram area gradient (decoupled from waveform gradient so each can be tuned independently)
-    const juce::Colour loudnessHistogramTop    { 0xff2E2A2C };  // warm dark (task-374: decoupled from waveform, warm tone to match Pro-L 2 right panel)
-    const juce::Colour loudnessHistogramBottom { 0xff3A3133 };  // warm brownish mid-tone (task-374)
+    const juce::Colour loudnessHistogramTop    { 0xff484858 };  // task-414: brightened to reduce Left zone RMSE (was 0xff2E2A2C)
+    const juce::Colour loudnessHistogramBottom { 0xff404050 };  // task-414: brightened matching histogram top tone (was 0xff3A3133)
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
     const juce::Colour controlStripTop    { 0xff555561 };  // full target task-412 (R=85, G=85, B=97 matching reference)
