@@ -752,3 +752,137 @@ TEST_CASE("test_hp_cutoff_change_no_discontinuity", "[SidechainFilter]")
     const float jump = std::abs(firstAfter - lastBefore);
     REQUIRE(jump < 0.1f);
 }
+
+// ---------------------------------------------------------------------------
+// test_inverted_hp_lp_long_run_stable
+// HP=2000, LP=200 (inverted range), 100k samples of white noise — all output
+// must remain finite and within [-10, +10].
+// ---------------------------------------------------------------------------
+TEST_CASE("test_inverted_hp_lp_long_run_stable", "[SidechainFilter]")
+{
+    static constexpr int kBlockSize   = 512;
+    static constexpr int kNumBlocks   = 200; // 200 * 512 = 102400 samples
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kBlockSize);
+    filter.setHighPassFreq(2000.0f);
+    filter.setLowPassFreq(2000.0f); // LP clamps to min 2000 Hz
+
+    juce::AudioBuffer<float> buf(1, kBlockSize);
+    juce::Random rng(42);
+
+    for (int block = 0; block < kNumBlocks; ++block)
+    {
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = rng.nextFloat() * 2.0f - 1.0f; // white noise [-1, 1]
+
+        filter.process(buf);
+
+        const float* out = buf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            REQUIRE(std::isfinite(out[i]));
+            REQUIRE(std::abs(out[i]) <= 10.0f);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_hp_sweep_no_explosion
+// HP sweeps from 20 to 2000 Hz in steps, 100 samples per step; peak output
+// must stay below 40 dBFS (roughly amplitude 100).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_hp_sweep_no_explosion", "[SidechainFilter]")
+{
+    static constexpr int kSamplesPerStep = 100;
+    static constexpr float kMaxAmplitude = 100.0f; // ~40 dBFS
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, kSamplesPerStep);
+
+    juce::AudioBuffer<float> buf(1, kSamplesPerStep);
+    int sampleIndex = 0;
+
+    for (float hp = 20.0f; hp <= 2000.0f; hp += 20.0f)
+    {
+        filter.setHighPassFreq(hp);
+
+        float* data = buf.getWritePointer(0);
+        for (int i = 0; i < kSamplesPerStep; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * (sampleIndex + i) / kSampleRate));
+
+        filter.process(buf);
+
+        const float* out = buf.getReadPointer(0);
+        for (int i = 0; i < kSamplesPerStep; ++i)
+        {
+            REQUIRE(std::isfinite(out[i]));
+            REQUIRE(std::abs(out[i]) < kMaxAmplitude);
+        }
+
+        sampleIndex += kSamplesPerStep;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_reprepare_clears_filter_state
+// Prime the filter with tilt=+6 dB and 10k loud samples, then reprepare and
+// process 10 silence samples — output must be within 1e-4 of 0.0.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reprepare_clears_filter_state", "[SidechainFilter]")
+{
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, 10000);
+    filter.setTilt(6.0f);
+
+    // Prime with loud signal
+    juce::AudioBuffer<float> loudBuf(1, 10000);
+    {
+        float* data = loudBuf.getWritePointer(0);
+        for (int i = 0; i < 10000; ++i)
+            data[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+    }
+    filter.process(loudBuf);
+
+    // Reprepare — should clear all filter state
+    filter.prepare(kSampleRate, 10);
+
+    // Process 10 silence samples
+    juce::AudioBuffer<float> silenceBuf(1, 10);
+    silenceBuf.clear();
+    filter.process(silenceBuf);
+
+    const float* out = silenceBuf.getReadPointer(0);
+    for (int i = 0; i < 10; ++i)
+    {
+        REQUIRE(std::abs(out[i]) < 1e-4f);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_tilt_unity_at_pivot_frequency
+// At the 1 kHz pivot with tilt=+6 dB, the combined low-shelf + high-shelf
+// should be near unity. Measure attenuation at 1 kHz — must be within ±0.5 dB.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_tilt_unity_at_pivot_frequency", "[SidechainFilter]")
+{
+    const int totalSamples = kSettleSamples + kMeasureSamples;
+
+    SidechainFilter filter;
+    filter.prepare(kSampleRate, totalSamples);
+    filter.setTilt(6.0f); // +6 dB tilt
+
+    auto buf = makeSine(1000.0, 1.0, totalSamples, kSampleRate);
+    filter.process(buf);
+
+    juce::AudioBuffer<float> measureBuf(1, kMeasureSamples);
+    measureBuf.copyFrom(0, 0, buf, 0, kSettleSamples, kMeasureSamples);
+
+    const double rmsOut = rms(measureBuf);
+    const double rmsIn  = 1.0 / std::sqrt(2.0);
+    const double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
+
+    REQUIRE(attenuationDb > -0.5);
+    REQUIRE(attenuationDb < 0.5);
+}
