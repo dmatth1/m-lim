@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "workers_running",
+  "phase": "specialist_sweep",
   "agents": 3,
   "model": "sonnet",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -234,7 +234,7 @@
     "222-remove-committed-screenshots.md"
   ],
   "review_count": 16,
-  "last_sweep_at_done_count": 378,
+  "last_sweep_at_done_count": 388,
   "specialist_sweep_count": 27,
   "decisions": [
     {
@@ -816,6 +816,11 @@
       "at": "2026-03-27T10:21:02Z",
       "action": "unblocked tasks 378 and 382 (both had no real dependencies)",
       "reason": "workers incorrectly blocked tasks due to false dependency reasoning on Colours.h edits"
+    },
+    {
+      "at": "2026-03-27T10:40:39Z",
+      "action": "wave 18 complete done=388, launching sweep 20",
+      "reason": "all tasks 374-383 done, wave 18 RMSE confirmed, gap to 15% target = 5.74pp"
     }
   ],
   "learnings": [
@@ -833,7 +838,8 @@
     "Wave 15: task 365 warm gradient bled onto GR meter -> left RMSE 20.85%->28.11% regression. Fix: scope warm gradient only to input level meters, not GR meter.",
     "Wave 16: Left 28.11% is a structural floor \u2014 the left meter crop (x=640-720) captures M-LIM TopBar (dark R=32) at y=0-35 vs Pro-L 2 bright level meter (R=123), and readout area (dark) vs bright meter bars. No histogram color change can fix this. Right panel improved to 23.57% by reducing level meter idle gradient top zone alpha 0.44\u21920.10 through warning boundary.",
     "loudnessHistogramTop/Bottom constants are now decoupled from displayGradientTop/Bottom. Current values match displayGradient colors (0xff3A3540/0xff506090) which are optimal for left RMSE.",
-    "Left meter RMSE floor ~28% is structural: M-LIM JUCE TopBar (R=32) occupies y=0-35 of left crop vs Pro-L2 bright level meter bars (R=123). No color/gradient change can close this gap without audio playback."
+    "Left meter RMSE floor ~28% is structural: M-LIM JUCE TopBar (R=32) occupies y=0-35 of left crop vs Pro-L2 bright level meter bars (R=123). No color/gradient change can close this gap without audio playback.",
+    "Wave 18 final: Full=20.74%, Wave=18.96%, Left=29.00% (floor), Right=22.36%, Control=20.17%"
   ],
   "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved."
 }
