@@ -74,7 +74,7 @@ void AlgorithmSelector::paint(juce::Graphics& g)
 {
     // Subtle rounded background behind the button grid.
     auto bounds = getLocalBounds().toFloat();
-    g.setColour(MLIMColours::displayBackground);
+    g.setColour(MLIMColours::algoButtonInactive);
     g.fillRoundedRectangle(bounds, 4.0f);
 
     g.setColour(MLIMColours::algoButtonInactive.brighter(0.3f));
