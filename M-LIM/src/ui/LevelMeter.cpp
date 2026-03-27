@@ -83,6 +83,30 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
         g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
 
+    // Idle structural gradient — gives the meter visual presence at silence.
+    // Same colour stops as the active fill but at very low alpha (~15%).
+    {
+        const float barTop2 = bar.getY();
+        const float barH2   = bar.getHeight();
+
+        const float normWarn2   = dbToNorm (kWarnDB);
+        const float normDanger2 = dbToNorm (kDangerDB);
+        const float dangerBot2  = barTop2 + barH2 * (1.0f - normDanger2);
+        const float warnBot2    = barTop2 + barH2 * (1.0f - normWarn2);
+
+        juce::ColourGradient idleGrad (
+            MLIMColours::meterDanger.withAlpha (0.15f),             0.0f, barTop2,
+            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.15f), 0.0f, barTop2 + barH2,
+            false);
+        idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
+                            MLIMColours::meterWarning.withAlpha (0.15f));
+        idleGrad.addColour ((warnBot2   - barTop2) / barH2,
+                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.15f));
+
+        g.setGradientFill (idleGrad);
+        g.fillRect (bar);
+    }
+
     // --- filled level portion ---
     const float normLevel = dbToNorm (levelDB);
     const float fillH     = barH * normLevel;
