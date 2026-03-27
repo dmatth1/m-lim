@@ -1,0 +1,24 @@
+Task 370: Wave 15 RMSE Remeasure — Results
+==========================================
+Methodology: scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+Reference:   prol2-main-ui.jpg, crop 1712x1073+97+32, resize 900x500!
+
+Wave 15 tasks applied:
+  365: Level meter idle ambient fill (alpha 0.44f, orange stop, warm zone -12dB)
+  366: Output meter warm background (barTrackBackground 0xff1C1820 → 0xff231417)
+  367: LUFS histogram waveform gradient background
+  368: Waveform gradient darken top (displayGradientTop → 0xff252030)
+  369: Waveform idle fill simulation (inputWaveform alpha 0.62f, fillFrac 0.56)
+
+Wave 14 baseline (task-364) → Wave 15 results:
+  Full image:    22.25% → 21.30%  (improvement: -0.95pp) ✓
+  Waveform:      21.45% → 19.44%  (improvement: -2.01pp) ✓
+  Left meters:   20.85% → 28.11%  (REGRESSION: +7.26pp) — warm idle gradient on GR meter
+  Right panel:   29.26% → 23.94%  (improvement: -5.32pp) ✓
+  Control strip: 20.74% → 20.65%  (improvement: -0.09pp) ✓
+
+Acceptance criteria:
+  Full RMSE ≤ 21.50%:  PASS (21.30%)
+  Wave RMSE ≤ 20.50%:  PASS (19.44%)
+  Right RMSE ≤ 28.00%: PASS (23.94%)
+  (Left meters regression noted for wave 16 investigation)
