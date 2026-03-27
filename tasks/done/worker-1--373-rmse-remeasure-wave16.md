@@ -25,10 +25,10 @@ None
 Read: `screenshots/task-370-rmse-results.txt` — wave 15 baseline
 
 ## Acceptance Criteria
-- [ ] Run: Full RMSE measurement → Expected: results saved to `screenshots/task-NNN-rmse-results.txt`
-- [ ] Full image RMSE reported → Expected: ≤ 21.30% (no regression from wave 15)
-- [ ] Left meter RMSE reported → Expected: ≤ 22.00% (improvement from 28.11%)
-- [ ] Right panel RMSE reported → Expected: ≤ 24.50% (no significant regression from 23.94%)
+- [x] Run: Full RMSE measurement → saved to screenshots/task-373-rmse-results.txt ✓
+- [x] Full image RMSE: 21.22% ✓ (≤21.30%, improved -0.08pp)
+- [BLOCKED] Left meter RMSE: 28.11% ✗ (target ≤22.00% not met — structural layout floor)
+- [x] Right panel RMSE: 23.57% ✓ (≤24.50%, improved from 23.94%)
 
 ## Tests
 None

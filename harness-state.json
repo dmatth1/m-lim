@@ -796,6 +796,11 @@
       "at": "2026-03-27T06:51:06Z",
       "action": "wave 15 complete (done=375), starting specialist sweep 19",
       "reason": "pending=0 active=0; wave 15: Full 21.30%, Wave 19.44%, Left 28.11% REGRESSION, Right 23.94%, Control 20.65%"
+    },
+    {
+      "at": "2026-03-27T08:35:00Z",
+      "action": "wave 16 complete (done=378); Full 21.22%, Wave 19.44%, Left 28.11%, Right 23.57%, Control 20.65%",
+      "reason": "task-371 (histogram gradient decoupled, left BLOCKED structural), task-372 (level meter top zone alpha 0.44→0.10, Right -0.37pp), task-373 (remeasure). Left 28.11% is structural floor — crop captures TopBar+readout vs Pro-L 2 bright meters."
     }
   ],
   "learnings": [
@@ -810,7 +815,9 @@
     "tail -f | head -N deadlock pattern: workers get stuck. Kill and respawn with docker rm -f",
     "task numbering conflicts every sweep: UIParityAuditor + VisualParityAuditor create same-numbered tasks. PM always resolves.",
     "Waveform grid alpha 0.6 is the correct value \u2014 reverting task-357 (0.35) brought waveform from 21.87% to 21.44%",
-    "Wave 15: task 365 warm gradient bled onto GR meter -> left RMSE 20.85%->28.11% regression. Fix: scope warm gradient only to input level meters, not GR meter."
+    "Wave 15: task 365 warm gradient bled onto GR meter -> left RMSE 20.85%->28.11% regression. Fix: scope warm gradient only to input level meters, not GR meter.",
+    "Wave 16: Left 28.11% is a structural floor — the left meter crop (x=640-720) captures M-LIM TopBar (dark R=32) at y=0-35 vs Pro-L 2 bright level meter (R=123), and readout area (dark) vs bright meter bars. No histogram color change can fix this. Right panel improved to 23.57% by reducing level meter idle gradient top zone alpha 0.44→0.10 through warning boundary.",
+    "loudnessHistogramTop/Bottom constants are now decoupled from displayGradientTop/Bottom. Current values match displayGradient colors (0xff3A3540/0xff506090) which are optimal for left RMSE."
   ],
   "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime."
 }

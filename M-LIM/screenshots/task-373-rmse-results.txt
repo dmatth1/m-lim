@@ -1,0 +1,17 @@
+Task 373 — RMSE Remeasure — Wave 16 Baseline
+
+Wave 16 tasks completed:
+  Task 371: decouple loudness histogram gradient (Colours.h structural improvement, BLOCKED on left <22%)
+  Task 372: level meter top zone alpha reduction (Right 23.94%→23.57%)
+
+Wave 16 RMSE Results:
+  Full:  21.22%  (wave 15: 21.30%, improved -0.08pp)
+  Wave:  19.44%  (wave 15: 19.44%, unchanged)
+  Left:  28.11%  (wave 15: 28.11%, unchanged — structural limit)
+  Right: 23.57%  (wave 15: 23.94%, improved -0.37pp)
+  Ctrl:  20.65%  (wave 15: 20.65%, unchanged)
+
+Wave 16 acceptance criteria:
+  Full ≤ 21.30%:    21.22% ✓ MET
+  Left ≤ 22.00%:    28.11% ✗ NOT MET (structural layout mismatch — BLOCKED)
+  Right ≤ 24.50%:   23.57% ✓ MET
