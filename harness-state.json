@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "workers_running",
+  "phase": "specialist_sweep",
   "agents": 3,
   "model": "sonnet",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -234,8 +234,8 @@
     "222-remove-committed-screenshots.md"
   ],
   "review_count": 16,
-  "last_sweep_at_done_count": 365,
-  "specialist_sweep_count": 20,
+  "last_sweep_at_done_count": 369,
+  "specialist_sweep_count": 18,
   "decisions": [
     {
       "at": "2026-03-25T02:48:00Z",
@@ -781,6 +781,11 @@
       "at": "2026-03-27T03:30:00Z",
       "action": "PM-20 ran, wave 14 tasks created (361-364)",
       "reason": "Done=365. Wave 13 outcome: control strip 20.74% (improved), waveform regressed 21.87% (task 357 grid alpha). Wave 14: 361=revert waveform grid, 362=output meter scale labels, 363=left meter + waveform edge, 364=RMSE remeasure. Workers claimed 361+362."
+    },
+    {
+      "at": "2026-03-27T05:10:00Z",
+      "action": "specialist sweep 18 started (UIParityAuditor + VisualParityAuditor)",
+      "reason": "Wave 14 done=369. Full=22.25%, Wave=21.45%, Left=20.85%(big win), Right=29.26%, Control=20.74%. All improved."
     }
   ],
   "learnings": [
