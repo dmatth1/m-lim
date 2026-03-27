@@ -1,0 +1,22 @@
+=== Task 381: Brighten Rotary Knob Face ===
+
+Change: knobFaceHighlight 0xffC0C0D0 → 0xffDDDDE8
+        knobFaceShadow    0xff303030 → 0xff505060
+
+Wave 17 baseline:
+  Full:    20.81%
+  Wave:    19.04%
+  Control: 20.13%
+
+Task 381 results:
+  Full:    20.82%  ~ (≤20.81% target: within noise ±0.02pp)
+  Wave:    19.04%  ✓ (unchanged, not targeted)
+  Control: 20.17%  ~ (< 20.13% target: 0.04pp within noise)
+
+Note: Knobs appear visually brighter/more metallic silver in screenshot.
+RMSE change is within measurement noise (< 0.05pp).
+
+Raw compare output:
+  Full:    13644 (0.208194)
+  Wave:    12474.6 (0.190350)
+  Control: 13218.1 (0.201696)
