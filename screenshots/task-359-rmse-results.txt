@@ -1,0 +1,12 @@
+Task 359: Control Strip Background Colour Brightness
+=====================================================
+Changes: controlStripTop 0xff3B3840 → 0xff4A4756, controlStripBottom 0xff282530 → 0xff38353F
+
+Full-image RMSE:     21.75% (baseline: 22.08% → IMPROVEMENT ✓)
+Control strip:       20.92% (baseline: 22.42% → IMPROVEMENT ✓, target ≤ 22.00% ✓)
+Waveform sub-region: 20.15% (baseline: 20.55%)
+Left meters:         23.46% (baseline: 23.50%)
+Right panel:         29.61% (baseline: 29.59%)
+
+All targets met. Control strip RMSE improved by 1.50% (22.42% → 20.92%).
+Full-image RMSE improved by 0.33% (22.08% → 21.75%).

@@ -61,8 +61,8 @@ namespace MLIMColours
     const juce::Colour loudnessPanelBackground { 0xff2B2729 };  // dark purple-gray; reverted from 0xff1E1C21 (task-331) which worsened right panel RMSE
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff3B3840 };  // dark purple-gray top — matches reference ~#3A3641
-    const juce::Colour controlStripBottom { 0xff282530 };  // darker at bottom — matches reference ~#2A2734
+    const juce::Colour controlStripTop    { 0xff4A4756 };  // brightened top — closer to Pro-L 2 ref ~36% brightness
+    const juce::Colour controlStripBottom { 0xff38353F };  // brightened bottom — ≈ 22% brightness
 
     // Button colours
     const juce::Colour algoButtonInactive       { 0xff303848 };  // inactive algo button — dark blue-gray blending with control strip
