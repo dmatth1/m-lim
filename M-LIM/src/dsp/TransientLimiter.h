@@ -22,6 +22,8 @@
 class TransientLimiter
 {
 public:
+    static constexpr int kMaxChannels = 8;
+
     TransientLimiter() = default;
 
     /** Call before processing begins or when sample rate / channel count changes. */

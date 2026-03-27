@@ -20,7 +20,8 @@ static constexpr float kReleaseMaxMs = 500.0f;
 void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numChannels)
 {
     mSampleRate   = sampleRate;
-    mNumChannels  = numChannels;
+    jassert (numChannels <= kMaxChannels);
+    mNumChannels  = std::min (numChannels, kMaxChannels);
 
     // Allocate delay buffers for maximum possible lookahead
     mMaxLookaheadSamples = static_cast<int>(kMaxLookaheadMs * 0.001 * sampleRate) + 1;
@@ -308,7 +309,7 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
         //        When sidechain provided, read sidechain deque maximum.
         //        Otherwise read main deque maximum.
         //        For bypass path: just use current input sample directly.
-        float perChRequiredGain[8];  // supports up to 8 channels (7.1 surround)
+        float perChRequiredGain[kMaxChannels];
         for (int ch = 0; ch < chCount; ++ch)
             perChRequiredGain[ch] = 1.0f;
 
