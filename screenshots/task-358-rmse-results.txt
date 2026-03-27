@@ -1,0 +1,12 @@
+Task 358: Increase RotaryKnob Visual Size
+==========================================
+Changes: labelH 13→10, valueH 13→8, arc stroke 2.0→2.5
+
+Full-image RMSE:     22.12% (baseline: 22.08%)
+Control strip:       22.75% (baseline: 22.42%, threshold: ≤22.42%)
+Waveform sub-region: 20.56% (baseline: ~20.58%)
+Left meters:         23.50% (baseline: ~23.33%)
+Right panel:         29.59% (baseline: ~29.56%)
+
+Note: Control strip is slightly above 22.42% threshold at 22.75%.
+The knob changes make knob size ~38px (from ~30px) as spec requires.

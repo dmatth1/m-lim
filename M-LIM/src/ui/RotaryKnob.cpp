@@ -20,8 +20,8 @@ void RotaryKnob::paint (juce::Graphics& g)
     const auto bounds = getLocalBounds().toFloat();
 
     // Reserve space: label row above, value row below
-    const float labelH     = 13.0f;
-    const float valueH     = 13.0f;
+    const float labelH     = 10.0f;
+    const float valueH     =  8.0f;
     const float textHeight = labelH + valueH;
     const float knobSize   = juce::jmin (bounds.getWidth(), bounds.getHeight() - textHeight);
     const float knobX      = bounds.getCentreX() - knobSize * 0.5f;
@@ -52,7 +52,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                           radius * 2.0f, radius * 2.0f,
                           kRotaryStartAngle, kRotaryEndAngle, true);
         g.setColour (MLIMColours::panelBorder);
-        g.strokePath (trackPath, juce::PathStrokeType (2.0f,
+        g.strokePath (trackPath, juce::PathStrokeType (2.5f,
                       juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
@@ -71,7 +71,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                             radius * 2.0f, radius * 2.0f,
                             kRotaryStartAngle, angle, true);
             g.setColour (MLIMColours::knobArc);
-            g.strokePath (arcPath, juce::PathStrokeType (2.0f,
+            g.strokePath (arcPath, juce::PathStrokeType (2.5f,
                           juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
     }
@@ -137,8 +137,8 @@ void RotaryKnob::paint (juce::Graphics& g)
 void RotaryKnob::resized()
 {
     const auto bounds = getLocalBounds();
-    const float labelH     = 13.0f;
-    const float textHeight = labelH + 13.0f;
+    const float labelH     = 10.0f;
+    const float textHeight = labelH + 8.0f;
     const float knobSize   = juce::jmin ((float)bounds.getWidth(),
                                          (float)bounds.getHeight() - textHeight);
     const int knobX        = bounds.getCentreX() - (int)(knobSize * 0.5f);
