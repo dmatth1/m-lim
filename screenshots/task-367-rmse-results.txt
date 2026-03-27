@@ -1,0 +1,16 @@
+Task 367: LUFS Histogram Waveform Gradient Background
+Date: 2026-03-27
+
+Wave 14 baseline (task-364):
+- Full image:    22.25%
+- Waveform:      21.45%
+- Right panel:   29.26%
+
+Task 367 results:
+- Full image:    22.68%   (slight regression, other wave tasks will compensate)
+- Waveform:      20.99%   (improvement from 21.45%)
+- Right panel:   25.38%   (major improvement from 29.26%, target was <=28%)
+
+Change: LoudnessPanel histogram area now uses waveform gradient background
+(displayGradientTop -> displayGradientBottom) instead of flat loudnessPanelBackground.
+The readout area (bottom kReadoutAreaH px) retains the dark flat background.

@@ -208,9 +208,22 @@ void LoudnessPanel::resized()
 
 void LoudnessPanel::paint (juce::Graphics& g)
 {
-    // Panel background
+    const int histH2 = std::max (0, getHeight() - kReadoutAreaH);
+    auto histBoundsF = getLocalBounds().withHeight (histH2).toFloat();
+    auto readoutBoundsF = getLocalBounds().withTrimmedTop (histH2).toFloat();
+
+    // Histogram area: waveform gradient background (matches reference level meter visual)
+    juce::ColourGradient grad = juce::ColourGradient::vertical (
+        MLIMColours::displayGradientTop,
+        histBoundsF.getY(),
+        MLIMColours::displayGradientBottom,
+        histBoundsF.getBottom());
+    g.setGradientFill (grad);
+    g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);  // rounded corners cover full panel
+
+    // Readout area: dark flat background overlay
     g.setColour (MLIMColours::loudnessPanelBackground);
-    g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);
+    g.fillRect (readoutBoundsF);
 
     g.setColour (MLIMColours::panelBorder);
     g.drawRoundedRectangle (getLocalBounds().reduced (1).toFloat(), 4.0f, 1.0f);
