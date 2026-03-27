@@ -100,16 +100,22 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
 
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.08f),           0.0f, barTop2,
-            MLIMColours::meterSafe.withAlpha (0.95f),             0.0f, barTop2 + barH2,
+            MLIMColours::meterDanger.withAlpha (0.03f),           0.0f, barTop2,
+            MLIMColours::meterSafe.withAlpha (0.80f),             0.0f, barTop2 + barH2,
             false);
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::grMeterMid.withAlpha (0.10f));     // reduced warm orange
+                            MLIMColours::grMeterMid.withAlpha (0.03f));     // task-425: minimal warm at danger
         idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.08f));   // reduced warm yellow
-        // Cool blue replaces warm bleed at -12 dB transition
+                            MLIMColours::meterWarning.withAlpha (0.03f));   // task-425: minimal warm at warning
+        // Cool blue at -12 dB transition
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.30f));      // cool blue instead of warm yellow
+                            MLIMColours::meterSafe.withAlpha (0.10f));      // task-425: subtle cool blue
+
+        // Mid-fill at -24 dBFS — subtle warm hint to simulate idle program material
+        const float normMidFill = dbToNorm (-24.0f);
+        const float midFillY    = barTop2 + barH2 * (1.0f - normMidFill);
+        idleGrad.addColour ((midFillY - barTop2) / barH2,
+                            MLIMColours::meterWarning.withAlpha (0.08f));   // task-425: minimal warm at -24 dBFS
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
