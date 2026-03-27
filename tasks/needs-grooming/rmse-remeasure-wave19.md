@@ -2,9 +2,10 @@
 
 ## Description
 
-After wave 19 tasks complete (waveform center brightness boost, LUFS panel background
-brightness, level meter warm zone increase), capture a new screenshot and measure RMSE
-across all standard regions to establish the wave 19 baseline.
+After completing all wave-19 visual parity tasks (waveform center brightness boost,
+LUFS panel background brightness, level meter warm zone increase, control strip gradient
+tune, and any other wave-19 fixes), capture a new screenshot and measure RMSE across
+all standard regions to establish the wave 19 baseline.
 
 Wave 18 baseline for comparison:
 - Full: 20.74%
