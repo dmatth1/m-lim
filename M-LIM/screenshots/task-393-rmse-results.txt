@@ -1,0 +1,35 @@
+=== Wave 20 RMSE Baseline (Task 393) ===
+
+Wave 18 baseline (task-383):
+  Full:    20.74%
+  Wave:    18.96%
+  Left:    29.00%
+  Right:   22.36%
+  Control: 20.17%
+
+Wave 20 tasks completed:
+  - Task 389: Waveform bottom gradient brightened (0xff506090 → 0xff606898)
+  - Task 390: Waveform mid-zone brightness boost (tent gradient)
+  - Task 391: Waveform top gradient warm shift (0xff242027 → 0xff332A2D)
+  - Task 392: Control strip additional +13 brightening
+
+Wave 20 results:
+  Full:    19.82%  ✓ (target: ≤20.74%, improved -0.92pp)
+  Wave:    17.29%  ✓ (target: ≤18.96%, improved -1.67pp)
+  Left:    28.75%  ✓ (target: floor ~29%, improved -0.25pp)
+  Right:   23.09%  ✗ (target: ≤22.36%, regressed +0.73pp)
+  Control: 21.02%  ✗ (target: ≤20.17%, regressed +0.85pp)
+
+Notes:
+  - Waveform region showed large improvement due to tasks 389/390/391
+  - Right panel regressed (task 391 warm shift caused +0.73pp increase)
+  - Control strip regressed (task 392 brightening caused +0.85pp increase)
+  - Net full-image improvement is +0.92pp despite right/control regressions
+  - Next wave should address right panel and control strip regressions
+
+Raw compare output:
+  Full:    12987.6 (0.198179)
+  Wave:    11333.7 (0.172942)
+  Left:    18839.4 (0.287470)
+  Right:   15130.3 (0.230874)
+  Control: 13776.8 (0.210220)
