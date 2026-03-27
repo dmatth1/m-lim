@@ -52,7 +52,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                           radius * 2.0f, radius * 2.0f,
                           kRotaryStartAngle, kRotaryEndAngle, true);
         g.setColour (MLIMColours::panelBorder);
-        g.strokePath (trackPath, juce::PathStrokeType (2.5f,
+        g.strokePath (trackPath, juce::PathStrokeType (3.0f,
                       juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
@@ -71,7 +71,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                             radius * 2.0f, radius * 2.0f,
                             kRotaryStartAngle, angle, true);
             g.setColour (MLIMColours::knobArc);
-            g.strokePath (arcPath, juce::PathStrokeType (2.5f,
+            g.strokePath (arcPath, juce::PathStrokeType (3.0f,
                           juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
     }
