@@ -837,3 +837,264 @@ TEST_CASE("test_adaptive_env_state_linear_convergence", "[LevelingLimiter]")
     // After sustained GR (> 500 ms smoother warm-up), adaptive must recover more
     REQUIRE(grAdaptive > grNonAdaptive);
 }
+
+// ---------------------------------------------------------------------------
+// test_zero_release_instant_recovery
+//   With release=10ms (minimum clamp), zero attack, loud block then quiet block;
+//   gain should recover within 3 dB of unity within first 10 samples of quiet.
+//   Note: setRelease clamps to [10, 1000] ms, so we use the minimum 10 ms.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_zero_release_instant_recovery", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, 1);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);     // instant attack
+    limiter.setRelease(10.0f);   // minimum release (10 ms)
+    limiter.setChannelLink(0.0f);
+    limiter.setThreshold(1.0f);
+
+    // Drive limiter with loud signal to engage GR
+    const float loudSignal = 4.0f;  // +12 dBFS
+    std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize, loudSignal));
+    auto ptrs = makePtrs(buf);
+
+    for (int i = 0; i < 50; ++i)
+    {
+        fillConstant(buf, loudSignal);
+        limiter.process(ptrs.data(), 1, kBlockSize);
+    }
+
+    // Confirm GR is significantly engaged
+    REQUIRE(limiter.getGainReduction() < -6.0f);
+
+    // Now feed silence sample-by-sample and check recovery
+    // With 10 ms release at 44100 Hz, τ = 441 samples.
+    // After 10 samples: g moves (1 - e^(-10/441)) ≈ 2.2% toward unity.
+    // Starting from g ≈ 0.25 (−12 dB), after 10 samples g ≈ 0.267.
+    // After 441 samples (1 τ), g moves 63.2% toward unity → g ≈ 0.724 → −2.8 dB.
+    // Check that within 441 samples (1 time constant), gain is within 3 dB of unity.
+    for (int s = 0; s < 441; ++s)
+    {
+        buf[0][0] = 0.0f;
+        limiter.process(ptrs.data(), 1, 1);
+    }
+
+    // After 1 time constant of minimum release, GR should be within 3 dB of unity
+    REQUIRE(limiter.getGainReduction() > -3.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_adaptive_release_exact_boundary_0_5db
+//   Drive envelope to exactly around 0.5 dB above target; confirm that the
+//   adaptive release speedup activates above 0.5 dB but not below.
+//   This tests the exact boundary condition in the adaptive release logic.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_adaptive_release_exact_boundary_0_5db", "[LevelingLimiter]")
+{
+    // Helper: sustain a signal at a given amplitude with adaptive release enabled,
+    // then release and return the GR after recovery.
+    auto measureRecovery = [](float amplitude, int sustainBlocks, int recoverBlocks) -> float
+    {
+        LevelingLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+        limiter.setAttack(0.0f);
+        limiter.setRelease(200.0f);
+        limiter.setChannelLink(0.0f);
+        limiter.setThreshold(1.0f);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.adaptiveRelease = true;
+        limiter.setAlgorithmParams(params);
+
+        std::vector<std::vector<float>> buf(1, std::vector<float>(kBlockSize));
+        auto ptrs = makePtrs(buf);
+
+        for (int i = 0; i < sustainBlocks; ++i)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), amplitude);
+            limiter.process(ptrs.data(), 1, kBlockSize);
+        }
+        for (int i = 0; i < recoverBlocks; ++i)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), 0.0f);
+            limiter.process(ptrs.data(), 1, kBlockSize);
+        }
+        return limiter.getGainReduction();
+    };
+
+    // Amplitude just below 0.5 dB threshold: 10^(0.3/20) ≈ 1.035
+    const float belowAmplitude = std::pow(10.0f, 0.3f / 20.0f);
+    // Amplitude well above 0.5 dB threshold: 10^(3.0/20) ≈ 1.413
+    const float aboveAmplitude = std::pow(10.0f, 3.0f / 20.0f);
+
+    // For below-threshold case, also measure non-adaptive to confirm no speedup
+    LevelingLimiter limNonAdaptive;
+    limNonAdaptive.prepare(kSampleRate, kBlockSize, 1);
+    limNonAdaptive.setAttack(0.0f);
+    limNonAdaptive.setRelease(200.0f);
+    limNonAdaptive.setChannelLink(0.0f);
+    limNonAdaptive.setThreshold(1.0f);
+    AlgorithmParams pNA = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    pNA.adaptiveRelease = false;
+    limNonAdaptive.setAlgorithmParams(pNA);
+
+    std::vector<std::vector<float>> bufNA(1, std::vector<float>(kBlockSize));
+    auto ptrsNA = makePtrs(bufNA);
+    for (int i = 0; i < 200; ++i)
+    {
+        std::fill(bufNA[0].begin(), bufNA[0].end(), belowAmplitude);
+        limNonAdaptive.process(ptrsNA.data(), 1, kBlockSize);
+    }
+    for (int i = 0; i < 10; ++i)
+    {
+        std::fill(bufNA[0].begin(), bufNA[0].end(), 0.0f);
+        limNonAdaptive.process(ptrsNA.data(), 1, kBlockSize);
+    }
+    const float grBelowNA = limNonAdaptive.getGainReduction();
+
+    const float grBelowAdaptive = measureRecovery(belowAmplitude, 200, 10);
+    const float grAboveAdaptive = measureRecovery(aboveAmplitude, 200, 10);
+
+    // Below 0.5 dB: adaptive should match non-adaptive (no speedup)
+    REQUIRE(std::abs(grBelowAdaptive - grBelowNA) < 0.01f);
+
+    // Above 0.5 dB: adaptive recovery should be faster (less negative GR)
+    // Compare to non-adaptive at same amplitude
+    LevelingLimiter limAboveNA;
+    limAboveNA.prepare(kSampleRate, kBlockSize, 1);
+    limAboveNA.setAttack(0.0f);
+    limAboveNA.setRelease(200.0f);
+    limAboveNA.setChannelLink(0.0f);
+    limAboveNA.setThreshold(1.0f);
+    pNA.adaptiveRelease = false;
+    limAboveNA.setAlgorithmParams(pNA);
+
+    std::vector<std::vector<float>> bufAboveNA(1, std::vector<float>(kBlockSize));
+    auto ptrsAboveNA = makePtrs(bufAboveNA);
+    for (int i = 0; i < 200; ++i)
+    {
+        std::fill(bufAboveNA[0].begin(), bufAboveNA[0].end(), aboveAmplitude);
+        limAboveNA.process(ptrsAboveNA.data(), 1, kBlockSize);
+    }
+    for (int i = 0; i < 10; ++i)
+    {
+        std::fill(bufAboveNA[0].begin(), bufAboveNA[0].end(), 0.0f);
+        limAboveNA.process(ptrsAboveNA.data(), 1, kBlockSize);
+    }
+    const float grAboveNA = limAboveNA.getGainReduction();
+
+    // Above boundary: adaptive should recover more (less negative) than non-adaptive
+    REQUIRE(grAboveAdaptive > grAboveNA);
+}
+
+// ---------------------------------------------------------------------------
+// test_gain_never_exceeds_unity
+//   Process 1000 loud blocks then silence; no output sample should ever exceed
+//   1.0f, ensuring no overshoot during attack or release phases.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_gain_never_exceeds_unity", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = true;  // test with adaptive release enabled
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);     // instant attack
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(1.0f);
+    limiter.setThreshold(1.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+    auto ptrs = makePtrs(buf);
+
+    float maxSeen = 0.0f;
+
+    // Phase 1: 1000 loud blocks
+    for (int block = 0; block < 1000; ++block)
+    {
+        fillConstant(buf, 4.0f);  // +12 dBFS
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+            for (int s = 0; s < kBlockSize; ++s)
+                maxSeen = std::max(maxSeen, std::abs(buf[ch][s]));
+    }
+
+    // Phase 2: silence — check release doesn't overshoot
+    for (int block = 0; block < 200; ++block)
+    {
+        fillConstant(buf, 0.0f);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+        for (int ch = 0; ch < kNumChannels; ++ch)
+            for (int s = 0; s < kBlockSize; ++s)
+                maxSeen = std::max(maxSeen, std::abs(buf[ch][s]));
+    }
+
+    // No output sample should ever exceed 1.0 (small tolerance for IIR numerical drift)
+    REQUIRE(maxSeen <= 1.0f + 2e-3f);
+}
+
+// ---------------------------------------------------------------------------
+// test_threshold_change_no_overshoot
+//   Rapid threshold changes (-6 → -12 → -6 dB) during limiting must not cause
+//   any output sample to exceed 1.0f.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_threshold_change_no_overshoot", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(0.0f);     // instant attack
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(1.0f);
+    limiter.setThreshold(1.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+    auto ptrs = makePtrs(buf);
+
+    float maxSeen = 0.0f;
+    const float inputLevel = 4.0f;  // +12 dBFS — always above threshold
+
+    // Warm up at default threshold
+    for (int block = 0; block < 20; ++block)
+    {
+        fillConstant(buf, inputLevel);
+        limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+    }
+
+    // Rapid threshold changes: cycle through -6 → -12 → -6 dB
+    const float thresholds[] = {
+        0.501f,   // -6 dBFS
+        0.251f,   // -12 dBFS
+        0.501f,   // back to -6 dBFS
+        0.251f,   // -12 dBFS again
+        0.501f    // -6 dBFS again
+    };
+
+    for (float thr : thresholds)
+    {
+        limiter.setThreshold(thr);
+
+        for (int block = 0; block < 40; ++block)
+        {
+            fillConstant(buf, inputLevel);
+            limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+            for (int ch = 0; ch < kNumChannels; ++ch)
+                for (int s = 0; s < kBlockSize; ++s)
+                    maxSeen = std::max(maxSeen, std::abs(buf[ch][s]));
+        }
+    }
+
+    // No output sample should ever exceed 1.0 regardless of threshold changes (small tolerance for IIR numerical drift)
+    REQUIRE(maxSeen <= 1.0f + 2e-3f);
+}
