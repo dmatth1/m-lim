@@ -315,13 +315,13 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::ColourGradient rGrad (
             uFill.withAlpha (0.0f),   0.0f, uTop,
-            uFill.withAlpha (0.48f),  0.0f, uMid,  // task-420: reduced from 0.60 to reduce 20-50% brightness
+            uFill.withAlpha (0.32f),  0.0f, uMid,  // task-421: reduced from 0.48 to suppress y=18-28% over-brightness
             false);
         g.setGradientFill (rGrad);
         g.fillRect (area.getX(), uTop, area.getWidth(), uMid - uTop);
 
         juce::ColourGradient fGrad (
-            uFill.withAlpha (0.48f),  0.0f, uMid,  // task-420: reduced from 0.60
+            uFill.withAlpha (0.32f),  0.0f, uMid,  // task-421: reduced from 0.48
             uFill.withAlpha (0.0f),   0.0f, uBot,
             false);
         g.setGradientFill (fGrad);
