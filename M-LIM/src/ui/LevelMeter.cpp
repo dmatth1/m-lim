@@ -238,6 +238,6 @@ void LevelMeter::paint (juce::Graphics& g)
     drawChannel (g, barL, levelL_, peakL_, clipL_);
     drawChannel (g, barR, levelR_, peakR_, clipR_);
 
-    if (kScaleWidth > 0)
+    if (kScaleWidth > 0 && showScale_)
         drawScale (g, barL.getY(), barL.getHeight());
 }

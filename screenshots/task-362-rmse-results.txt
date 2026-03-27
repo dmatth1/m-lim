@@ -1,0 +1,26 @@
+Task 362 RMSE Results — Output Meter Right Panel Visual Improvement
+===================================================================
+
+Changes:
+  - Added setShowScale(bool) to LevelMeter, called outputMeter_.setShowScale(false)
+  - Changed barTrackBackground from #181818 to #1C1820 (dark purple-tinted)
+
+Wave 13 Baseline (task-358):
+  Full image:    22.33%
+  Waveform:      21.87%
+  Left Meters:   23.50%
+  Right Panel:   29.59%
+  Control Strip: 20.74%
+
+Task 362 Results:
+  Full image:    22.27%  (improved 0.06%)
+  Waveform:      21.40%  (improved 0.47%)
+  Left Meters:   23.31%  (improved 0.19%)
+  Right Panel:   29.26%  (improved 0.33%)
+  Control Strip: 20.74%  (unchanged)
+
+Acceptance criteria:
+  - outputMeter_.setShowScale(false) added: YES
+  - barTrackBackground NOT 0xff181818: YES (changed to 0xff1C1820)
+  - Right panel improvement from 29.59%: YES (29.26%) — goal ≤28.00% not fully met
+  - All regions improved or stable: YES

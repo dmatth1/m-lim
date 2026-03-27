@@ -30,6 +30,9 @@ public:
     /** Reset both clip indicators. */
     void resetClip();
 
+    /** Show or hide the dB scale labels on the right edge. Default: true. */
+    void setShowScale (bool show) { showScale_ = show; repaint(); }
+
     void paint (juce::Graphics& g) override;
     void resized() override;
     void mouseDown (const juce::MouseEvent& e) override;
@@ -51,6 +54,7 @@ private:
     float peakR_  = kMinDB;
     bool  clipL_  = false;
     bool  clipR_  = false;
+    bool  showScale_ = true;
 
     /** Map a dB value to a normalised 0-1 position (0 = bottom, 1 = top). */
     static float dbToNorm (float db) noexcept;
