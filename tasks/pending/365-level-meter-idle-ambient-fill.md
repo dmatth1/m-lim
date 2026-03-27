@@ -1,4 +1,4 @@
-# Task: Level Meter Idle Ambient Fill — Boost Idle Gradient Brightness and Warmth
+# Task 365: Level Meter Idle Ambient Fill — Boost Idle Gradient Brightness and Warmth
 
 ## Description
 

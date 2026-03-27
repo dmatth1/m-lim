@@ -1,4 +1,4 @@
-# Task: Output Meter Track — Warm Up from Cool Blue-Purple to Warm Reddish
+# Task 366: Output Meter Track — Warm Up from Cool Blue-Purple to Warm Reddish
 
 ## Description
 The output meter bar track background renders as (40, 39, 51) = cool blue-purple (`#282733`) in idle

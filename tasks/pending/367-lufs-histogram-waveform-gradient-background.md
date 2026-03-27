@@ -1,4 +1,4 @@
-# Task: LUFS Panel Histogram — Use Waveform Gradient as Background
+# Task 367: LUFS Panel Histogram — Use Waveform Gradient as Background
 
 ## Description
 The "Waveform" RMSE sub-region crop (`600x400+150+50`) captures x=150..750. Of this, x=660..750
