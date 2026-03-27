@@ -1,0 +1,15 @@
+Task 404: Waveform Midzone Tent Alpha Reduction
+===============================================
+Changes:
+  Mid tent peak alpha: 0.80 → 0.68 (task-404)
+  Center tent peak alpha: 0.65 → 0.52 (task-404)
+
+RMSE Results:
+  Full RMSE:  18.82% (wave22 baseline: 19.46% → improved)
+  Wave RMSE:  16.02% (wave21 baseline: 16.72% → improved, meets ≤16.72%)
+
+Midzone pixel at y=250, x=300:
+  M-LIM before: (126, 134, 162)
+  M-LIM after:  (126, 133, 159)
+  Reference:    (121, 128, 155)
+  Delta: +5R, +5G, +4B (reduced from +5R, +6G, +7B before)
