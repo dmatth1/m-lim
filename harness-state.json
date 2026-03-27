@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "workers_running",
+  "phase": "specialist_sweep",
   "agents": 3,
   "model": "opus[1m]",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -234,8 +234,8 @@
     "222-remove-committed-screenshots.md"
   ],
   "review_count": 16,
-  "last_sweep_at_done_count": 420,
-  "specialist_sweep_count": 36,
+  "last_sweep_at_done_count": 440,
+  "specialist_sweep_count": 37,
   "decisions": [
     {
       "at": "2026-03-25T02:48:00Z",
@@ -886,6 +886,11 @@
       "at": "2026-03-27T20:43:00Z",
       "action": "respawned all 3 workers with refreshed OAuth token",
       "reason": "401 auth errors \u2014 token rotated; workers 1/3 hit max iterations, worker-2 stopped early; unstuck tasks 424, 429, 421; fixed spawn command (removed erroneous /workspace mount)"
+    },
+    {
+      "at": "2026-03-27T22:08:00Z",
+      "action": "launched specialist sweep 37 (6 specialists in parallel)",
+      "reason": "all 9 wave-24 visual parity tasks complete (421-429); 20 completions since last sweep at d=420"
     }
   ],
   "learnings": [
