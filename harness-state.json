@@ -836,6 +836,11 @@
       "at": "2026-03-27T13:49:32Z",
       "action": "PM-37 groomed 11 needs-grooming tasks into 9 pending (403-411), merging 2 duplicate pairs; respawned 3 workers with fresh OAuth token after expiry; wave 22 running",
       "reason": "PM-36 was killed blocking workers; OAuth token expired; workers idle since wave 21 task 397"
+    },
+    {
+      "at": "2026-03-27T14:10:59Z",
+      "action": "discovered ccache not using shared volume \u2014 CCACHE_DIR unset, defaulting to container-local path; added CCACHE_DIR=/build-cache/ccache to extra_guidance and learnings",
+      "reason": "0% ccache hit rate after 75 min build; build-cache volume not being used"
     }
   ],
   "learnings": [
@@ -856,7 +861,8 @@
     "Left meter RMSE floor ~28% is structural: M-LIM JUCE TopBar (R=32) occupies y=0-35 of left crop vs Pro-L2 bright level meter bars (R=123). No color/gradient change can close this gap without audio playback.",
     "Wave 18 final: Full=20.74%, Wave=18.96%, Left=29.00% (floor), Right=22.36%, Control=20.17%",
     "Wave 20 final: Full=19.82%, Wave=17.29%, Left=28.75% (floor), Right=23.09% (regression from task-391 warm shift), Control=21.02% (regression from task-392 over-brightening). Full broke 20%!",
-    "Wave 21 final: Full=19.46%, Wave=16.72%, Left=28.71%, Right=23.09% (still regressed), Control=21.02% (still regressed). Waveform keeps improving. Right/Control need dedicated fix wave."
+    "Wave 21 final: Full=19.46%, Wave=16.72%, Left=28.71%, Right=23.09% (still regressed), Control=21.02% (still regressed). Waveform keeps improving. Right/Control need dedicated fix wave.",
+    "ccache defaults to /home/swarm/.cache/ccache (container-local, lost on exit). Must set CCACHE_DIR=/build-cache/ccache to use the shared build-cache volume."
   ],
-  "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved."
+  "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved. Set CCACHE_DIR=/build-cache/ccache so ccache persists across container restarts."
 }
