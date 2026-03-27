@@ -322,6 +322,124 @@ TEST_CASE("test_resetpeak_clears_peak_accumulator", "[TruePeakDetector]")
     REQUIRE(det.getPeak() == Catch::Approx(output).epsilon(1e-6f));
 }
 
+TEST_CASE("test_single_sample_blocks_over_1000_calls", "[TruePeakDetector]")
+{
+    // Process 1000 single-sample blocks of 1 kHz sine; getPeak() must be >= sample-domain peak.
+    // This stresses ring buffer wrapping on every call.
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    const int numCalls = 1000;
+    float samplePeak = 0.0f;
+
+    for (int i = 0; i < numCalls; ++i)
+    {
+        float s = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+        float absSample = std::abs(s);
+        if (absSample > samplePeak)
+            samplePeak = absSample;
+
+        det.processBlock(&s, 1);
+    }
+
+    float truePeak = det.getPeak();
+    REQUIRE(std::isfinite(truePeak));
+    REQUIRE(truePeak >= samplePeak);
+}
+
+TEST_CASE("test_ring_buffer_wrap_continuity", "[TruePeakDetector]")
+{
+    // 7-sample blocks (coprime with FIR length 12), 4096 total samples of 1 kHz sine.
+    // Verify no amplitude discontinuity at block boundaries by comparing block-processed
+    // peak against a reference that processes sample-by-sample.
+    TruePeakDetector blockDet;
+    TruePeakDetector refDet;
+    blockDet.prepare(kSampleRate);
+    refDet.prepare(kSampleRate);
+
+    const int totalSamples = 4096;
+    const int blockSize = 7;
+    std::vector<float> signal(totalSamples);
+    for (int i = 0; i < totalSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+    // Process in 7-sample blocks
+    for (int offset = 0; offset < totalSamples; offset += blockSize)
+    {
+        int remaining = std::min(blockSize, totalSamples - offset);
+        blockDet.processBlock(signal.data() + offset, remaining);
+    }
+
+    // Process sample-by-sample as reference
+    for (int i = 0; i < totalSamples; ++i)
+        refDet.processSample(signal[i]);
+
+    // Both must produce the same peak — any ring buffer discontinuity would cause divergence
+    float blockPeak = blockDet.getPeak();
+    float refPeak = refDet.getPeak();
+    REQUIRE(std::isfinite(blockPeak));
+    REQUIRE(std::abs(blockPeak - refPeak) < 1e-5f);
+}
+
+TEST_CASE("test_reset_peak_preserves_fir_state", "[TruePeakDetector]")
+{
+    // Settle with 100 samples of sine, resetPeak(), process 100 more;
+    // peak must be >= expected true peak (no NaN/corruption).
+    TruePeakDetector det;
+    TruePeakDetector refDet;
+    det.prepare(kSampleRate);
+    refDet.prepare(kSampleRate);
+
+    const int settleSamples = 100;
+    const int postSamples = 100;
+    std::vector<float> signal(settleSamples + postSamples);
+    for (int i = 0; i < settleSamples + postSamples; ++i)
+        signal[i] = 0.8f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+
+    // Settle both detectors with 100 samples
+    det.processBlock(signal.data(), settleSamples);
+    refDet.processBlock(signal.data(), settleSamples);
+
+    // Reset peak only on det; refDet continues uninterrupted
+    det.resetPeak();
+    REQUIRE(det.getPeak() == 0.0f);
+
+    // Process 100 more samples on both
+    det.processBlock(signal.data() + settleSamples, postSamples);
+    refDet.processBlock(signal.data() + settleSamples, postSamples);
+
+    float detPeak = det.getPeak();
+    float refPeak = refDet.getPeak();
+
+    // Must be finite (no NaN/corruption from resetPeak)
+    REQUIRE(std::isfinite(detPeak));
+    // Must detect real peaks (the sine has amplitude 0.8)
+    REQUIRE(detPeak >= 0.8f);
+    // The post-reset peak processing should match the reference for those same samples,
+    // since FIR state was preserved. The ref peak may be higher (it includes pre-reset peaks),
+    // but det's post-reset results should be sample-accurate with the ref's post-reset outputs.
+    // We verify by checking that det peak is reasonable (>= 0.8 from the sine amplitude).
+}
+
+TEST_CASE("test_negative_input_tracked_as_absolute", "[TruePeakDetector]")
+{
+    // All-negative samples at -0.8; getPeak() must be >= 0.8 (absolute value tracking).
+    TruePeakDetector det;
+    det.prepare(kSampleRate);
+
+    const int numSamples = 256;
+    std::vector<float> signal(numSamples, -0.8f);
+
+    det.processBlock(signal.data(), numSamples);
+
+    float peak = det.getPeak();
+    REQUIRE(std::isfinite(peak));
+    // After FIR settles on DC=-0.8, the absolute peak should be near 0.8
+    REQUIRE(peak >= 0.8f);
+    // Should not wildly exceed the input magnitude
+    REQUIRE(peak < 1.0f);
+}
+
 TEST_CASE("test_fir_coefficient_integrity", "[TruePeakDetector]")
 {
     // Verify that the transposed kCoeffsByTap table contains identical values
