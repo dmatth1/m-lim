@@ -1,0 +1,32 @@
+Task 405: Waveform Lower Zone Brightness Boost (y=62%–100%)
+
+Change applied: Added lower idle fill gradient, y=62%–100%
+  Color: 0xff9898A8 (warmer neutral, equal R/G to reduce blue overshoot)
+  Alpha: 0.0 at y=62% → 0.35 at y=100%
+
+=== Pixel analysis at x=300 (crop 908x500+509+325 → 900x500) ===
+Before:
+  y=300: srgb(110,123,154)  (ref: 144,155,181)
+  y=350: srgb(103,120,158)  (ref: 130,137,165)
+  y=390: srgb(104,121,162)  (ref: 119,125,153)
+
+After (0xff9898A8, alpha=0.35):
+  y=300: srgb(123,129,156)  (ref: 144,155,181)
+  y=350: srgb(123,131,163)  (ref: 130,137,165)  ← near match!
+  y=390: srgb(124,133,166)  (ref: 119,125,153)
+
+=== RMSE Results (correct methodology: wave = 640x500 full-height) ===
+Full RMSE:  19.34%  (baseline: 19.46% — improved)
+Wave RMSE:  16.54%  (baseline: 16.72% — improved)
+
+Acceptance criteria:
+  ✓ Build exit 0
+  ✓ Wave RMSE 16.54% ≤ 16.72%
+  ✓ Full RMSE 19.34% ≤ 19.46%
+  ✓ screenshots/task-405-after.png and task-405-rmse-results.txt exist
+
+Options tested:
+  0xff9298B0 α=0.35 — Full=19.35%, Wave=17.19% (wrong crop) / 16.55% (correct)
+  0xff9298B0 α=0.25 — Full=19.35%, Wave=17.19% (wrong crop) / 16.54% (correct)
+  0xff9298B0 α=0.40 — Full=19.35%, Wave=16.55%
+  0xff9898A8 α=0.35 — Full=19.34%, Wave=16.54%  ← CHOSEN (best full RMSE, no B overshoot)

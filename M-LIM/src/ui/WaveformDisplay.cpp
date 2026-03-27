@@ -378,6 +378,20 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.fillRect (area.getX(), cMid, area.getWidth(), cBot - cMid);
     }
 
+    // Lower idle fill — approximates output waveform/envelope content in lower portion
+    // Covers y=62%–100%, peak alpha at bottom 0.25, fades to 0 at 62%
+    {
+        const float lTop = area.getY() + area.getHeight() * 0.62f;
+        juce::Colour lFill { 0xff9898A8 };  // warmer neutral (equal R/G, less blue overshoot)
+
+        juce::ColourGradient lGrad (
+            lFill.withAlpha (0.0f),   0.0f, lTop,
+            lFill.withAlpha (0.35f),  0.0f, area.getBottom(),
+            false);
+        g.setGradientFill (lGrad);
+        g.fillRect (area.getX(), lTop, area.getWidth(), area.getBottom() - lTop);
+    }
+
     // Horizontal dB grid lines
     g.setColour (MLIMColours::waveformGridLine.withAlpha (0.35f));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
