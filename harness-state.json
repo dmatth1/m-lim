@@ -234,8 +234,8 @@
     "222-remove-committed-screenshots.md"
   ],
   "review_count": 16,
-  "last_sweep_at_done_count": 388,
-  "specialist_sweep_count": 27,
+  "last_sweep_at_done_count": 398,
+  "specialist_sweep_count": 31,
   "decisions": [
     {
       "at": "2026-03-25T02:48:00Z",
@@ -821,6 +821,11 @@
       "at": "2026-03-27T10:40:39Z",
       "action": "wave 18 complete done=388, launching sweep 20",
       "reason": "all tasks 374-383 done, wave 18 RMSE confirmed, gap to 15% target = 5.74pp"
+    },
+    {
+      "at": "2026-03-27T11:55:47Z",
+      "action": "wave 19/20 complete done=398, launching sweep 21",
+      "reason": "Full=19.82% Wave=17.29% \u2014 regressions in Right(+0.73pp) and Control(+0.85pp) need fixing"
     }
   ],
   "learnings": [
@@ -839,7 +844,8 @@
     "Wave 16: Left 28.11% is a structural floor \u2014 the left meter crop (x=640-720) captures M-LIM TopBar (dark R=32) at y=0-35 vs Pro-L 2 bright level meter (R=123), and readout area (dark) vs bright meter bars. No histogram color change can fix this. Right panel improved to 23.57% by reducing level meter idle gradient top zone alpha 0.44\u21920.10 through warning boundary.",
     "loudnessHistogramTop/Bottom constants are now decoupled from displayGradientTop/Bottom. Current values match displayGradient colors (0xff3A3540/0xff506090) which are optimal for left RMSE.",
     "Left meter RMSE floor ~28% is structural: M-LIM JUCE TopBar (R=32) occupies y=0-35 of left crop vs Pro-L2 bright level meter bars (R=123). No color/gradient change can close this gap without audio playback.",
-    "Wave 18 final: Full=20.74%, Wave=18.96%, Left=29.00% (floor), Right=22.36%, Control=20.17%"
+    "Wave 18 final: Full=20.74%, Wave=18.96%, Left=29.00% (floor), Right=22.36%, Control=20.17%",
+    "Wave 20 final: Full=19.82%, Wave=17.29%, Left=28.75% (floor), Right=23.09% (regression from task-391 warm shift), Control=21.02% (regression from task-392 over-brightening). Full broke 20%!"
   ],
   "extra_guidance": "Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved."
 }
