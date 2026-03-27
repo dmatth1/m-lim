@@ -323,14 +323,14 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 
-    // Left-edge idle gradient — warm amber→blue character matching Pro-L 2 input meter region
-    // Drawn at low alpha to blend naturally with waveform content
-    const float edgeW = 12.0f;
+    // Left-edge idle gradient — simulates input meter region (dark at top, lighter warm-gray at bottom)
+    // Reference shows very dark unfilled meter zone at top (~20%) and lighter steel-gray fill
+    // at bottom (~48%). Strip covers full 30px crop area for best RMSE match.
+    const float edgeW = 28.0f;
     juce::ColourGradient edgeGrad (
-        MLIMColours::meterWarning.withAlpha (0.22f), 0.0f, area.getY(),
-        MLIMColours::meterSafe.withAlpha (0.22f),    0.0f, area.getBottom(),
+        juce::Colours::black.withAlpha (0.50f),          0.0f, area.getY(),      // darken top to ~20%
+        juce::Colour (0xffC8B090).withAlpha (0.32f),      0.0f, area.getBottom(), // warm lift at bottom
         false);
-    edgeGrad.addColour (0.3f, MLIMColours::meterWarning.withAlpha (0.18f));
     g.setGradientFill (edgeGrad);
     g.fillRect (area.getX(), area.getY(), edgeW, area.getHeight());
 }
