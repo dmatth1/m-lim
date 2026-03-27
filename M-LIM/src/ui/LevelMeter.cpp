@@ -111,11 +111,17 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
                             MLIMColours::meterSafe.withAlpha (0.10f));      // task-425: subtle cool blue
 
-        // Mid-fill at -24 dBFS — subtle warm hint to simulate idle program material
+        // Mid-fill at -24 dBFS — blue tint to match reference idle appearance
         const float normMidFill = dbToNorm (-24.0f);
         const float midFillY    = barTop2 + barH2 * (1.0f - normMidFill);
         idleGrad.addColour ((midFillY - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.08f));   // task-425: minimal warm at -24 dBFS
+                            MLIMColours::meterSafe.withAlpha (0.18f));      // task-451: visible blue at -24 dBFS
+
+        // Transition zone at -18 dBFS — visible blue tint starts here
+        const float normTrans = dbToNorm (-18.0f);
+        const float transY    = barTop2 + barH2 * (1.0f - normTrans);
+        idleGrad.addColour ((transY - barTop2) / barH2,
+                            MLIMColours::meterSafe.withAlpha (0.30f));      // task-451: prominent blue from -18 dB down
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
