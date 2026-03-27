@@ -84,7 +84,7 @@ void RotaryKnob::paint (juce::Graphics& g)
                             + static_cast<float>(proportion)
                               * (kRotaryEndAngle - kRotaryStartAngle);
         const float pointerLength    = faceRadius * 0.50f;
-        const float pointerThickness = 2.5f;
+        const float pointerThickness = 3.5f;
 
         juce::Path pointer;
         pointer.addRectangle (-pointerThickness * 0.5f, -faceRadius,
