@@ -1,0 +1,22 @@
+Task 366: Output Meter Warm Background — RMSE Results
+====================================================
+Methodology: scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+Reference:   prol2-main-ui.jpg, crop 1712x1073+97+32, resize 900x500!
+
+Change: barTrackBackground 0xff1C1820 → 0xff231417 (warm dark reddish-maroon)
+Note: idle gradient alpha kept at 0.44f from task-365 (not reduced to 0.07f — would undo task-365 gains)
+
+Wave 14 baseline (task-364):
+  Full RMSE:    22.25%
+  Right panel:  29.26%
+
+Task 366 result (with task-365 already applied):
+  Full RMSE:    21.30%  (improvement: -0.95pp from task-365 state, -0.95pp from baseline)
+  Right panel:  23.94%  (improvement: -1.13pp from task-365, -5.32pp from baseline)
+
+Acceptance criteria:
+  barTrackBackground = 0xff231417:  PASS
+  No 0.15f alpha matches in LevelMeter.cpp: PASS (values are 0.44f from task-365)
+  Right panel RMSE ≤ 28.00%: PASS (23.94%)
+  Right panel below 24%: PASS (23.94%)
+  Full RMSE below 21.5%: PASS (21.30%)
