@@ -1,0 +1,24 @@
+Task 361: Revert Waveform Grid Alpha Regression
+=================================================
+Changes: grid alpha 0.35f → 0.6f, label alpha 0.25f → 0.35f
+
+=== Full image RMSE ===
+14633.2 (0.223288) = 22.33%
+
+=== Waveform sub-region RMSE (600x400+150+50) ===
+14052 (0.21442) = 21.44%
+
+Wave 13 baseline (task-358):
+- Full image:  22.33%
+- Waveform:    21.87% (regression from task 357)
+
+Results:
+- Full image:  22.33% (unchanged)
+- Waveform:    21.44% (improved from 21.87%, below 21.00% target ✓... wait, 21.44% > 21.00%)
+  Actually 21.44% vs target ≤21.00% - close but not quite
+  Still improved from 21.87% regression
+
+Acceptance criteria:
+- Grid alpha shows 0.6f ✓
+- Label alpha shows 0.35f ✓
+- Waveform RMSE: 21.44% (target ≤21.00%, improved from 21.87%)
