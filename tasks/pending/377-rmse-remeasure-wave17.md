@@ -1,21 +1,21 @@
-# Task: RMSE Remeasure — Wave 17 Baseline
+# Task 377: RMSE Remeasure — Wave 17 Baseline
 
 ## Description
 
 Measure full and sub-region RMSE after all wave 17 tasks complete. Establish new baselines
 and validate improvement/regression against wave 16 state.
 
-**Wave 17 tasks expected:**
-- Right panel histogram warm dark background (loudnessHistogramTop/Bottom)
-- Control strip gradient brightness increase
-- Waveform idle fill extend coverage to mid-zone
+**Wave 17 tasks:**
+- Task 374: Right panel histogram warm dark background (loudnessHistogramTop/Bottom)
+- Task 375: Control strip gradient brightness increase (controlStripTop/Bottom)
+- Task 376: Waveform idle fill extend coverage to mid-zone (new mid gradient block)
 
 **Wave 16 baseline (task-373):**
-- Full:  21.22%
-- Wave:  19.44%
-- Left:  28.11% (structural floor — not targeted in wave 17)
-- Right: 23.57%
-- Ctrl:  20.65%
+- Full:    21.22%
+- Wave:    19.44%
+- Left:    28.11% (structural floor — not targeted in wave 17)
+- Right:   23.57%
+- Control: 20.65%
 
 ## Produces
 None
@@ -24,14 +24,14 @@ None
 None
 
 ## Relevant Files
-Read: `M-LIM/screenshots/task-373-rmse-results.txt` — wave 16 baseline
+Read: `M-LIM/screenshots/sweep19-rmse-baseline.txt` — wave 16 RMSE baseline
 
 ## Acceptance Criteria
-- [ ] Run: Full RMSE measurement → save to `M-LIM/screenshots/task-NNN-rmse-results.txt`
-- [ ] Full image RMSE: ≤ 21.22% (no regression)
-- [ ] Wave region RMSE: ≤ 19.44% (improvement expected)
-- [ ] Right panel RMSE: ≤ 23.57% (improvement expected)
-- [ ] Control strip RMSE: ≤ 20.65% (improvement expected)
+- [ ] Run: full RMSE measurement → save to `screenshots/task-377-rmse-results.txt`
+- [ ] Full image RMSE: ≤ 21.22% (no regression from wave 16)
+- [ ] Wave region RMSE: ≤ 19.44% (improvement expected from task 376)
+- [ ] Right panel RMSE: ≤ 23.57% (improvement expected from task 374)
+- [ ] Control strip RMSE: ≤ 20.65% (improvement expected from task 375)
 
 ## Tests
 None
@@ -45,7 +45,7 @@ convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
 
 # Step 2: Build Standalone only
 export CCACHE_DIR=/build-cache
-cmake --build /workspace/M-LIM/build --target MLIM_Standalone -j$(nproc)
+cmake --build /workspace/M-LIM/build --target MLIM_Standalone_Standalone -j$(nproc)
 
 # Step 3: Launch and capture
 pkill -f "Standalone/M-LIM" 2>/dev/null; sleep 1
@@ -84,8 +84,8 @@ echo "=== Control strip ==="
 compare -metric RMSE /tmp/w17-ctrl.png /tmp/ref-ctrl.png /dev/null 2>&1
 ```
 
-Save text results to `M-LIM/screenshots/task-NNN-rmse-results.txt`.
-Save plugin crop to `M-LIM/screenshots/task-NNN-wave17-crop.png`.
+Save text results to `screenshots/task-377-rmse-results.txt`.
+Save plugin crop to `screenshots/task-377-wave17-crop.png`.
 
 ## Dependencies
-Requires all wave 17 tasks (histogram warmth, control strip brightness, waveform fill)
+Requires tasks 374, 375, 376
