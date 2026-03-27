@@ -304,6 +304,30 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
     }
 
+    // Upper idle fill — approximates dense input waveform content in -6 to -12 dBFS zone.
+    // Covers y=15%–55% height (centered around 30%), peak alpha ~0.60.
+    // Addresses 46-60 unit brightness gap observed at y=30% height vs reference. (task-403)
+    {
+        const float uTop = area.getY() + area.getHeight() * 0.15f;
+        const float uMid = area.getY() + area.getHeight() * 0.30f;
+        const float uBot = area.getY() + area.getHeight() * 0.55f;
+        juce::Colour uFill = MLIMColours::inputWaveform.withAlpha (1.0f);
+
+        juce::ColourGradient rGrad (
+            uFill.withAlpha (0.0f),   0.0f, uTop,
+            uFill.withAlpha (0.60f),  0.0f, uMid,
+            false);
+        g.setGradientFill (rGrad);
+        g.fillRect (area.getX(), uTop, area.getWidth(), uMid - uTop);
+
+        juce::ColourGradient fGrad (
+            uFill.withAlpha (0.60f),  0.0f, uMid,
+            uFill.withAlpha (0.0f),   0.0f, uBot,
+            false);
+        g.setGradientFill (fGrad);
+        g.fillRect (area.getX(), uMid, area.getWidth(), uBot - uMid);
+    }
+
     // Mid-zone brightness boost — two-pass tent centred at 58% height
     // Extends from 36%–82%, peak alpha 0.80 at midpoint to close 40-53 unit gap.
     {

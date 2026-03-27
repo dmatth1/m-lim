@@ -1,0 +1,22 @@
+Task 403: Waveform Upper Idle Fill — New Brightness Pass
+
+Added upper idle fill: y=15%–55%, tent centered at 30%, peak alpha 0.60
+Using inputWaveform color (#6878A0)
+
+Wave-21 baseline:
+  Full:    19.46%
+  Wave:    16.72%
+
+Task-403 results:
+  Full:    19.12%  (improved -0.34%)
+  Wave:    16.51%  (improved -0.21%)
+
+Pixel check at y=150, x=300:
+  Before:  ~srgb(62, 67, 84)  
+  After:   ~srgb(91, 98, 126)
+  Target:  ~srgb(103, 112, 146) — significantly closer
+
+Acceptance criteria:
+  - Build: PASS
+  - Wave RMSE 16.51% ≤ 16.72%: PASS
+  - Full RMSE 19.12% ≤ 19.46%: PASS
