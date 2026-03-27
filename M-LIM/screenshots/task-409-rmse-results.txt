@@ -1,0 +1,17 @@
+Task 409: Lighten algoButtonInactive Color
+==========================================
+Changes:
+  1. Colours.h: algoButtonInactive 0xff3C4455 → 0xff545870 (+24R, +8G, -15B)
+  2. AlgorithmSelector.cpp: button buttonColourId → algoButtonInactive
+  3. LookAndFeel.cpp: drawButtonBackground uses backgroundColour (not displayBackground)
+
+RMSE Results:
+  Full RMSE:  18.95% (wave22 baseline: 19.46% → improved by 0.51pp)
+  Wave RMSE:  16.06% (improved further from task-408's 16.59%)
+
+Algo button area pixels (crop 170x80+0+407 from 900x500):
+  M-LIM before: (52, 54, 62)
+  M-LIM after:  (86, 89, 106)
+  Reference:    (84, 84, 99)
+  
+Result: Very close match to reference! All channels within ±7 of target.

@@ -32,7 +32,7 @@ AlgorithmSelector::AlgorithmSelector()
     {
         algoButtons_[i].setButtonText(kAlgorithmButtonLabels[i]);
         algoButtons_[i].setClickingTogglesState(false);
-        algoButtons_[i].setColour(juce::TextButton::buttonColourId,   MLIMColours::buttonBackground);
+        algoButtons_[i].setColour(juce::TextButton::buttonColourId,   MLIMColours::algoButtonInactive);
         algoButtons_[i].setColour(juce::TextButton::buttonOnColourId, MLIMColours::algoButtonSelected);
         algoButtons_[i].setColour(juce::TextButton::textColourOffId,  MLIMColours::textSecondary);
         algoButtons_[i].setColour(juce::TextButton::textColourOnId,   MLIMColours::textPrimary);

@@ -151,14 +151,13 @@ void MLIMLookAndFeel::drawButtonBackground (juce::Graphics& g,
         return;
     }
 
-    juce::Colour fillColour = MLIMColours::displayBackground;
+    // Use the button's own backgroundColour (buttonColourId when off, buttonOnColourId when on).
+    // This lets individual components control their colour via setColour(buttonColourId, ...).
+    juce::Colour fillColour = backgroundColour;
     if (shouldDrawButtonAsDown)
         fillColour = MLIMColours::accentBlue.darker (0.3f);
     else if (shouldDrawButtonAsHighlighted)
-        fillColour = MLIMColours::displayBackground.brighter (0.15f);
-
-    if (button.getToggleState())
-        fillColour = backgroundColour;
+        fillColour = backgroundColour.brighter (0.15f);
 
     g.setColour (fillColour);
     g.fillRoundedRectangle (bounds, 4.0f);
