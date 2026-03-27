@@ -304,17 +304,29 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
     }
 
-    // Mid-zone brightness boost for idle simulation
+    // Mid-zone brightness boost — two-pass tent centred at 50% height
+    // Extends from 28%–75%, peak alpha 0.68 at midpoint to close 40-53 unit gap.
     {
-        const float midTop  = area.getY() + area.getHeight() * 0.28f;
-        const float midBot  = area.getY() + area.getHeight() * 0.60f;
-        juce::Colour midFillColour { 0xff828AA5 };  // bright steel-blue, R=130, G=138, B=165
-        juce::ColourGradient midFillGrad (
-            midFillColour.withAlpha (0.42f), 0.0f, midTop,
-            midFillColour.withAlpha (0.0f),  0.0f, midBot,
+        const float midTop   = area.getY() + area.getHeight() * 0.28f;
+        const float midMid   = area.getY() + area.getHeight() * 0.50f;
+        const float midBot   = area.getY() + area.getHeight() * 0.75f;
+        juce::Colour midFill { 0xff828AA5 };
+
+        // Rising half: transparent at 28% → 0.68 at 50%
+        juce::ColourGradient riseGrad (
+            midFill.withAlpha (0.0f),   0.0f, midTop,
+            midFill.withAlpha (0.68f),  0.0f, midMid,
             false);
-        g.setGradientFill (midFillGrad);
-        g.fillRect (area.getX(), midTop, area.getWidth(), midBot - midTop);
+        g.setGradientFill (riseGrad);
+        g.fillRect (area.getX(), midTop, area.getWidth(), midMid - midTop);
+
+        // Falling half: 0.68 at 50% → transparent at 75%
+        juce::ColourGradient fallGrad (
+            midFill.withAlpha (0.68f),  0.0f, midMid,
+            midFill.withAlpha (0.0f),   0.0f, midBot,
+            false);
+        g.setGradientFill (fallGrad);
+        g.fillRect (area.getX(), midMid, area.getWidth(), midBot - midMid);
     }
 
     // Center tent brightness boost — 32%→50% rising, 50%→68% falling
