@@ -1,0 +1,13 @@
+Task 395: Waveform Gradient Bottom Blue Boost — RMSE Results
+
+Change: displayGradientBottom 0xff606898 → 0xff708AB4 (+16R +22G +28B)
+
+Wave-20 Baseline (task-393):
+  Full:  19.82%
+  Wave:  17.29%
+
+Task-395 Results:
+  Full:  19.65%  (improved by 0.17%)
+  Wave:  17.03%  (improved by 0.26%)
+
+Both regions improved. Acceptance criteria met (no regression from baseline).
