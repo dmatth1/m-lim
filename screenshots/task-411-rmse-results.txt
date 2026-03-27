@@ -1,0 +1,35 @@
+Task 411: Wave 22 RMSE Closing Baseline
+
+Wave-21 Baseline (task-397):
+  Full:    19.46%
+  Wave:    16.72%
+  Left:    28.71%
+  Right:   23.09%
+  Control: 21.02%
+
+Wave-22 Results (tasks 403–410):
+  Full:    19.11%  (improved -0.35%)
+  Wave:    16.51%  (improved -0.21%)
+  Left:    26.22%  (improved -2.49%)
+  Right:   23.50%  (regressed +0.41% — due to task-410 loudnessPanelBackground change)
+  Control: 19.37%  (improved -1.65%)
+
+Acceptance criteria:
+  ✓ Full    19.11% ≤ 19.46%
+  ✓ Wave    16.51% ≤ 16.72%
+  ✓ Left    26.22% ≤ 28.71%
+  ✗ Right   23.50% > 23.09% (slight regression from task-410 loudnessPanelBackground lightening)
+  ✓ Control 19.37% ≤ 21.02%
+
+Net improvement vs wave-21: Full -0.35%, Wave -0.21%, Left -2.49%, Control -1.65%
+Right slightly regressed +0.41%.
+
+Changes applied in wave 22:
+  - Task 403: Upper idle fill new pass (inputWaveform, y=15%-55%)
+  - Task 404: Midzone tent alpha reduction (0.80→0.68, 0.65→0.52)
+  - Task 405: Lower brightness boost (0xff9898A8, α=0.35, y=62%-100%)
+  - Task 406: Idle fill alpha tune (0.88→0.82)
+  - Task 407: displayGradientTop warm shift (0xff28242A→0xff271F22)
+  - Task 408: displayGradientBottom warmth increase (0xff708AB4→0xff9E9EC4)
+  - Task 409: algoButtonInactive lightening (0xff3C4455→0xff545870)
+  - Task 410: loudnessPanelBackground lightening (0xff2B2729→0xff464356)
