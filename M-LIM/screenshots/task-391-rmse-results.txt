@@ -1,0 +1,23 @@
+Task 391: Waveform Top Gradient — Warm Color Shift
+Change: displayGradientTop 0xff242027 → 0xff332A2D
+
+=== Full RMSE ===
+12971.6 (0.197934) → 19.79%
+
+=== Wave RMSE (640x500+0+0) ===
+11419.8 (0.174255) → 17.43%
+
+=== Left meters (80x500+640+0) ===
+18886.6 (0.288191) → 28.82%
+
+=== Right panel (180x500+720+0) ===
+14801.8 (0.225861) → 22.59%
+
+=== Control strip (900x90+0+410) ===
+13299.2 (0.202933) → 20.29%
+
+=== Pixel at y=80 (warmth check) ===
+363038 (R:54, G:48, B:56) — warmer than previous 292733, closer to reference 39332A
+
+Wave-18 baseline: Full=20.74%, Wave=18.96%, Right=22.36%
+Result: All criteria met. Wave RMSE improved 17.43% (from 18.96%).
