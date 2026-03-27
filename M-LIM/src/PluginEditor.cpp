@@ -39,7 +39,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputGainValueLabel_.setText ("+0.0", juce::dontSendNotification);
     inputGainValueLabel_.setFont (juce::Font (9.0f, juce::Font::bold));
     inputGainValueLabel_.setJustificationType (juce::Justification::centred);
-    inputGainValueLabel_.setColour (juce::Label::textColourId, juce::Colour (0xffFFD700));
+    inputGainValueLabel_.setColour (juce::Label::textColourId, MLIMColours::peakLabel);
     inputGainValueLabel_.setColour (juce::Label::backgroundColourId, MLIMColours::peakLabelBackground);
     inputGainValueLabel_.setColour (juce::Label::outlineColourId,    MLIMColours::panelBorder);
     inputGainValueLabel_.setInterceptsMouseClicks (false, false);
@@ -158,7 +158,7 @@ void MLIMAudioProcessorEditor::wireCallbacks()
 
 void MLIMAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xff1a1a1a));
+    g.fillAll (MLIMColours::background);
 }
 
 void MLIMAudioProcessorEditor::resized()
