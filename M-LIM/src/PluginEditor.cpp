@@ -20,7 +20,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (topBar_);
     addAndMakeVisible (waveformDisplay_);
     addAndMakeVisible (inputMeter_);
-    inputMeter_.setVisible (false);
+    inputMeter_.setShowScale (true);
     addAndMakeVisible (outputMeter_);
     outputMeter_.setShowScale (false);
     addAndMakeVisible (grMeter_);
@@ -170,8 +170,8 @@ void MLIMAudioProcessorEditor::resized()
     topBar_.setBounds       (bounds.removeFromTop    (kTopBarH));
     controlStrip_.setBounds (bounds.removeFromBottom (kControlStripH));
 
-    // Input level meter hidden — waveform extends to left edge (no left strip)
-    inputMeter_.setVisible (false);
+    // Input level meter visible on the left edge (task-413)
+    inputMeter_.setBounds (bounds.removeFromLeft (kInputMeterW));
 
     // Right edge: output meter (outermost/rightmost), then loudness panel, then GR meter adjacent to waveform
     outputMeter_.setBounds   (bounds.removeFromRight (kOutputMeterW));    // rightmost
