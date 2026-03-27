@@ -1,0 +1,26 @@
+Task 407: displayGradientTop — Warm Shift to Match Reference Top Zone
+
+Change applied: 0xff28242A → 0xff271F22 (option 1)
+  Delta: R-1, G-5, B-8 from previous value
+
+=== Pixel analysis (crop 650x100+0+10 from 900x500) ===
+M-LIM avg before: (47, 46, 53)
+M-LIM avg after:  (46, 42, 47)
+Reference avg:    (52, 44, 47)
+  → B now matches reference exactly (47 == 47, was +6 off)
+  → G improved: was +2, now -2
+  → R: 46 vs 52 (still -6 off, was -5)
+
+=== RMSE Results ===
+Full RMSE:  19.46%  (baseline: 19.46% — no change)
+Wave RMSE:  17.21%  (baseline: 16.72% — slight increase, but satisfies criterion of ≤19.31%)
+
+Options tested:
+  Option 1: 0xff271F22 (39,31,34) — Full=19.46%, Wave=17.21%  ← CHOSEN
+  Option 3: 0xff342C2F (52,44,47) — Full=19.50%, Wave=17.36% (overshoot, upper zone 55,51,56)
+
+Acceptance criteria:
+  ✓ Build exit 0
+  ✓ B closer to 47 (was 53, now 47 — exact match)
+  ✓ Wave RMSE (17.21%) does not worsen vs 19.31% baseline criterion
+  ✓ This file exists
