@@ -442,20 +442,26 @@ void LoudnessPanel::drawLargeReadout (juce::Graphics& g,
     else
         valColour = MLIMColours::lufsReadoutGood;                     // comfortably below: golden
 
-    // Value in large bold font — occupies the upper 2/3 of the strip
-    g.setFont (juce::Font (38.0f, juce::Font::bold));
+    // Value in large bold font — right-aligned with "LUFS" suffix to the right
+    constexpr int kSuffixW = 32;   // width reserved for "LUFS" label
+    constexpr int kRightPad = 6;
+
+    auto numberArea = bounds.withTrimmedRight (kSuffixW + kRightPad);
+    auto suffixArea = bounds.removeFromRight (kSuffixW + kRightPad).withTrimmedRight (kRightPad);
+
+    g.setFont (juce::Font (42.0f, juce::Font::bold));
     g.setColour (valColour);
     g.drawText (valStr,
-                bounds.withTrimmedBottom (bounds.getHeight() / 3),
-                juce::Justification::centred,
+                numberArea,
+                juce::Justification::centredRight,
                 false);
 
-    // "LUFS" unit label in smaller font — occupies the lower 1/3
-    g.setFont (juce::Font (12.0f));
+    // "LUFS" unit label — small, positioned to the right of the number, top-aligned
+    g.setFont (juce::Font (10.0f));
     g.setColour (MLIMColours::textSecondary);
     g.drawText ("LUFS",
-                bounds.withTrimmedTop (bounds.getHeight() * 2 / 3),
-                juce::Justification::centred,
+                suffixArea.withTrimmedTop (bounds.getHeight() / 4).withHeight (14),
+                juce::Justification::centredLeft,
                 false);
 }
 
