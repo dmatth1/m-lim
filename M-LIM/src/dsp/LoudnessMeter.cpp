@@ -434,7 +434,7 @@ float LoudnessMeter::computeLRA()
         cumul += mLraHisto[static_cast<size_t>(b)];
         const float binLUFS = kLraHistoMinLUFS + static_cast<float>(b) * kLraBinWidth;
 
-        if (!foundLo && cumul > loTarget)
+        if (!foundLo && cumul >= loTarget)
         {
             loLUFS  = binLUFS;
             foundLo = true;
