@@ -1,4 +1,4 @@
-# Task: Waveform Idle Fill — Bottom Alpha Reduction for Neutral Tone
+# Task 406: Waveform Idle Fill — Bottom Alpha Reduction for Neutral Tone
 
 ## Description
 
@@ -11,22 +11,26 @@ The reference at y=390 has:
 - +4 more Green
 - -9 LESS Blue
 
-The high-alpha idle fill at the bottom (88% alpha at y=390) is creating a blue cast that's
-stronger than the reference. Reducing the maximum alpha from 0.88 to 0.80-0.84 would allow
-more of the base gradient to show through, producing a slightly warmer and less blue-saturated
-bottom.
+The high-alpha idle fill at the bottom (88% alpha at y=390) creates a blue cast stronger than
+the reference. Reducing the maximum alpha from 0.88 to 0.82 allows more of the base gradient
+to show through, producing a slightly warmer and less blue-saturated bottom.
 
 **Fix**: Reduce idle fill bottom alpha from 0.88 to 0.82.
 
-## Relevant Files
+## Produces
+None
 
-Modify: `src/ui/WaveformDisplay.cpp` — line 301 where `withAlpha(0.88f)` is set
+## Consumes
+None
+
+## Relevant Files
+Modify: `src/ui/WaveformDisplay.cpp` — line ~301 where `withAlpha(0.88f)` is set
 
 ## Acceptance Criteria
-
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: exit 0
 - [ ] Run wave RMSE → Expected: ≤ 16.72%
 - [ ] Run full RMSE → Expected: ≤ 19.46%
-- [ ] Save results to `screenshots/task-NNN-rmse-results.txt`
+- [ ] Run: `ls screenshots/task-406-rmse-results.txt` → Expected: file exists
 
 ## Tests
 None
@@ -52,9 +56,5 @@ juce::ColourGradient fillGrad (
 **Tuning**: Try 0.80, 0.82, 0.84 and pick the value that gives best wave RMSE while not
 degrading the full RMSE.
 
-**Effect calculation**: At y=390 (95% height), current idle alpha ≈ 0.838. Reducing to 0.82
-gives idle alpha ≈ 0.782. This allows ~5% more gradient to show through, adding slightly more
-warmth from the base gradient.
-
 ## Dependencies
-None (small conservative change, can be combined with other waveform tasks)
+None

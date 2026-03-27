@@ -1,4 +1,4 @@
-# Task: Waveform Upper Idle Fill — New Brightness Pass (y=15%–50%)
+# Task 403: Waveform Upper Idle Fill — New Brightness Pass (y=15%–50%)
 
 ## Description
 
@@ -18,22 +18,25 @@ M-LIM has no idle fill in this zone at all — the current idle fill starts at f
 
 **Fix**: Add a new upward-facing idle fill pass in `WaveformDisplay::drawBackground()`. This pass
 should target the y=15%–50% range, centered around y=25-30%, using the inputWaveform color
-at moderate alpha (0.55–0.70 peak). This approximates the dense waveform content that is
-visible in the reference at this height.
+at moderate alpha (0.55–0.70 peak).
+
+## Produces
+None
+
+## Consumes
+None
 
 ## Relevant Files
-
 Modify: `src/ui/WaveformDisplay.cpp` — add new gradient pass in `drawBackground()` after the
   existing gradient fill and before the midzone tents (around line 307)
 Read: `src/ui/Colours.h` — inputWaveform constant (#6878A0)
 Read: `screenshots/task-397-rmse-results.txt` — wave-21 baseline to compare against
 
 ## Acceptance Criteria
-
-- [ ] Run RMSE on wave region after change → Expected: wave region RMSE ≤ 16.72% (wave-21 baseline)
-- [ ] Run RMSE on full image → Expected: full RMSE ≤ 19.46% (wave-21 baseline)
-- [ ] Save screenshot crop to `screenshots/task-NNN-after.png`
-- [ ] Save RMSE results to `screenshots/task-NNN-rmse-results.txt`
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: exit 0
+- [ ] Run wave RMSE after change → Expected: wave region RMSE ≤ 16.72% (wave-21 baseline)
+- [ ] Run full RMSE → Expected: full RMSE ≤ 19.46% (wave-21 baseline)
+- [ ] Run: `ls screenshots/task-403-*.png screenshots/task-403-rmse-results.txt` → Expected: files exist
 
 ## Tests
 None
@@ -76,28 +79,21 @@ None
 **Tuning guidance**:
 - Start with peak alpha 0.60 and measure wave RMSE
 - Try 0.50, 0.65, 0.70 and pick the best RMSE result
-- If the fill is too blue (increases blue RMSE), try using a warmer fill color like `juce::Colour{0xff707498}` instead
-- Do NOT let the fill extend above y=10% or it will over-brighten the top area that currently matches well
+- If the fill is too blue, try warmer fill color like `juce::Colour{0xff707498}`
+- Do NOT let the fill extend above y=10%
 
-**RMSE methodology** (from task-397):
+**RMSE methodology**:
 ```bash
-# Reference
 convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
     -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref.png
-
-# M-LIM
 DISPLAY=:99 /workspace/M-LIM/build/MLIM_artefacts/Release/Standalone/M-LIM &
 sleep 8
 DISPLAY=:99 scrot /tmp/raw.png
 pkill -f "M-LIM"
 convert /tmp/raw.png -crop 908x500+509+325 +repage -resize 900x500! /tmp/mlim.png
-
-# Wave region
 convert /tmp/mlim.png -crop 640x500+0+0 +repage /tmp/mlim-wave.png
 convert /tmp/ref.png  -crop 640x500+0+0 +repage /tmp/ref-wave.png
 compare -metric RMSE /tmp/mlim-wave.png /tmp/ref-wave.png /dev/null 2>&1
-
-# Full RMSE
 compare -metric RMSE /tmp/mlim.png /tmp/ref.png /dev/null 2>&1
 ```
 

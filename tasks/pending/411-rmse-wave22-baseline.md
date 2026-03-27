@@ -1,10 +1,12 @@
-# Task: RMSE Remeasure — Wave 22 Baseline
+# Task 411: RMSE Wave 22 — Closing Baseline Measurement
 
 ## Description
 
-After wave-22 tasks complete (waveform upper idle fill, midzone tent alpha reduction,
-lower brightness boost, idle fill alpha tune, gradient top warm shift), capture a new
-screenshot and measure RMSE across all standard regions to establish the wave-22 baseline.
+After all wave-22 tasks complete (403–410: waveform upper idle fill, midzone tent alpha
+reduction, lower brightness boost, idle fill alpha tune, gradient top warm shift,
+displayGradientBottom warmth, algoButtonInactive lightening, loudnessPanelBackground
+lightening), capture a new screenshot and measure RMSE across all standard regions to
+establish the wave-22 closing baseline.
 
 Wave-21 baseline for comparison (from task 397):
 - Full:    19.46%
@@ -22,14 +24,17 @@ None
 ## Relevant Files
 Read: `Scripts/ui-test-helper.sh` — helper script reference
 Read: `screenshots/task-397-rmse-results.txt` — wave-21 baseline
+Modify: `screenshots/task-411-rmse-results.txt` — create closing baseline file
 
 ## Acceptance Criteria
-- [ ] Run: full image RMSE → Expected: ≤ wave-21 full baseline 19.46%
-- [ ] Run: wave region RMSE → Expected: ≤ wave-21 wave baseline 16.72%
-- [ ] Run: left meters RMSE → Expected: ≤ wave-21 left baseline 28.71%
-- [ ] Run: right panel RMSE → Expected: ≤ wave-21 right baseline 23.09%
-- [ ] Save results to `screenshots/task-NNN-rmse-results.txt`
-- [ ] Save screenshot crop to `screenshots/task-NNN-wave22-crop.png`
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: exit 0
+- [ ] Run full RMSE → Expected: Full RMSE ≤ 19.46% (wave-21 full baseline)
+- [ ] Run wave region RMSE → Expected: ≤ 16.72%
+- [ ] Run left meters RMSE → Expected: ≤ 28.71%
+- [ ] Run right panel RMSE → Expected: ≤ 23.09%
+- [ ] Run control strip RMSE → Expected: ≤ 21.02%
+- [ ] Run: `ls screenshots/task-411-rmse-results.txt screenshots/task-411-wave22-crop.png` → Expected: files exist
+- [ ] Run: `git log --oneline -3` → Expected: baseline commit visible
 
 ## Tests
 None
@@ -43,7 +48,7 @@ convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
 
 # Step 2: Build
 export CCACHE_DIR=/build-cache
-cmake --build /workspace/M-LIM/build --target MLIM_Standalone -j$(nproc)
+cmake --build /workspace/M-LIM/build --target MLIM_Standalone_Standalone -j$(nproc)
 
 # Step 3: Launch and screenshot
 pkill -f "M-LIM" 2>/dev/null; sleep 1
@@ -54,6 +59,7 @@ pkill -f "M-LIM"
 
 # Step 4: Crop
 convert /tmp/task-w22-raw.png -crop 908x500+509+325 +repage -resize 900x500! /tmp/task-w22-mlim.png
+cp /tmp/task-w22-mlim.png screenshots/task-411-wave22-crop.png
 
 # Step 5: Full RMSE
 echo "=== Full image RMSE ===" && compare -metric RMSE /tmp/refW22.png /tmp/task-w22-mlim.png /dev/null 2>&1
@@ -76,5 +82,7 @@ convert /tmp/refW22.png         -crop 900x90+0+410 +repage /tmp/ref-ctrl.png
 echo "=== Control strip ===" && compare -metric RMSE /tmp/w22-ctrl.png /tmp/ref-ctrl.png /dev/null 2>&1
 ```
 
+Save all output to `screenshots/task-411-rmse-results.txt` and commit.
+
 ## Dependencies
-Requires all wave-22 color/gradient tasks to complete first
+Requires tasks 403, 404, 405, 406, 407, 408, 409, 410
