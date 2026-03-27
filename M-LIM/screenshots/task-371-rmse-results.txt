@@ -1,0 +1,28 @@
+Task 371 — Fix Left Meter Regression — Loudness Panel Histogram Decoupled
+
+Configuration: loudnessHistogramTop=0xff3A3540, loudnessHistogramBottom=0xff506090
+(Equivalent to wave 15 baseline — decoupled into separate constants)
+
+RMSE Results:
+  Full:  21.30%  ← target ≤21.30% ✓ MET
+  Left:  28.11%  ← target ≤22.00% ✗ NOT MET (structural issue)
+  Right: 23.94%  ← target ≤25.00% ✓ MET
+
+BLOCKED: Left ≤22.00% not achievable via histogram gradient color changes.
+Root cause: The left meter crop (x=640-720) contains three structural mismatches
+vs. the Pro-L 2 reference that color changes cannot resolve:
+1. TopBar (y=0-35): M-LIM R≈32 dark; reference has bright level meter content (R≈123) here
+2. Complex horizontal variation in reference (waveform edges, meter zones) vs.
+   M-LIM's uniform horizontal gradient
+3. Readout area (y=334+): M-LIM dark (R≈55); reference bright (R≈106-117) level meters
+
+Colors tested:
+  0xff3A3540/0xff506090 (baseline)      : Full=21.30%, Left=28.11%, Right=23.94%  ← BEST
+  0xff60687A/0xff7890B8 (task-suggested): Full=22.22%, Left=29.59%, Right=27.13%  ← WORSE
+  0xff686468/0xff506090 (pre-task-368)  : Full=21.60%, Left=28.53%, Right=25.03%  ← WORSE
+  0xff3A3540/0xffA2B7E8 (bright bottom) : Full=22.39%, Left=29.76%, Right=27.72%  ← WORSE
+  0xff404858/0xffA0A8C0 (inverted)      : Full=22.20%, Left=29.36%, Right=27.13%  ← WORSE
+
+Structural change preserved: loudnessHistogramTop/Bottom constants added to Colours.h
+and wired into LoudnessPanel.cpp, decoupling histogram gradient from waveform gradient.
+This allows future independent tuning of each area without cross-contamination.

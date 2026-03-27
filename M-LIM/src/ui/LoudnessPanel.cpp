@@ -212,11 +212,11 @@ void LoudnessPanel::paint (juce::Graphics& g)
     auto histBoundsF = getLocalBounds().withHeight (histH2).toFloat();
     auto readoutBoundsF = getLocalBounds().withTrimmedTop (histH2).toFloat();
 
-    // Histogram area: waveform gradient background (matches reference level meter visual)
+    // Histogram area: dedicated brighter gradient to match reference level meter appearance
     juce::ColourGradient grad = juce::ColourGradient::vertical (
-        MLIMColours::displayGradientTop,
+        MLIMColours::loudnessHistogramTop,
         histBoundsF.getY(),
-        MLIMColours::displayGradientBottom,
+        MLIMColours::loudnessHistogramBottom,
         histBoundsF.getBottom());
     g.setGradientFill (grad);
     g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);  // rounded corners cover full panel

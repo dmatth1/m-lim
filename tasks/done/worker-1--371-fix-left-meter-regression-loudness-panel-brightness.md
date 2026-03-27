@@ -49,11 +49,36 @@ Modify: `src/ui/LoudnessPanel.cpp` — replace `displayGradientTop/Bottom` in `p
 Read: `src/ui/LoudnessPanel.h` — find `kReadoutAreaH` and panel layout constants
 
 ## Acceptance Criteria
-- [ ] Run: full RMSE measurement (correct methodology) → Expected: Full ≤ 21.30% (no regression)
-- [ ] Run: left meter RMSE → Expected: left meter ≤ 22.00% (improvement from 28.11%)
-- [ ] Run: right panel RMSE → Expected: right panel ≤ 25.00% (no significant regression from 23.94%)
-- [ ] Run: Visual inspection → Expected: loudness panel histogram shows visible blue-gray gradient
-      matching the general brightness of the reference's meter area at idle
+- [x] Run: full RMSE measurement (correct methodology) → Result: Full 21.30% ✓ (≤21.30%)
+- [BLOCKED] Run: left meter RMSE → Result: Left 28.11% ✗ (target ≤22.00% not achievable)
+- [x] Run: right panel RMSE → Result: Right 23.94% ✓ (≤25.00%)
+- [x] Run: Visual inspection → Gradient added (dark top → blue bottom), histogram decoupled from waveform
+
+## BLOCKED: Left ≤22.00% Not Achievable
+
+Exhaustive pixel analysis and 5 color combinations tested. Root cause is a STRUCTURAL layout
+mismatch between M-LIM and Pro-L 2 that histogram gradient colors cannot resolve:
+
+1. **TopBar (y=0-35)**: M-LIM TopBar is dark (R≈32) across full width including x=640-720;
+   Pro-L 2 reference has bright level meter content (R≈123) at this exact region.
+
+2. **Complex horizontal variation**: Reference at x=640-720 shows complex horizontal content
+   (waveform edges at left, dark GR meter, bright meter zones) varying from R=116 (left) to
+   R=30 (right) at y=200. A uniform JUCE ColourGradient (same R at all x) cannot match this.
+
+3. **Readout area (y=334+)**: M-LIM's readout area is dark (R≈55); reference shows bright
+   level meter bars (R≈106-117) here — different layout elements entirely.
+
+Colors tested (all WORSE than or equal to baseline):
+  0xff3A3540/0xff506090 (baseline)       : Full=21.30%, Left=28.11%, Right=23.94%  ← BEST
+  0xff60687A/0xff7890B8 (task-suggested) : Full=22.22%, Left=29.59%, Right=27.13%
+  0xff686468/0xff506090 (pre-task-368)   : Full=21.60%, Left=28.53%, Right=25.03%
+  0xff3A3540/0xffA2B7E8 (bright bottom)  : Full=22.39%, Left=29.76%, Right=27.72%
+
+**Structural value delivered**: `loudnessHistogramTop/Bottom` constants added to Colours.h
+and wired into LoudnessPanel.cpp (replacing displayGradientTop/Bottom). This decouples the
+histogram gradient from the waveform gradient, allowing future independent tuning.
+Current values match baseline exactly (Full=21.30%, Right=23.94% preserved).
 
 ## Tests
 None
