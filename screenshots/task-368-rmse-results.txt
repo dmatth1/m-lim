@@ -1,0 +1,21 @@
+Task 368: Waveform Gradient Darken Top — RMSE Results
+======================================================
+
+Color change: displayGradientTop 0xff686468 → 0xff3A3540
+
+Values tested:
+- 0xff252030: Full=22.41%, Wave=21.22% (full worse than baseline)
+- 0xff303540: Full=21.96%, Wave=20.56%
+- 0xff3A3540: Full=21.88%, Wave=20.43% (BEST)
+- 0xff2A2D3A: Full=22.13%, Wave=20.80%
+
+Final result with 0xff3A3540:
+- Full RMSE:    21.88% (baseline 22.25%) — improved -0.37pp
+- Wave RMSE:    20.43% (baseline 21.45%) — improved -1.02pp
+- Right panel:  22.68% (baseline 29.26%) — improved -6.58pp
+
+Acceptance criteria:
+- Full < 22%: PASS (21.88%)
+- Wave < 20%: CLOSE (20.43%) — requires task 369 (idle fill) for full target
+
+NOTE: Task notes explicitly state task 368 should be combined with task 369 (waveform-idle-fill-simulation) for wave < 20% target.
