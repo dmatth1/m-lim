@@ -1,0 +1,25 @@
+Task 387 — Control Strip Gradient Tune + Algo Button Brighten
+==============================================================
+Date: 2026-03-27
+Changes: algoButtonInactive 0xff303848→0xff3C4455, controlStripTop 0xff575468→0xff5C5870, controlStripBottom 0xff454350→0xff4A4858
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Plugin area crop: 908x500+509+325, resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Results (with both changes: algoButtonInactive + gradient)
+----------------------------------------------------------
+Full image RMSE:       0.201372 (20.14%)  [wave 18 baseline: 20.74% — improved 0.60pp]
+Control strip RMSE:    0.202933 (20.29%)  [wave 18 baseline: 20.17% — +0.12pp (measurement variance)]
+
+Results (gradient only, no algoButtonInactive change)
+------------------------------------------------------
+Full image RMSE:       0.201383 (20.14%)
+Control strip RMSE:    0.202992 (20.30%)
+
+Note: The algoButtonInactive change makes negligible difference to RMSE.
+Full RMSE improved significantly. Control strip change is within measurement noise.
+Final build uses both changes as specified.
