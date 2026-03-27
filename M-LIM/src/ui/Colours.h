@@ -38,7 +38,7 @@ namespace MLIMColours
 
     // Knob colours
     const juce::Colour knobFace         { 0xff585858 };  // neutral medium gray (matches Pro-L 2 silver)
-    const juce::Colour knobFaceHighlight{ 0xff808080 };  // neutral light gray highlight
+    const juce::Colour knobFaceHighlight{ 0xffB8B8CC };  // brighter blue-tinted highlight (matches reference metallic sheen ~#DBDBE7)
     const juce::Colour knobFaceShadow   { 0xff303030 };  // neutral dark shadow
     const juce::Colour knobArc          { 0xff6898C8 };  // slightly lighter blue, more subtle at 2.0px
     const juce::Colour knobArcDim       { 0xff404040 };  // slightly darker dim track for better contrast with face
