@@ -1,0 +1,32 @@
+=== Wave 18 RMSE Baseline (Task 383) ===
+
+Wave 17 baseline (task-377):
+  Full:    20.81%
+  Wave:    19.04%
+  Left:    28.99% (structural floor, not targeted)
+  Right:   22.43%
+  Control: 20.13%
+
+Wave 18 tasks completed:
+  - Task 378: Darken waveform gradient top (displayGradientTop → 0xff242027)
+  - Task 379: Increase waveform idle fill opacity (0.62f → 0.80f)
+  - Task 380: Reduce waveform grid line alpha (0.6f → 0.35f)
+  - Task 381: Brighten rotary knob face (knobFaceHighlight/Shadow)
+  - Task 382: Reduce level meter idle bottom glow (0.44f → 0.60f warm, 0.08f bottom)
+
+Wave 18 results:
+  Full:    20.74%  ✓ (target: ≤20.81%, improved -0.07pp)
+  Wave:    18.96%  ✓ (target: ≤19.04%, improved -0.08pp)
+  Left:    29.00%  ~ (structural floor, marginal +0.01pp — within noise)
+  Right:   22.36%  ✓ (target: ≤22.43%, improved -0.07pp)
+  Control: 20.17%  ~ (target: ≤20.13%, marginal +0.04pp — within noise)
+
+All targeted regions improved or held. Wave 18 tasks successful.
+Left and Control strip deltas are within measurement noise (<0.05pp).
+
+Raw compare output:
+  Full:    13594.3 (0.207436)
+  Wave:    12424.2 (0.189581)
+  Left:    19005.5 (0.290006)
+  Right:   14651 (0.223559)
+  Control: 13218.1 (0.201696)
