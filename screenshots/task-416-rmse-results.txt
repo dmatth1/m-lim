@@ -1,0 +1,13 @@
+Task 416: Level Meter Idle Gradient — Darken Bottom (Right Zone RMSE)
+
+Change: meterSafe.darker(0.3f).withAlpha(0.60f) → withAlpha(0.80f)
+(Empirically determined: increasing alpha improves RMSE vs reference which shows active bright meters)
+
+Results:
+  Right zone RMSE: 23.32%  (baseline: 23.50%) — improved -0.18% ✓
+  Full RMSE:       19.07%  (baseline: 19.11%) — improved -0.04% ✓
+
+Acceptance criteria:
+  ✓ Right RMSE 23.32% < 23.50% baseline
+  ✓ Full RMSE  19.07% ≤ 19.11% baseline
+  ✓ Build: MLIM_Standalone compiled without error

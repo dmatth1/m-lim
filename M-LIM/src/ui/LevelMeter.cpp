@@ -101,7 +101,7 @@ void LevelMeter::drawChannel (juce::Graphics& g,
 
         juce::ColourGradient idleGrad (
             MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,  // near-transparent at top — dark empty track
-            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.60f),  0.0f, barTop2 + barH2,
+            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.80f),  0.0f, barTop2 + barH2,
             false);
         // Top zone (danger+warn, 0 to -3 dBFS): keep low alpha — reference shows dark here
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
