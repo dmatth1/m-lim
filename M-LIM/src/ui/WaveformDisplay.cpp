@@ -322,6 +322,17 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.setColour (MLIMColours::textPrimary.withAlpha (alpha));
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
+
+    // Left-edge idle gradient — warm amber→blue character matching Pro-L 2 input meter region
+    // Drawn at low alpha to blend naturally with waveform content
+    const float edgeW = 12.0f;
+    juce::ColourGradient edgeGrad (
+        MLIMColours::meterWarning.withAlpha (0.22f), 0.0f, area.getY(),
+        MLIMColours::meterSafe.withAlpha (0.22f),    0.0f, area.getBottom(),
+        false);
+    edgeGrad.addColour (0.3f, MLIMColours::meterWarning.withAlpha (0.18f));
+    g.setGradientFill (edgeGrad);
+    g.fillRect (area.getX(), area.getY(), edgeW, area.getHeight());
 }
 
 void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
