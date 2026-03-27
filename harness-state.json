@@ -906,6 +906,11 @@
       "at": "2026-03-27T22:52:00Z",
       "action": "respawned worker-1 (cleared 62-min rate-limit backoff)",
       "reason": "3708s sleep accumulation; 38 tasks pending, need workers active"
+    },
+    {
+      "at": "2026-03-27T23:07:27Z",
+      "action": "respawned worker-2",
+      "reason": "rate-limit backoff was 3924s (~65 min), far exceeds 30 min threshold"
     }
   ],
   "learnings": [
