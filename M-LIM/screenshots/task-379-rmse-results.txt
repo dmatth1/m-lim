@@ -1,0 +1,15 @@
+=== Task 379: Increase Waveform Idle Fill Opacity ===
+
+Change: inputWaveform.withAlpha(0.62f) → 0.80f (bottom of idle fill gradient)
+
+Wave 17 baseline:
+  Full: 20.81%
+  Wave: 19.04%
+
+Task 379 results:
+  Full: 20.65%  ✓ (improved -0.16pp)
+  Wave: 18.78%  ✓ (improved -0.26pp)
+
+Raw compare output:
+  Full: 13532.2 (0.206488)
+  Wave: 12304.7 (0.187758)
