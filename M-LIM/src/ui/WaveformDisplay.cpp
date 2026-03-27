@@ -298,7 +298,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::ColourGradient fillGrad (
             MLIMColours::inputWaveform.withAlpha (0.0f),   0.0f, fillTop,
-            MLIMColours::inputWaveform.withAlpha (0.80f),  0.0f, area.getBottom(),
+            MLIMColours::inputWaveform.withAlpha (0.88f),  0.0f, area.getBottom(),
             false);
         g.setGradientFill (fillGrad);
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
@@ -315,6 +315,31 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             false);
         g.setGradientFill (midFillGrad);
         g.fillRect (area.getX(), midTop, area.getWidth(), midBot - midTop);
+    }
+
+    // Center tent brightness boost — 32%→50% rising, 50%→68% falling
+    // Addresses the 39-unit mid-zone gap (ref #6D7694 vs current #474F6C).
+    {
+        const float cTop = area.getY() + area.getHeight() * 0.32f;
+        const float cMid = area.getY() + area.getHeight() * 0.50f;
+        const float cBot = area.getY() + area.getHeight() * 0.68f;
+        juce::Colour cCol { 0xff828AA5 };  // same steel-blue as midFillColour above
+
+        // Rising half: 0.0 at cTop → 0.55 at cMid
+        juce::ColourGradient upGrad (
+            cCol.withAlpha (0.0f),   0.0f, cTop,
+            cCol.withAlpha (0.55f),  0.0f, cMid,
+            false);
+        g.setGradientFill (upGrad);
+        g.fillRect (area.getX(), cTop, area.getWidth(), cMid - cTop);
+
+        // Falling half: 0.55 at cMid → 0.0 at cBot
+        juce::ColourGradient downGrad (
+            cCol.withAlpha (0.55f),  0.0f, cMid,
+            cCol.withAlpha (0.0f),   0.0f, cBot,
+            false);
+        g.setGradientFill (downGrad);
+        g.fillRect (area.getX(), cMid, area.getWidth(), cBot - cMid);
     }
 
     // Horizontal dB grid lines
