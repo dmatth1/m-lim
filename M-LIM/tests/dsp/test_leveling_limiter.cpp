@@ -1098,3 +1098,128 @@ TEST_CASE("test_threshold_change_no_overshoot", "[LevelingLimiter]")
     // No output sample should ever exceed 1.0 regardless of threshold changes (small tolerance for IIR numerical drift)
     REQUIRE(maxSeen <= 1.0f + 2e-3f);
 }
+
+// ---------------------------------------------------------------------------
+// test_sidechain_drives_envelope_not_main
+//   Main is at 0.5 (below threshold=1.0), sidechain is at 2.0 (above threshold).
+//   GR should be applied because the sidechain triggers the envelope, even
+//   though the main signal itself would not trigger it.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_drives_envelope_not_main", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(0.0f);    // instant attack
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(1.0f);
+
+    // Main: quiet signal at 0.5 (below threshold)
+    std::vector<std::vector<float>> main(kNumChannels, std::vector<float>(kBlockSize, 0.5f));
+    auto mainPtrs = makePtrs(main);
+
+    // Sidechain: loud signal at 2.0 (above threshold)
+    std::vector<std::vector<float>> sc(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+    std::vector<const float*> scPtrs(kNumChannels);
+    for (int i = 0; i < kNumChannels; ++i)
+        scPtrs[i] = sc[i].data();
+
+    // Run enough blocks for the envelope to settle
+    for (int block = 0; block < 20; ++block)
+    {
+        fillConstant(main, 0.5f);
+        limiter.process(mainPtrs.data(), kNumChannels, kBlockSize, scPtrs.data());
+    }
+
+    // GR should be applied (sidechain drove it) — negative dB means reduction active
+    REQUIRE(limiter.getGainReduction() < -0.1f);
+
+    // And main output should be reduced below its original 0.5 amplitude
+    float peakOut = blockPeak(main[0]);
+    REQUIRE(peakOut < 0.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_sidechain_silent_no_gr_applied
+//   Main at 2.0 (above threshold), sidechain at 0.01 (effectively silent).
+//   When sidechain is used for detection and it is quiet, no GR should occur
+//   despite the main signal being loud.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_sidechain_silent_no_gr_applied", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(0.0f);
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(1.0f);
+
+    // Main: loud signal at 2.0
+    std::vector<std::vector<float>> main(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+    auto mainPtrs = makePtrs(main);
+
+    // Sidechain: near-silent
+    std::vector<std::vector<float>> sc(kNumChannels, std::vector<float>(kBlockSize, 0.01f));
+    std::vector<const float*> scPtrs(kNumChannels);
+    for (int i = 0; i < kNumChannels; ++i)
+        scPtrs[i] = sc[i].data();
+
+    // Run enough blocks to settle
+    for (int block = 0; block < 20; ++block)
+    {
+        fillConstant(main, 2.0f);
+        limiter.process(mainPtrs.data(), kNumChannels, kBlockSize, scPtrs.data());
+    }
+
+    // Sidechain is quiet → envelope stays near unity → minimal/no GR (close to 0 dB)
+    REQUIRE(limiter.getGainReduction() > -1.0f);
+
+    // Main output should be close to the original 2.0 (not significantly reduced)
+    float peakOut = blockPeak(main[0]);
+    REQUIRE(peakOut > 1.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_null_sidechain_uses_main_for_detection
+//   Main at 2.0 (above threshold), sidechain = nullptr.
+//   Behaviour should be identical to no-sidechain: main drives the envelope
+//   and GR is applied.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_null_sidechain_uses_main_for_detection", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    params.adaptiveRelease = false;
+    limiter.setAlgorithmParams(params);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(0.0f);
+    limiter.setRelease(100.0f);
+    limiter.setChannelLink(1.0f);
+
+    std::vector<std::vector<float>> main(kNumChannels, std::vector<float>(kBlockSize, 2.0f));
+    auto mainPtrs = makePtrs(main);
+
+    // Run with explicit nullptr sidechain
+    for (int block = 0; block < 20; ++block)
+    {
+        fillConstant(main, 2.0f);
+        limiter.process(mainPtrs.data(), kNumChannels, kBlockSize, nullptr);
+    }
+
+    // Main drives envelope → GR should be applied (negative dB)
+    REQUIRE(limiter.getGainReduction() < -0.1f);
+
+    // Output should be clamped near threshold (1.0), not the raw 2.0
+    float peakOut = blockPeak(main[0]);
+    REQUIRE(peakOut <= 1.0f + 1e-3f);
+}
