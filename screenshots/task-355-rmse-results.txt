@@ -1,0 +1,21 @@
+=== Full image RMSE ===
+14915.3 (0.227594)
+=== Right panel (100x400+800+50) RMSE ===
+19405.9 (0.296115)
+=== Waveform (600x400+150+50) RMSE ===
+14334.4 (0.218729)
+=== Left meters (30x378+0+30) RMSE ===
+15397.8 (0.234955)
+=== Control strip (900x60+0+440) RMSE ===
+14910.7 (0.227522)
+=== Summary ===
+Full image: 22.76% (baseline 22.08%)
+Right panel: 29.61% (baseline 29.59%, target <28.00%)
+Waveform: 21.87% (baseline 20.55%)
+Left meters: 23.50% (baseline 23.50%)
+Control strip: 22.75% (baseline 22.42%)
+
+Note: OutputMeter IS now at rightmost x=800-900 position (verified visually).
+RMSE improvement not achieved because idle meter bars (dark, no audio) look similar
+to the text-heavy LoudnessPanel from RMSE perspective. Reference shows active
+colorful signal bars which requires audio playback to match.

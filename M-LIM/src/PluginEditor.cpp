@@ -172,9 +172,9 @@ void MLIMAudioProcessorEditor::resized()
     // Input level meter hidden — waveform extends to left edge (no left strip)
     inputMeter_.setVisible (false);
 
-    // Right edge: loudness panel (outermost), then output meter, then GR meter adjacent to waveform
+    // Right edge: output meter (outermost/rightmost), then loudness panel, then GR meter adjacent to waveform
+    outputMeter_.setBounds   (bounds.removeFromRight (kOutputMeterW));    // rightmost
     loudnessPanel_.setBounds (bounds.removeFromRight (kLoudnessPanelW));
-    outputMeter_.setBounds   (bounds.removeFromRight (kOutputMeterW));
     grMeter_.setBounds       (bounds.removeFromRight (kGRMeterW));
 
     // Waveform display fills the remaining centre (~70-75% of total width)
