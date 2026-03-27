@@ -1,0 +1,20 @@
+Task 372 — Level Meter Idle Gradient Top Zone Alpha Reduction
+
+Configuration: dangerBot2 and warnBot2 stops reduced from alpha 0.44 to 0.10
+(top ~5% of bar — danger+warn zone — uses near-transparent alpha matching reference dark track)
+
+RMSE Results:
+  Full:  21.22%  ← baseline 21.30%, improved -0.08pp ✓ (≤21.30%)
+  Right: 23.57%  ← baseline 23.94%, improved -0.37pp ✓ (≤23.94%)
+
+Acceptance criteria all MET with improvements.
+
+Implementation: Changed idle gradient so that the top zone (barTop through warnBot2,
+approximately top 5% of bar covering danger+warning zone) uses alpha=0.10 instead of
+0.44. The warmExtY stop at -12 dBFS retains alpha=0.30 to preserve warm appearance in
+lower zone. This matches reference appearance where the top of the level meter shows a
+dark/empty track rather than bright reddish-orange.
+
+Pixel changes at x=820-900 (level meter area):
+  y=60: before R=94, after R=51, ref R=52  ← very close match now
+  y=100: before R=71, after R=54, ref R=40  ← improved, still slightly warm

@@ -100,16 +100,15 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
 
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.44f),              0.0f, barTop2,
+            MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,  // near-transparent at top — dark empty track
             MLIMColours::meterSafe.darker (0.3f).withAlpha (0.44f),  0.0f, barTop2 + barH2,
             false);
-        // Add orange stop just below the danger/warning boundary
+        // Top zone (danger+warn, 0 to -3 dBFS): keep low alpha — reference shows dark here
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::grMeterMid.withAlpha (0.44f));     // orange #FF8C00
-        // Yellow at kWarnDB boundary
+                            MLIMColours::grMeterMid.withAlpha (0.10f));     // orange #FF8C00, near-transparent
         idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.44f));
-        // Warm/cool transition extended to -18 dB
+                            MLIMColours::meterWarning.withAlpha (0.10f));   // yellow, near-transparent at top
+        // Warm/cool transition extended to -12 dB: ramp up to visible
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
                             MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.30f));  // transition
 
