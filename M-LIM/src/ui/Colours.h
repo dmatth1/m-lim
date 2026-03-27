@@ -19,7 +19,7 @@ namespace MLIMColours
     // Reference background pure color is lighter (~#8992AB) but the composite with
     // input/output waveform fills appears as a darker neutral-warm gray at top
     // and blue-saturated gray at bottom. Task-317 values gave 20.00% waveform RMSE.
-    const juce::Colour displayGradientTop   { 0xff271F22 };  // warm shift: R-1, G-5, B-8 — upper zone B now 47 matching ref (task-407)
+    const juce::Colour displayGradientTop   { 0xff302528 };  // task-420: +9 units to close top-20% brightness gap vs reference
     const juce::Colour displayGradientBottom{ 0xff9E9EC4 };  // +46R +20G +16B warmer for lower zone RMSE (task-408)
 
     // Waveform colours (with alpha)
