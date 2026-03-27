@@ -1,0 +1,51 @@
+VisualParityAuditor — Wave 21 Sweep Audit
+==========================================
+Date: 2026-03-27
+
+Methodology
+-----------
+- M-LIM standalone launched on Xvfb :99 (1920x1080)
+- Plugin area crop: 908x500+509+325, resized to 900x500
+- Reference: prol2-main-ui.jpg cropped 1712x1073+97+32, resized to 900x500
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Results (wave-20 state, after tasks 389–392)
+---------------------------------------------
+Full image RMSE:       0.198179 (19.82%)
+Wave region RMSE:      0.172942 (17.29%)
+Left meters RMSE:      0.287470 (28.75%)
+Right panel RMSE:      0.230874 (23.09%)
+Control strip RMSE:    0.210220 (21.02%)
+
+Key visual differences identified
+-----------------------------------
+1. Waveform mid-zone brightness gap (60% height):
+   - M-LIM y=300: #5F688C
+   - Reference y=300: #909AB5
+   - Delta: ~50 counts — tent fill centers need shift from 50% to 58%
+
+2. Waveform top zone slightly too warm/light:
+   - M-LIM y=50: #342C31 (warm dark)
+   - Reference y=50: #262127 (cooler, slightly darker)
+   - Delta: ~14 counts — small darken + cool shift
+
+3. Waveform gradient bottom insufficient blue:
+   - displayGradientBottom = #606898 contributing less brightness than reference in lower-mid zone
+   - Reference lower mid shows ~#7A88B8 equivalent contribution
+
+4. Left meter region (28.75% RMSE — structural):
+   - M-LIM shows LUFS text panel labels (Momentary/Short-Term/Integrated/Range/True Peak)
+   - Reference shows level meter column segments with dB scale labels
+   - Layout difference — not addressed by colour changes alone
+
+5. Top bar (29% RMSE — structural):
+   - M-LIM: flat dark #2D2D2D background
+   - Reference: FabFilter Pro-L 2 branding with bright logo (#FDFDFC at x=100)
+   - Structural layout difference
+
+Tasks created in needs-grooming/
+----------------------------------
+- waveform-midzone-boost-shift-down.md
+- waveform-gradient-bottom-blue-boost.md
+- waveform-top-gradient-darken.md
+- rmse-remeasure-wave21.md
