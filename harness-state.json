@@ -911,6 +911,11 @@
       "at": "2026-03-27T23:07:27Z",
       "action": "respawned worker-2",
       "reason": "rate-limit backoff was 3924s (~65 min), far exceeds 30 min threshold"
+    },
+    {
+      "at": "2026-03-27T23:10:54Z",
+      "action": "respawned worker-3",
+      "reason": "rate-limit backoff was 1926s (~32 min), exceeds 30 min threshold"
     }
   ],
   "learnings": [
