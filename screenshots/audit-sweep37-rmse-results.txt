@@ -1,0 +1,64 @@
+UIParityAuditor Sweep 37 — RMSE Results
+=========================================
+Date: 2026-03-27
+Build: Post-task-420 (latest main)
+
+Methodology (standard harness crop):
+  M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500
+  Reference: prol2-main-ui.jpg crop 1712x1073+97+32, resize 900x500
+  compare -metric RMSE (normalized 0.0–1.0)
+
+Current RMSE:
+  Full image:                           0.1923  (19.23%)
+  Left level meters (30x378 at 0,30):  0.3025  (30.25%)  ← REGRESSION vs 23.50% baseline
+  Waveform (600x400 at 150,50):         0.1679  (16.79%)  ← improved from 20.55%
+  Right panel (100x400 at 800,50):      0.2674  (26.74%)  ← improved from 29.59%
+  Control strip (900x60 at 0,440):      0.1838  (18.38%)  ← improved from 22.42%
+
+Baseline (task-354):
+  Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%
+
+Key Issues Found
+=================
+
+1. LEFT ZONE REGRESSION (30.25% vs 23.50% baseline)
+   Root cause: Tasks 415–417 boosted idle warm zone alphas (0.10→0.28/0.25/0.20).
+   The warmExtY stop (at ~20% from bar top) uses warm-yellow and bleeds through the
+   lower 80% of the bar via gradient interpolation. This creates warm-amber appearance
+   (92,74,42 at y=200) where the reference shows cool blue-purple (105,101,141).
+   
+   The LEFT zone (30x378+0+30) is the INPUT METER component (x=0–30 of the plugin).
+   In the reference, this position shows the LEFT EDGE OF THE WAVEFORM DISPLAY with
+   active audio content in cool blue-purple tones.
+   
+   TASKS CREATED: level-meter-idle-gradient-fix-warm-bleed.md (HIGH PRIORITY)
+   
+   Note: Previous tasks 413–420 measured a DIFFERENT "Left zone" (x=640–720 or x=720–800)
+   which is the GR meter / loudness panel boundary. The harness measures x=0–30.
+   Workers should use crop 30x378+0+30 for Left zone RMSE, not x=640-720.
+
+2. OUTPUT METER IDLE GRADIENT TOO WARM / NOT BRIGHT ENOUGH
+   At x=840, y=200 (output meter 50% fill position):
+     M-LIM (69,62,48) warm-amber vs Ref (149,125,67) very bright warm-fill
+   At x=840, y=400 (output meter bottom):
+     M-LIM (61,64,74) medium-dark vs Ref (112,118,144) bright cool-blue
+   The output meter at idle should better simulate active program material appearance.
+   TASKS CREATED: output-meter-idle-simulate-active-fill.md
+
+3. WAVEFORM UPPER IDLE FILL BRIGHTNESS (minor)
+   At y=100–140 (18–28% of waveform height), M-LIM is 30–55 units brighter than reference.
+   Reference shows dark background (waveform peaks block gradient); M-LIM shows idle fill.
+   Upper idle fill peak alpha 0.48 (from task-420) could be reduced to ~0.32.
+   TASKS CREATED: waveform-upper-idle-fill-brightness-tune.md
+
+4. WAVEFORM LEFT-EDGE OVERLAY WARM PINK TINT
+   WaveformDisplay::paintIdleContent() renders a warm pink overlay (0xffD8ACD0 at alpha 0.52)
+   over the first 28px of the waveform (x=30–58 in crop). This pink tint doesn't match the
+   reference's cool blue-gray at that position.
+   TASKS CREATED: waveform-left-edge-gradient-colour-correction.md
+
+5. LEFT/RIGHT ZONE RMSE MEASUREMENT CONFUSION (process issue)
+   Tasks 413–420 were optimising "Left zone RMSE" using crop 80x500+640+0 or 180x500+720+0.
+   These crops are in the GR meter / loudness panel area, NOT the harness's Left zone (x=0–30).
+   Workers must use crop 30x378+0+30 for the standard harness Left zone measurement.
+
