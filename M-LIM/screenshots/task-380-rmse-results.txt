@@ -1,0 +1,19 @@
+=== Task 380: Reduce Waveform Grid Line Alpha ===
+
+Change: waveformGridLine.withAlpha(0.6f) → 0.35f
+
+Wave 17 baseline:
+  Full: 20.81%
+  Wave: 19.04%
+
+Task 379 state:
+  Full: 20.65%
+  Wave: 18.78%
+
+Task 380 results:
+  Full: 20.59%  ✓ (improved -0.06pp from 379)
+  Wave: 18.68%  ✓ (improved -0.10pp from 379)
+
+Raw compare output:
+  Full: 13492.4 (0.205881)
+  Wave: 12243.6 (0.186825)

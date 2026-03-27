@@ -318,7 +318,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     }
 
     // Horizontal dB grid lines
-    g.setColour (MLIMColours::waveformGridLine.withAlpha (0.6f));
+    g.setColour (MLIMColours::waveformGridLine.withAlpha (0.35f));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
     {
         const float db = MLIMColours::kMeterGridDB[gi];
