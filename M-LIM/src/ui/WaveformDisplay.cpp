@@ -304,6 +304,19 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
     }
 
+    // Mid-zone brightness boost for idle simulation
+    {
+        const float midTop  = area.getY() + area.getHeight() * 0.28f;
+        const float midBot  = area.getY() + area.getHeight() * 0.60f;
+        juce::Colour midFillColour { 0xff828AA5 };  // bright steel-blue, R=130, G=138, B=165
+        juce::ColourGradient midFillGrad (
+            midFillColour.withAlpha (0.42f), 0.0f, midTop,
+            midFillColour.withAlpha (0.0f),  0.0f, midBot,
+            false);
+        g.setGradientFill (midFillGrad);
+        g.fillRect (area.getX(), midTop, area.getWidth(), midBot - midTop);
+    }
+
     // Horizontal dB grid lines
     g.setColour (MLIMColours::waveformGridLine.withAlpha (0.6f));
     for (int gi = 0; gi < kWaveformGridDBCount; ++gi)
