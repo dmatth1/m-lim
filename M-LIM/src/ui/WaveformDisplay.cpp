@@ -298,7 +298,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::ColourGradient fillGrad (
             MLIMColours::inputWaveform.withAlpha (0.0f),   0.0f, fillTop,
-            MLIMColours::inputWaveform.withAlpha (0.88f),  0.0f, area.getBottom(),
+            MLIMColours::inputWaveform.withAlpha (0.82f),  0.0f, area.getBottom(),  // task-406: reduced from 0.88 to reduce blue cast
             false);
         g.setGradientFill (fillGrad);
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);

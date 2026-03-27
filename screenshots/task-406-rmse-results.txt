@@ -1,0 +1,16 @@
+Task 406: Waveform Idle Fill Bottom Alpha Reduction (0.88 → 0.82)
+
+Wave-21 baseline:
+  Full:    19.46%
+  Wave:    16.72%
+  Right:   23.09%
+
+Task-406 results:
+  Full:    19.24%  (improved -0.22%)
+  Wave:    16.54%  (improved -0.18%)
+  Right:   23.76%  (no change from task-410)
+
+Acceptance criteria:
+  - Build: PASS
+  - Wave RMSE 16.54% ≤ 16.72% baseline: PASS
+  - Full RMSE 19.24% ≤ 19.46% baseline: PASS
