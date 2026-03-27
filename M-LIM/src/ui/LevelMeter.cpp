@@ -99,11 +99,13 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float normWarmExt  = dbToNorm (-12.0f);
         const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
 
+        // Near-transparent at top (above danger zone) to match reference's dark empty track.
+        // Full 0.44f alpha begins at the danger zone boundary, preserving warm lower zone.
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.44f),              0.0f, barTop2,
+            MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,
             MLIMColours::meterSafe.darker (0.3f).withAlpha (0.44f),  0.0f, barTop2 + barH2,
             false);
-        // Add orange stop just below the danger/warning boundary
+        // Full alpha begins at the danger zone boundary
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
                             MLIMColours::grMeterMid.withAlpha (0.44f));     // orange #FF8C00
         // Yellow at kWarnDB boundary
