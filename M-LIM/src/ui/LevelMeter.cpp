@@ -100,17 +100,16 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
 
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.10f),              0.0f, barTop2,  // near-transparent at top — dark empty track
-            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.80f),  0.0f, barTop2 + barH2,
+            MLIMColours::meterDanger.withAlpha (0.08f),           0.0f, barTop2,
+            MLIMColours::meterSafe.withAlpha (0.95f),             0.0f, barTop2 + barH2,
             false);
-        // Top zone (danger+warn, 0 to -3 dBFS): boost warm zone alphas to match reference amber tone
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::grMeterMid.withAlpha (0.28f));     // orange #FF8C00, boosted (was 0.10)
+                            MLIMColours::grMeterMid.withAlpha (0.10f));     // reduced warm orange
         idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.25f));   // yellow, boosted (was 0.10)
-        // Warm/cool transition extended to -12 dB: warm yellow replaces cool blue
+                            MLIMColours::meterWarning.withAlpha (0.08f));   // reduced warm yellow
+        // Cool blue replaces warm bleed at -12 dB transition
         idleGrad.addColour ((warmExtY   - barTop2) / barH2,
-                            MLIMColours::grMeterLow.withAlpha (0.20f));     // warm yellow at -12 dB transition (was cool meterSafe.brighter 0.45)
+                            MLIMColours::meterSafe.withAlpha (0.30f));      // cool blue instead of warm yellow
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
@@ -231,6 +230,18 @@ void LevelMeter::paint (juce::Graphics& g)
     const float h      = bounds.getHeight();
     const float x      = bounds.getX();
     const float y      = bounds.getY();
+
+    // Fill entire meter component with cool blue-purple gradient to match reference background
+    {
+        const float bgAlphaTop = showScale_ ? 0.55f : 0.15f;
+        const float bgAlphaBot = showScale_ ? 0.65f : 0.25f;
+        juce::ColourGradient bgGrad (
+            MLIMColours::meterSafe.darker (0.6f).withAlpha (bgAlphaTop),  0.0f, y,
+            MLIMColours::meterSafe.withAlpha (bgAlphaBot),                0.0f, y + h,
+            false);
+        g.setGradientFill (bgGrad);
+        g.fillRect (bounds);
+    }
 
     const float barW = availW * kBarWidthRatio;
     const float gap  = availW * kGapRatio;
