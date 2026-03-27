@@ -336,17 +336,17 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         const float midBot   = area.getY() + area.getHeight() * 0.82f;
         juce::Colour midFill { 0xff828AA5 };
 
-        // Rising half: transparent at 36% → 0.68 at 58% (task-404: reduced from 0.80)
+        // Rising half: transparent at 36% → 0.52 at 58% (task-422: reduced from 0.68)
         juce::ColourGradient riseGrad (
             midFill.withAlpha (0.0f),   0.0f, midTop,
-            midFill.withAlpha (0.68f),  0.0f, midMid,
+            midFill.withAlpha (0.52f),  0.0f, midMid,
             false);
         g.setGradientFill (riseGrad);
         g.fillRect (area.getX(), midTop, area.getWidth(), midMid - midTop);
 
-        // Falling half: 0.68 at 58% → transparent at 82% (task-404: reduced from 0.80)
+        // Falling half: 0.52 at 58% → transparent at 82% (task-422: reduced from 0.68)
         juce::ColourGradient fallGrad (
-            midFill.withAlpha (0.68f),  0.0f, midMid,
+            midFill.withAlpha (0.52f),  0.0f, midMid,
             midFill.withAlpha (0.0f),   0.0f, midBot,
             false);
         g.setGradientFill (fallGrad);
@@ -361,17 +361,17 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         const float cBot = area.getY() + area.getHeight() * 0.76f;
         juce::Colour cCol { 0xff828AA5 };  // same steel-blue as midFillColour above
 
-        // Rising half: 0.0 at cTop → 0.52 at cMid (task-404: reduced from 0.65)
+        // Rising half: 0.0 at cTop → 0.40 at cMid (task-422: reduced from 0.52)
         juce::ColourGradient upGrad (
             cCol.withAlpha (0.0f),   0.0f, cTop,
-            cCol.withAlpha (0.52f),  0.0f, cMid,
+            cCol.withAlpha (0.40f),  0.0f, cMid,
             false);
         g.setGradientFill (upGrad);
         g.fillRect (area.getX(), cTop, area.getWidth(), cMid - cTop);
 
-        // Falling half: 0.52 at cMid → 0.0 at cBot (task-404: reduced from 0.65)
+        // Falling half: 0.40 at cMid → 0.0 at cBot (task-422: reduced from 0.52)
         juce::ColourGradient downGrad (
-            cCol.withAlpha (0.52f),  0.0f, cMid,
+            cCol.withAlpha (0.40f),  0.0f, cMid,
             cCol.withAlpha (0.0f),   0.0f, cBot,
             false);
         g.setGradientFill (downGrad);
