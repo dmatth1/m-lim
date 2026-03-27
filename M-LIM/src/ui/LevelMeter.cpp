@@ -129,13 +129,13 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float dangerBot  = barTop + barH * (1.0f - normDanger);
         const float warnBot    = barTop + barH * (1.0f - normWarn);
 
-        // Vertical gradient: red at top → yellow at warn threshold → deep blue at bottom
+        // Vertical gradient: red at top → yellow at warn threshold → warm amber at mid → cool blue at bottom
         juce::ColourGradient gradient (
-            MLIMColours::meterDanger,             0.0f, barTop,
-            MLIMColours::meterSafe.darker (0.3f), 0.0f, barTop + barH,
+            MLIMColours::meterDanger,              0.0f, barTop,
+            MLIMColours::meterSafe.darker (0.1f),  0.0f, barTop + barH,
             false);
         gradient.addColour ((dangerBot - barTop) / barH, MLIMColours::meterWarning);
-        gradient.addColour ((warnBot   - barTop) / barH, MLIMColours::meterSafe.brighter (0.15f));
+        gradient.addColour ((warnBot   - barTop) / barH, MLIMColours::grMeterLow.withAlpha (0.8f));
 
         // Clip to the filled (active level) region and draw solid gradient
         g.saveState();
