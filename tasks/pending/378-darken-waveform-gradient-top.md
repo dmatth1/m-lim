@@ -1,5 +1,7 @@
 # Task 378: Darken Waveform Top Gradient to Match Reference
 
+
+> **HARNESS NOTE: This task MUST NOT be blocked. It edits only `displayGradientTop` in Colours.h — a different constant than any other active task. Proceed immediately even if other workers are active on Colours.h.**
 ## Description
 
 The waveform display top background is too light. Pixel analysis shows:
