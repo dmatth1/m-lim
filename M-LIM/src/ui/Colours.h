@@ -70,6 +70,10 @@ const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover 
     const juce::Colour controlStripTop    { 0xff5D5D6A };  // task-427: +8 brightness (R=93, G=93, B=106)
     const juce::Colour controlStripBottom { 0xff444350 };  // task-427: +8 brightness (R=68, G=67, B=80)
 
+    // Top bar gradient background
+    const juce::Colour topBarGradientTop    { 0xff4A4650 };
+    const juce::Colour topBarGradientBottom { 0xff3C3842 };
+
     // Button colours
     const juce::Colour algoButtonInactive       { 0xff545870 };  // +24R +8G -15B lighten for better match (task-409)
     const juce::Colour algoButtonSelected       { 0xff2E3E58 };  // selected algo button — dark navy, subtle blue highlight (task-346)
