@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "specialist_sweep",
+  "phase": "workers_running",
   "agents": 3,
   "model": "opus[1m]",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -891,6 +891,11 @@
       "at": "2026-03-27T22:08:00Z",
       "action": "launched specialist sweep 37 (6 specialists in parallel)",
       "reason": "all 9 wave-24 visual parity tasks complete (421-429); 20 completions since last sweep at d=420"
+    },
+    {
+      "at": "2026-03-27T22:27:00Z",
+      "action": "launched PM for sweep 37; all 6 specialists done",
+      "reason": "VPA-37 RMSE: Full=18.44% (\u21930.79pp), Wave=15.53%, Left=20.62%, Right=22.82%, Control=18.22%. 5 VPA tasks in needs-grooming, 11 UIParityAuditor tasks, 7 QAEngineer tasks, PM consolidating."
     }
   ],
   "learnings": [
@@ -912,7 +917,8 @@
     "Wave 18 final: Full=20.74%, Wave=18.96%, Left=29.00% (floor), Right=22.36%, Control=20.17%",
     "Wave 20 final: Full=19.82%, Wave=17.29%, Left=28.75% (floor), Right=23.09% (regression from task-391 warm shift), Control=21.02% (regression from task-392 over-brightening). Full broke 20%!",
     "Wave 21 final: Full=19.46%, Wave=16.72%, Left=28.71%, Right=23.09% (still regressed), Control=21.02% (still regressed). Waveform keeps improving. Right/Control need dedicated fix wave.",
-    "ccache defaults to /home/swarm/.cache/ccache (container-local, lost on exit). Must set CCACHE_DIR=/build-cache/ccache to use the shared build-cache volume."
+    "ccache defaults to /home/swarm/.cache/ccache (container-local, lost on exit). Must set CCACHE_DIR=/build-cache/ccache to use the shared build-cache volume.",
+    "VPA-37: Full=18.44%, Wave=15.53%, Left=20.62%, Right=22.82%, Control=18.22% \u2014 wave-24 improved Full by 0.79pp. Gap to 15% target: 3.44pp. VPA puts tasks in M-LIM/tasks/needs-grooming/ for PM grooming."
   ],
   "extra_guidance": "PRIORITY: Always pick tasks 421-429 first (visual parity tasks) over test/code tasks \u2014 these directly improve RMSE toward the 15% target. Only pick test tasks when no visual parity tasks remain. Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved. Set CCACHE_DIR=/build-cache/ccache so ccache persists across container restarts."
 }
