@@ -65,8 +65,8 @@ namespace MLIMColours
     const juce::Colour loudnessHistogramBottom { 0xff506090 };  // matches displayGradientBottom — blue-saturated
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff4A4756 };  // brightened top — closer to Pro-L 2 ref ~36% brightness
-    const juce::Colour controlStripBottom { 0xff38353F };  // brightened bottom — ≈ 22% brightness
+    const juce::Colour controlStripTop    { 0xff575468 };  // +13 brightness — task-375
+    const juce::Colour controlStripBottom { 0xff454350 };  // +13 brightness — task-375
 
     // Button colours
     const juce::Colour algoButtonInactive       { 0xff303848 };  // inactive algo button — dark blue-gray blending with control strip
