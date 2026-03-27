@@ -1,0 +1,5 @@
+Task 357 RMSE results
+Full image RMSE: 22.06% (0.220626)
+Baseline: 22.08%
+Target: ≤ 22.08%
+Status: PASS (no regression)

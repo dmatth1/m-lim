@@ -4,8 +4,8 @@
 
 // Short display names for the compact button grid (ALL CAPS).
 static constexpr const char* kAlgorithmButtonLabels[] = {
-    "TRANSPARENT", "PUNCHY", "DYNAMIC", "AGGRESSIVE",
-    "ALLROUND", "BUS", "SAFE", "MODERN"
+    "TR", "PU", "DY", "AG",
+    "AR", "BU", "SA", "MO"
 };
 
 AlgorithmSelector::AlgorithmSelector()
