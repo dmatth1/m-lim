@@ -325,6 +325,33 @@ void LoudnessPanel::drawHistogram (juce::Graphics& g,
     const float originX   = static_cast<float> (barsArea.getX());
     const float originY   = static_cast<float> (barsArea.getY());
 
+    // ── Draw idle grid structure (visible even when no audio) ─────────────────
+    // Horizontal separators: subtle lines between every 2 bins (every 1 dB)
+    {
+        const juce::Colour sepColour = MLIMColours::panelBorder.withAlpha (0.25f);
+        const juce::Colour majorColour = MLIMColours::panelBorder.withAlpha (0.45f);
+        for (int i = 0; i <= kHistBins; i += 2)
+        {
+            const float normPos = static_cast<float> (i) / static_cast<float> (kHistBins);
+            const float sepY    = originY + totalH - normPos * totalH;
+            // Every 10 bins (= 5 dB) draw a slightly brighter major gridline
+            const bool  major   = (i % 10 == 0);
+            g.setColour (major ? majorColour : sepColour);
+            g.drawHorizontalLine (juce::roundToInt (sepY), originX, originX + barAreaW);
+        }
+    }
+    // Vertical guide lines at 25%, 50%, 75% of bar area width
+    {
+        const juce::Colour guideColour = MLIMColours::panelBorder.withAlpha (0.3f);
+        g.setColour (guideColour);
+        for (float frac : { 0.25f, 0.5f, 0.75f })
+        {
+            const float vx = originX + frac * barAreaW;
+            g.drawVerticalLine (juce::roundToInt (vx),
+                                originY, originY + totalH);
+        }
+    }
+
     // ── Draw histogram bars (bin 0 = -35 LUFS at bottom, bin 69 = 0 LUFS at top) ──
     for (int i = 0; i < kHistBins; ++i)
     {
