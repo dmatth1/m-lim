@@ -916,6 +916,11 @@
       "at": "2026-03-27T23:10:54Z",
       "action": "respawned worker-3",
       "reason": "rate-limit backoff was 1926s (~32 min), exceeds 30 min threshold"
+    },
+    {
+      "at": "2026-03-27T23:16:11Z",
+      "action": "respawned worker-1",
+      "reason": "log frozen for 20+ min at 9 lines, 0% CPU after 747s backoff expired \u2014 hung"
     }
   ],
   "learnings": [
