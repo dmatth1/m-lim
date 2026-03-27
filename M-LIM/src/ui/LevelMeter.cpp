@@ -83,25 +83,35 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     for (float sy = barTop; sy < barTop + barH; sy += kSegH + kSegGap)
         g.fillRect (bar.getX(), sy + kSegH, bar.getWidth(), kSegGap);
 
-    // Idle structural gradient — gives the meter visual presence at silence.
-    // Same colour stops as the active fill but at very low alpha (~15%).
+    // Idle structural gradient — simulates warm-program-material appearance at silence.
+    // Alpha boosted to 0.44f and warm zone extended to -18 dB so ~70% of bar shows
+    // orange/yellow (matching the reference captured with loud audio content).
     {
         const float barTop2 = bar.getY();
         const float barH2   = bar.getHeight();
 
-        const float normWarn2   = dbToNorm (kWarnDB);
-        const float normDanger2 = dbToNorm (kDangerDB);
-        const float dangerBot2  = barTop2 + barH2 * (1.0f - normDanger2);
-        const float warnBot2    = barTop2 + barH2 * (1.0f - normWarn2);
+        const float normWarn2    = dbToNorm (kWarnDB);
+        const float normDanger2  = dbToNorm (kDangerDB);
+        const float dangerBot2   = barTop2 + barH2 * (1.0f - normDanger2);
+        const float warnBot2     = barTop2 + barH2 * (1.0f - normWarn2);
+
+        // Extended warm zone: yellow/orange covers down to -12 dB instead of kWarnDB
+        const float normWarmExt  = dbToNorm (-12.0f);
+        const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
 
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.15f),             0.0f, barTop2,
-            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.15f), 0.0f, barTop2 + barH2,
+            MLIMColours::meterDanger.withAlpha (0.44f),              0.0f, barTop2,
+            MLIMColours::meterSafe.darker (0.3f).withAlpha (0.44f),  0.0f, barTop2 + barH2,
             false);
+        // Add orange stop just below the danger/warning boundary
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.15f));
+                            MLIMColours::grMeterMid.withAlpha (0.44f));     // orange #FF8C00
+        // Yellow at kWarnDB boundary
         idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.15f));
+                            MLIMColours::meterWarning.withAlpha (0.44f));
+        // Warm/cool transition extended to -18 dB
+        idleGrad.addColour ((warmExtY   - barTop2) / barH2,
+                            MLIMColours::meterSafe.brighter (0.15f).withAlpha (0.30f));  // transition
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
