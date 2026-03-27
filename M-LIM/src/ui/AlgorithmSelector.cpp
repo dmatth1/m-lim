@@ -43,11 +43,6 @@ AlgorithmSelector::AlgorithmSelector()
         addAndMakeVisible(algoButtons_[i]);
     }
 
-    // Hide legacy nav widgets.
-    prevButton_.setVisible(false);
-    nextButton_.setVisible(false);
-    nameLabel_.setVisible(false);
-
     updateButtonStates();
 }
 
@@ -67,7 +62,6 @@ void AlgorithmSelector::updateButtonStates()
     const int selected = juce::jlimit(0, kNumAlgorithms - 1, comboBox.getSelectedId() - 1);
     for (int i = 0; i < kNumAlgorithms; ++i)
         algoButtons_[i].setToggleState(i == selected, juce::dontSendNotification);
-    nameLabel_.setText(kAlgorithmButtonLabels[selected], juce::dontSendNotification);
 }
 
 void AlgorithmSelector::paint(juce::Graphics& g)

@@ -41,11 +41,6 @@ private:
     /** 2×4 grid of algorithm selection buttons. */
     juce::TextButton algoButtons_[kNumAlgorithms];
 
-    /** Legacy nav widgets — kept for ABI compatibility but hidden. */
-    juce::TextButton prevButton_;
-    juce::TextButton nextButton_;
-    juce::Label nameLabel_;
-
     /** Refresh button toggle states to reflect current comboBox selection. */
     void updateButtonStates();
 
