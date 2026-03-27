@@ -305,23 +305,23 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     }
 
     // Upper idle fill — approximates dense input waveform content in -6 to -12 dBFS zone.
-    // Covers y=15%–55% height (centered around 30%), peak alpha ~0.60.
-    // Addresses 46-60 unit brightness gap observed at y=30% height vs reference. (task-403)
+    // Covers y=20%–50% height (centered around 30%), peak alpha 0.20.
+    // Narrowed and darkened (task-450) to match Pro-L 2 near-black upper zone.
     {
-        const float uTop = area.getY() + area.getHeight() * 0.15f;
+        const float uTop = area.getY() + area.getHeight() * 0.20f;
         const float uMid = area.getY() + area.getHeight() * 0.30f;
-        const float uBot = area.getY() + area.getHeight() * 0.55f;
+        const float uBot = area.getY() + area.getHeight() * 0.50f;
         juce::Colour uFill = MLIMColours::inputWaveform.withAlpha (1.0f);
 
         juce::ColourGradient rGrad (
             uFill.withAlpha (0.0f),   0.0f, uTop,
-            uFill.withAlpha (0.32f),  0.0f, uMid,  // task-421: reduced from 0.48 to suppress y=18-28% over-brightness
+            uFill.withAlpha (0.20f),  0.0f, uMid,  // task-450: reduced from 0.32 to darken upper zone
             false);
         g.setGradientFill (rGrad);
         g.fillRect (area.getX(), uTop, area.getWidth(), uMid - uTop);
 
         juce::ColourGradient fGrad (
-            uFill.withAlpha (0.32f),  0.0f, uMid,  // task-421: reduced from 0.48
+            uFill.withAlpha (0.20f),  0.0f, uMid,  // task-450: reduced from 0.32
             uFill.withAlpha (0.0f),   0.0f, uBot,
             false);
         g.setGradientFill (fGrad);
