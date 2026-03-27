@@ -47,6 +47,17 @@ void SidechainFilter::prepare(double sampleRate, int /*maxBlockSize*/)
     }
 }
 
+void SidechainFilter::reset()
+{
+    for (int ch = 0; ch < kMaxChannels; ++ch)
+    {
+        mHP[ch].reset();
+        mLP[ch].reset();
+        mTiltLS[ch].reset();
+        mTiltHS[ch].reset();
+    }
+}
+
 void SidechainFilter::process(juce::AudioBuffer<float>& buffer)
 {
     // Apply any pending parameter changes before processing.

@@ -9,6 +9,12 @@ void Oversampler::prepare(double sampleRate, int maxBlockSize, int numChannels)
     recreate();
 }
 
+void Oversampler::reset()
+{
+    if (mOversampling)
+        mOversampling->reset();
+}
+
 void Oversampler::setFactor(int factor)
 {
     jassert(factor >= 0 && factor <= 5);

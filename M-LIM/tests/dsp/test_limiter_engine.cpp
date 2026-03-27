@@ -1485,3 +1485,37 @@ TEST_CASE("test_true_peak_not_exceeded", "[LimiterEngine]")
     INFO("Worst true peak after enforcement: " << worstTruePeak);
     REQUIRE(worstTruePeak <= 1.059f);
 }
+
+// ============================================================================
+// test_reset_no_allocation
+// LimiterEngine::reset() must not invoke heap allocation.
+// Uses AllocGuard from alloc_tracking.h (operator new defined once in
+// test_realtime_safety.cpp; the thread-local counter is shared via extern).
+// ============================================================================
+#include "alloc_tracking.h"
+
+TEST_CASE("test_reset_no_allocation", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+
+    // Process a block so internal state is non-trivial
+    auto buf = makeSine(2.0f, kBlockSize);
+    engine.process(buf);
+
+    // Measure allocations during reset()
+    int allocsDuringReset;
+    {
+        AllocGuard guard;
+        engine.reset();
+        allocsDuringReset = guard.count();
+    }
+
+    INFO("Heap allocations during reset(): " << allocsDuringReset);
+    REQUIRE(allocsDuringReset == 0);
+
+    // Engine must still be functional after reset
+    auto buf2 = makeSine(0.5f, kBlockSize);
+    engine.process(buf2);
+    REQUIRE(maxAbsValue(buf2) <= 1.0f + 1e-4f);
+}

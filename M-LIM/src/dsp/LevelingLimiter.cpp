@@ -27,6 +27,16 @@ void LevelingLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numCh
 }
 
 // ---------------------------------------------------------------------------
+// reset
+// ---------------------------------------------------------------------------
+void LevelingLimiter::reset()
+{
+    std::fill(mGainState.begin(), mGainState.end(), 1.0f);
+    std::fill(mEnvState.begin(),  mEnvState.end(),  1.0f);
+    mCurrentGRdB = 0.0f;
+}
+
+// ---------------------------------------------------------------------------
 // updateCoefficients  (private)
 // ---------------------------------------------------------------------------
 void LevelingLimiter::updateCoefficients()

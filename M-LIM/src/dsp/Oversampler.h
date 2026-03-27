@@ -27,6 +27,10 @@ public:
     /** Call before processing begins or when sample rate / block size changes. */
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
 
+    /** Clear oversampling filter state without reallocating.
+     *  Safe to call from the audio thread. */
+    void reset();
+
     /** Upsample the buffer. Returns an AudioBlock at the higher sample rate.
      *  When factor == 0, returns a block wrapping the original buffer (passthrough). */
     juce::dsp::AudioBlock<float> upsample(juce::AudioBuffer<float>& buffer);

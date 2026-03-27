@@ -102,15 +102,8 @@ void LimiterEngine::reset()
     // TransientLimiter: clear delay buffers, gain state, sliding-window deques
     mTransientLimiter.resetCounters();
 
-    // LevelingLimiter: re-prepare to clear gain/envelope state
-    // (no dedicated reset — prepare() zeros everything without realloc if sizes match)
-    {
-        const int osFactorPow2 = (mCurrentOversamplingFactor > 0)
-                                     ? (1 << mCurrentOversamplingFactor) : 1;
-        const double usSampleRate = mSampleRate * osFactorPow2;
-        const int    usBlockSize  = mMaxBlockSize * osFactorPow2;
-        mLevelingLimiter.prepare (usSampleRate, usBlockSize, mNumChannels);
-    }
+    // LevelingLimiter: clear gain/envelope state without reallocating vectors
+    mLevelingLimiter.reset();
 
     // True peak detectors
     mTruePeakL.reset();
@@ -126,12 +119,12 @@ void LimiterEngine::reset()
     mDitherL.prepare (mSampleRate);
     mDitherR.prepare (mSampleRate);
 
-    // Sidechain filter — re-prepare to clear filter state
-    mSidechainFilter.prepare (mSampleRate, mMaxBlockSize);
+    // Sidechain filter — clear IIR state without reallocating coefficients
+    mSidechainFilter.reset();
 
-    // Oversampler filter state — re-prepare clears internal IIR state
-    mOversampler.prepare (mSampleRate, mMaxBlockSize, mNumChannels);
-    mSidechainOversampler.prepare (mSampleRate, mMaxBlockSize, mNumChannels);
+    // Oversampler filter state — clear internal IIR state without reallocating
+    mOversampler.reset();
+    mSidechainOversampler.reset();
 
     // Clear working buffers
     mPreLimitBuffer.clear();

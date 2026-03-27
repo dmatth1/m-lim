@@ -28,6 +28,10 @@ public:
     /** Call before processing begins or when sample rate changes. */
     void prepare(double sampleRate, int maxBlockSize);
 
+    /** Clear filter state without reallocating coefficients.
+     *  Safe to call from the audio thread. */
+    void reset();
+
     /** Process buffer in-place (operates on all channels, up to 2).
      *  Applies any pending parameter changes before processing. */
     void process(juce::AudioBuffer<float>& buffer);

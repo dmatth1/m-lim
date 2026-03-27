@@ -26,6 +26,10 @@ public:
     /** Call before processing begins or when sample rate / channel count changes. */
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
 
+    /** Clear gain/envelope state without reallocating vectors.
+     *  Safe to call from the audio thread. */
+    void reset();
+
     /** Process audio in-place.
      *  When sidechainData is non-null, use it for envelope following while
      *  applying gain reduction to channelData. When null, follow channelData. */
