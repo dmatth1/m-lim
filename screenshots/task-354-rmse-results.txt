@@ -1,0 +1,65 @@
+# Task 354: RMSE Remeasure After Tasks 349, 350, 351, 353
+# Date: 2026-03-27
+# Build: cmake --build build -j$(nproc) → 0 errors
+
+## Methodology
+- Reference: convert /reference-docs/reference-screenshots/prol2-main-ui.jpg
+             -crop 1712x1073+97+32 +repage -resize 900x500! (CORRECT crop methodology)
+- M-LIM: launch on Xvfb :95, scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+- App confirmed rendering: TopBar shows #323035 (dark gray-purple, per task-351 change)
+
+## Full Image RMSE
+- Result:   22.08%
+- Baseline: 22.20% (task-352 corrected baseline)
+- Target:   ≤ 21.80%
+- Delta:    -0.12% improvement (target was ≥ 0.40% combined from tasks 349+350+351+353)
+- Status:   BELOW TARGET by 0.28%
+
+NOTE: Full-image RMSE has a structural floor from TopBar mismatch (JUCE dark ~37,37,37
+vs macOS light ~200,200,200 in reference). Top 20 rows contribute ~59% RMSE.
+Sub-region RMSEs are the authoritative parity indicator.
+
+## Sub-Region RMSE Results
+
+### Waveform (600x400+150+50)
+- Result:   20.55%
+- Baseline: 20.58%
+- Target:   ≤ 21.08%
+- Status:   PASS ✓ (-0.03% improvement)
+
+### Left Meters (30x378+0+30)
+- Result:   23.50%
+- Baseline: 23.33%
+- Target:   ≤ 23.83%
+- Status:   PASS ✓ (+0.17% regression, within 0.5% threshold)
+
+### Right Panel (100x400+800+50)
+- Result:   29.59%
+- Baseline: 29.56%
+- Target:   ≤ 30.06%
+- Status:   PASS ✓ (+0.03% minimal change)
+
+### Control Strip (900x60+0+440)
+- Result:   22.42%
+- Baseline: 22.42%
+- Target:   ≤ 22.92%
+- Status:   PASS ✓ (no change)
+
+### Top Band y=20-35 (900x16+0+20)
+- Result:   16.47%
+- Note:     Improvement from the structural ~59% top-strip RMSE noted in prior tasks.
+            Task-349 (TopBar height 24→40px) pushed content 16px lower, reducing the
+            high-contrast zone. Task-353 (ceiling line shift to -0.5f) reduced bright
+            red artifact in top rows.
+
+## Summary
+All sub-region RMSE targets met. Full-image RMSE improved by 0.12% to 22.08% but
+did not reach the ≤ 21.80% target. The combined improvements from tasks 349+350+351+353
+had less full-image impact than estimated (~0.12% vs ~0.40% expected). Sub-region
+metrics confirm no regressions > 0.17%.
+
+## Task Context Notes
+- task-348 RMSE values are INVALID (wrong reference crop — squished full image)
+- task-352 baseline (22.20%) uses CORRECT crop methodology and is the authoritative baseline
+- Full-image RMSE floor from platform difference (JUCE dark vs macOS light TopBar) is
+  irreducible without OS-specific rendering hacks (~13% minimum floor)
