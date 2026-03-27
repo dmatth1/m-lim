@@ -1,0 +1,13 @@
+Task 378: Darken Waveform Gradient Top (displayGradientTop → 0xff242027)
+
+Change: 0xff3A3540 → 0xff242027
+
+=== Full image RMSE ===
+13612.3 (0.20771)  → 20.77%
+
+=== Wave region RMSE ===
+12424.2 (0.189581) → 18.96%
+
+Acceptance criteria:
+- Wave RMSE ≤ 19.0%: 18.96% ≤ 19.0% ✓ PASS
+- Full RMSE ≤ wave-17 baseline (20.81%): 20.77% ≤ 20.81% ✓ PASS
