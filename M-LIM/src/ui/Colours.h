@@ -30,6 +30,9 @@ namespace MLIMColours
     const juce::Colour grMeterLow           { 0xffE8C840 };  // warm yellow (0–3 dB GR)
     const juce::Colour grMeterMid           { 0xffFF8C00 };  // warm orange (3–9 dB GR)
     const juce::Colour waveformGridLine     { 0xff9AA0B4 };  // horizontal dB grid lines — lighter than gradient, matches Pro-L 2 subtle grid
+    const juce::Colour waveformIdleMidFill  { 0xff828AA5 };  // mid/center tent idle fill (steel blue)
+    const juce::Colour waveformIdleLowFill  { 0xff9898A8 };  // lower idle fill (warm neutral)
+    const juce::Colour waveformLeftEdgeTint { 0xffD8ACD0 };  // left-edge gradient tint — currently unused (removed task-423)
     const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
     const juce::Colour waveformCeilingLine  { 0x50DD4444 };  // ceiling line — warm red, ~31% alpha — subtler, closer to Pro-L 2 reference
 

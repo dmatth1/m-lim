@@ -334,7 +334,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         const float midTop   = area.getY() + area.getHeight() * 0.36f;
         const float midMid   = area.getY() + area.getHeight() * 0.58f;
         const float midBot   = area.getY() + area.getHeight() * 0.82f;
-        juce::Colour midFill { 0xff828AA5 };
+        juce::Colour midFill = MLIMColours::waveformIdleMidFill;
 
         // Rising half: transparent at 36% → 0.52 at 58% (task-422: reduced from 0.68)
         juce::ColourGradient riseGrad (
@@ -359,7 +359,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         const float cTop = area.getY() + area.getHeight() * 0.40f;
         const float cMid = area.getY() + area.getHeight() * 0.58f;
         const float cBot = area.getY() + area.getHeight() * 0.76f;
-        juce::Colour cCol { 0xff828AA5 };  // same steel-blue as midFillColour above
+        juce::Colour cCol = MLIMColours::waveformIdleMidFill;  // same steel-blue as midFill above
 
         // Rising half: 0.0 at cTop → 0.40 at cMid (task-422: reduced from 0.52)
         juce::ColourGradient upGrad (
@@ -382,7 +382,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
     // Covers y=62%–100%, peak alpha at bottom 0.25, fades to 0 at 62%
     {
         const float lTop = area.getY() + area.getHeight() * 0.62f;
-        juce::Colour lFill { 0xff9898A8 };  // warmer neutral (equal R/G, less blue overshoot)
+        juce::Colour lFill = MLIMColours::waveformIdleLowFill;  // warmer neutral (equal R/G, less blue overshoot)
 
         juce::ColourGradient lGrad (
             lFill.withAlpha (0.0f),   0.0f, lTop,
@@ -426,8 +426,8 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 
-    // Left-edge idle gradient removed (task-423): the pink-lavender 0xffD8ACD0 tint
-    // didn't match reference (neutral blue-gray). Removal eliminates visible pink cast.
+    // Left-edge idle gradient removed (task-423): the pink-lavender tint (now
+    // MLIMColours::waveformLeftEdgeTint) didn't match reference. Removal eliminates pink cast.
 }
 
 void WaveformDisplay::drawCeilingLine (juce::Graphics& g,
