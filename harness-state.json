@@ -901,6 +901,11 @@
       "at": "2026-03-27T22:30:00Z",
       "action": "respawned worker-3 (reset rate-limit backoff)",
       "reason": "worker-3 had 3960s sleep remaining; PM added 36 tasks; needed worker back ASAP"
+    },
+    {
+      "at": "2026-03-27T22:52:00Z",
+      "action": "respawned worker-1 (cleared 62-min rate-limit backoff)",
+      "reason": "3708s sleep accumulation; 38 tasks pending, need workers active"
     }
   ],
   "learnings": [
