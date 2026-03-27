@@ -37,16 +37,16 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     addAndMakeVisible (inputGainSlider_);
 
     inputGainValueLabel_.setText ("+0.0", juce::dontSendNotification);
-    inputGainValueLabel_.setFont (juce::Font (9.0f, juce::Font::bold));
+    inputGainValueLabel_.setFont (juce::Font (10.0f, juce::Font::bold));
     inputGainValueLabel_.setJustificationType (juce::Justification::centred);
-    inputGainValueLabel_.setColour (juce::Label::textColourId, MLIMColours::peakLabel);
-    inputGainValueLabel_.setColour (juce::Label::backgroundColourId, MLIMColours::peakLabelBackground);
-    inputGainValueLabel_.setColour (juce::Label::outlineColourId,    MLIMColours::panelBorder);
+    inputGainValueLabel_.setColour (juce::Label::textColourId, MLIMColours::textPrimary);
+    inputGainValueLabel_.setColour (juce::Label::backgroundColourId, juce::Colour (0x00000000));
+    inputGainValueLabel_.setColour (juce::Label::outlineColourId,    juce::Colour (0x00000000));
     inputGainValueLabel_.setInterceptsMouseClicks (false, false);
     addAndMakeVisible (inputGainValueLabel_);
 
     gainLabel_.setText ("GAIN", juce::dontSendNotification);
-    gainLabel_.setFont (juce::Font (MLIMColours::kFontSizeSmall));
+    gainLabel_.setFont (juce::Font (9.0f, juce::Font::plain));
     gainLabel_.setColour (juce::Label::textColourId, MLIMColours::textSecondary);
     gainLabel_.setJustificationType (juce::Justification::centred);
     gainLabel_.setInterceptsMouseClicks (false, false);
@@ -159,6 +159,15 @@ void MLIMAudioProcessorEditor::wireCallbacks()
 void MLIMAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (MLIMColours::background);
+
+    // Draw rounded background behind the input gain badge
+    if (inputGainValueLabel_.isVisible())
+    {
+        auto badgeRect = gainLabel_.getBounds().toFloat()
+                            .getUnion (inputGainValueLabel_.getBounds().toFloat());
+        g.setColour (MLIMColours::widgetBackground.withAlpha (0.85f));
+        g.fillRoundedRectangle (badgeRect, 3.0f);
+    }
 }
 
 void MLIMAudioProcessorEditor::resized()
@@ -181,14 +190,13 @@ void MLIMAudioProcessorEditor::resized()
     // Waveform display fills the remaining centre (~70-75% of total width)
     waveformDisplay_.setBounds (bounds);
 
-    // Input Gain badge slider: floating in the bottom-left corner of waveform area
-    // The badge rect sits on top of the waveform content (non-interactive label overlay)
-    // Leave room for the "GAIN" label (12px) + 2px gap below the badge
+    // Input Gain badge: floating in the bottom-left corner of waveform area
+    // Badge contains "GAIN" label (top half) and value (bottom half) with rounded background
     const int badgeX = waveformDisplay_.getX() + 4;
-    const int badgeY = waveformDisplay_.getBottom() - kGainBadgeH - 14 - 4;
+    const int badgeY = waveformDisplay_.getBottom() - kGainBadgeH - 4;
     inputGainSlider_.setBounds     (badgeX, badgeY, kGainBadgeW, kGainBadgeH);
-    inputGainValueLabel_.setBounds (badgeX, badgeY, kGainBadgeW, kGainBadgeH);
-    gainLabel_.setBounds           (badgeX, badgeY + kGainBadgeH + 2, kGainBadgeW, 12);
+    gainLabel_.setBounds           (badgeX, badgeY, kGainBadgeW, kGainBadgeH / 2);
+    inputGainValueLabel_.setBounds (badgeX, badgeY + kGainBadgeH / 2, kGainBadgeW, kGainBadgeH / 2);
 }
 
 void MLIMAudioProcessorEditor::timerCallback()

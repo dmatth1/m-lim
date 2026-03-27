@@ -69,7 +69,7 @@ private:
     static constexpr int kLoudnessPanelW = 140;
     static constexpr int kPeakHoldFrames = 120; // ~2s at 60fps
     static constexpr int kGainBadgeW     = 80;  // input gain badge width
-    static constexpr int kGainBadgeH     = 20;  // input gain badge height
+    static constexpr int kGainBadgeH     = 30;  // input gain badge height (label + value)
 
     void wireCallbacks();
     void updatePeakHold (float newL, float newR,
