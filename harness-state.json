@@ -7,7 +7,7 @@
   ],
   "phase": "specialist_sweep",
   "agents": 3,
-  "model": "sonnet",
+  "model": "opus[1m]",
   "repo": "git@github.com:dmatth1/m-lim.git",
   "mounts": [
     "/home/ubuntu/l2-reference-docs:/reference-docs:ro"
@@ -866,6 +866,11 @@
       "at": "2026-03-27T18:30:00Z",
       "action": "launched specialist sweep 36 (all non-PM)",
       "reason": "wave 23 complete p=0 a=0 d=420; all 9 tasks done"
+    },
+    {
+      "at": "2026-03-27T18:45:00Z",
+      "action": "updated worker model to opus[1m] per user request",
+      "reason": "user requested opus 1m for wave 24 workers"
     }
   ],
   "learnings": [
