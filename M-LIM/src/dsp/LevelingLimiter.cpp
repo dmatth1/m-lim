@@ -1,6 +1,7 @@
 #include "LevelingLimiter.h"
 #include "DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
 #include <cmath>
 #include <algorithm>
 
@@ -192,45 +193,108 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
         applyChannelLinking(perChRequiredGain, chCount, mChannelLink);
 
         // --- 3. Smooth gain in linear domain ---------------------------------
-        // mGainState[ch] is in linear scale (1.0 = no reduction, <1 = reducing).
-        // Tracking in linear domain avoids per-sample transcendental calls while
-        // remaining numerically close to dB-domain smoothing for typical
-        // attack/release times (>10 ms), where per-sample delta is <0.5%.
-        for (int ch = 0; ch < chCount; ++ch)
-        {
-            float& g = mGainState[ch];  // linear domain state
-            const float target = perChRequiredGain[ch];  // already linear
+        // Steps 3a (adaptive envelope) must remain scalar since it uses a single
+        // mAdaptiveSmoothCoeff. Steps 3b (attack/release) and 4 (gain apply) get
+        // a SIMD fast path for stereo.
 
-            // Update long-term envelope tracker for adaptive release.
-            // mEnvState is in linear domain (1.0 = no reduction, <1 = reduction).
-            if (mParams.adaptiveRelease)
+        // 3a. Update long-term envelope tracker (always scalar).
+        if (mParams.adaptiveRelease)
+        {
+            for (int ch = 0; ch < chCount; ++ch)
             {
+                const float target = perChRequiredGain[ch];
                 mEnvState[ch] = mEnvState[ch] * mAdaptiveSmoothCoeff
                                 + target * (1.0f - mAdaptiveSmoothCoeff);
             }
-
-            if (target < g)
-            {
-                // Attack: more reduction needed — first-order IIR in linear domain.
-                g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
-            }
-            else
-            {
-                // Release: recovering toward unity (1.0) in linear domain.
-                g = g * effectiveReleaseCoeffs[ch] + (1.0f - effectiveReleaseCoeffs[ch]);
-            }
-
-            g = std::max(g, kMinGain);
         }
 
-        // --- 4. Apply gain to main audio -------------------------------------
-        for (int ch = 0; ch < chCount; ++ch)
+        // 3b. Attack/release smoothing + 4. gain apply.
+#if JUCE_USE_SIMD
+        using SIMDf     = juce::dsp::SIMDRegister<float>;
+        using vMaskType = typename SIMDf::vMaskType;
+        using MaskType  = typename SIMDf::MaskType;
+        if (chCount == 2 && SIMDf::SIMDNumElements >= 4)
         {
-            const float linearGain = mGainState[ch];  // already linear, no conversion needed
-            channelData[ch][s] *= linearGain;
+            // Load gain states and targets into SIMD lanes (lanes 2-3 = 1.0).
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float gArr[4] =
+                { mGainState[0], mGainState[1], 1.0f, 1.0f };
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float tArr[4] =
+                { perChRequiredGain[0], perChRequiredGain[1], 1.0f, 1.0f };
 
-            if (linearGain < minGain)
-                minGain = linearGain;
+            SIMDf g      = SIMDf::fromRawArray(gArr);
+            SIMDf target = SIMDf::fromRawArray(tArr);
+
+            // Attack: g * attackCoeff + target * (1 - attackCoeff)
+            SIMDf attackGain = g * SIMDf::expand(mAttackCoeff)
+                             + target * SIMDf::expand(1.0f - mAttackCoeff);
+
+            // Release uses per-channel coefficients loaded into SIMD lanes.
+            // Release target is unity (1.0), not `target`.
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float relArr[4] =
+                { effectiveReleaseCoeffs[0], effectiveReleaseCoeffs[1], 1.0f, 1.0f };
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float relInvArr[4] =
+                { 1.0f - effectiveReleaseCoeffs[0], 1.0f - effectiveReleaseCoeffs[1], 0.0f, 0.0f };
+            SIMDf relCoeff    = SIMDf::fromRawArray(relArr);
+            SIMDf relCoeffInv = SIMDf::fromRawArray(relInvArr);
+
+            // Release: g * relCoeff + (1 - relCoeff)  [targets unity]
+            SIMDf releaseGain = g * relCoeff + relCoeffInv;
+
+            // Branchless blend: attack where target < g, else release.
+            vMaskType useAttack = SIMDf::lessThan(target, g);
+            vMaskType notAttack = useAttack ^ vMaskType::expand(MaskType(0xFFFFFFFFu));
+
+            SIMDf newG = (attackGain & useAttack) + (releaseGain & notAttack);
+
+            // Clamp to [kMinGain, 1.0f]
+            newG = SIMDf::max(newG, SIMDf::expand(kMinGain));
+            newG = SIMDf::min(newG, SIMDf::expand(1.0f));
+
+            alignas(SIMDf::SIMDNumElements * sizeof(float)) float outArr[4];
+            newG.copyToRawArray(outArr);
+            mGainState[0] = outArr[0];
+            mGainState[1] = outArr[1];
+
+            // Apply gain to main audio and track minimum.
+            channelData[0][s] *= mGainState[0];
+            channelData[1][s] *= mGainState[1];
+
+            const float localMin = std::min(mGainState[0], mGainState[1]);
+            if (localMin < minGain)
+                minGain = localMin;
+        }
+        else
+#endif // JUCE_USE_SIMD
+        {
+            // Scalar path: mono, surround, or platforms without SIMD.
+            for (int ch = 0; ch < chCount; ++ch)
+            {
+                float& g = mGainState[ch];
+                const float target = perChRequiredGain[ch];
+
+                if (target < g)
+                {
+                    // Attack: more reduction needed.
+                    g = g * mAttackCoeff + target * (1.0f - mAttackCoeff);
+                }
+                else
+                {
+                    // Release: recovering toward unity (1.0).
+                    g = g * effectiveReleaseCoeffs[ch] + (1.0f - effectiveReleaseCoeffs[ch]);
+                }
+
+                g = std::max(g, kMinGain);
+            }
+
+            // Apply gain to main audio.
+            for (int ch = 0; ch < chCount; ++ch)
+            {
+                const float linearGain = mGainState[ch];
+                channelData[ch][s] *= linearGain;
+
+                if (linearGain < minGain)
+                    minGain = linearGain;
+            }
         }
     }
 
