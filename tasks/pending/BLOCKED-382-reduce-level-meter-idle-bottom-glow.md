@@ -87,3 +87,23 @@ compare -metric RMSE /tmp/ref.png /tmp/mlim.png /dev/null 2>&1
 
 ## Dependencies
 Requires task 377
+
+## Blocker
+
+Empirical RMSE testing shows the proposed alpha reduction moves RMSE in the wrong direction:
+
+| Bottom alpha | Right RMSE | Full RMSE |
+|---|---|---|
+| 0.08f (proposed) | 23.54% | 21.06% |
+| 0.25f (midpoint)  | 22.89% | 20.91% |
+| 0.44f (current)   | **22.43%** | **20.81%** (baseline) |
+| 0.55f (increase)  | 29.02% | — |
+
+The current 0.44f value is the RMSE minimum for the right panel. Reducing alpha (darkening)
+increases RMSE because the reference's idle meters have a visible blue-green ambient
+brightness that the 0.44f alpha partially matches. Making them darker (0.08f) moves further
+from the reference, not closer.
+
+The task's assumption ("near-dark idle state matching the reference") does not hold when
+measured against actual pixel data. The acceptance criteria (right panel RMSE < 22.43%)
+cannot be met by adjusting these alpha values in either direction.
