@@ -129,11 +129,11 @@ target_link_libraries(MLIM
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        $<$<BOOL:${ALSA_FOUND}>:${ALSA_LIBRARIES}>
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
+        $<$<BOOL:${ALSA_FOUND}>:${ALSA_LIBRARIES}>
 )
 
 if(CLAP_SUPPORT)
