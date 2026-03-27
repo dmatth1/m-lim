@@ -1,0 +1,60 @@
+Task 349: Increase TopBar Height to Reduce Top-Strip RMSE
+==========================================================
+Date: 2026-03-27
+Build: kTopBarH changed from 24 to 40
+
+Change Made
+-----------
+M-LIM/src/PluginEditor.h line 64:
+  static constexpr int kTopBarH = 40;  // was 24
+
+Effect: WaveformDisplay pushed down by 16px; crop y=20-35 now shows
+dark TopBar gradient (~45,45,45) instead of WaveformDisplay top (~103,99,104).
+
+Build Verification
+------------------
+cmake --build M-LIM/build -j$(nproc): 0 errors ✓
+
+Screenshot Methodology
+----------------------
+- M-LIM standalone launched on Xvfb :97 (1920x1080)
+- Full 1920x1080 scrot → screenshots/task-349-after.png
+- Plugin crop: 908x500+509+325, forced resize to 900x500
+- Reference: prol2-main-ui.jpg forced resize to 900x500 (-geometry 900x500!)
+
+Pixel Check (TopBar vs WaveformDisplay boundary)
+-------------------------------------------------
+y=5:  (45,45,45) — dark TopBar background ✓
+y=15: (45,45,45) — dark TopBar background ✓
+y=25: (45,45,45) — dark TopBar background ✓ (was 103,99,104 before)
+y=35: (51,51,51) — TopBar gradient bottom ✓ (was 103,99,104 before)
+y=40: (103,99,104) — WaveformDisplay top begins
+y=45: (103,99,104) — WaveformDisplay
+
+Top Strip RMSE (y=20-35 band, 900x16)
+--------------------------------------
+Before fix (baseline):    0.219445 (21.9%)
+After fix (task-349):     0.148891 (14.9%)
+Threshold:                ≤ 0.15
+Status:                   PASS ✓ (improved by ~7%)
+
+Waveform Sub-Region RMSE (600x400 at x=150, y=50)
+---------------------------------------------------
+Task 348 baseline:   0.1963 (19.63%)
+Task 349 result:     0.1958 (19.58%)
+Threshold:           ≤ 0.205 (no regression)
+Status:              PASS ✓ (slight improvement)
+
+Full Image RMSE
+---------------
+Task 348 baseline:   0.2298 (22.98%)
+Task 349 result:     0.2280 (22.80%)
+Improvement:         -0.18%
+Status:              IMPROVED ✓
+
+Files Saved
+-----------
+screenshots/task-349-after.png         — M-LIM raw screenshot (1920x1080)
+screenshots/task-349-mlim-cropped.png  — M-LIM plugin area (900x500)
+screenshots/task-349-ref-cropped.png   — Pro-L 2 reference (900x500)
+screenshots/task-349-rmse-results.txt  — This file

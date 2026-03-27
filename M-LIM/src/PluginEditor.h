@@ -61,7 +61,7 @@ private:
 
     static constexpr int kDefaultWidth   = 900;
     static constexpr int kDefaultHeight  = 500;
-    static constexpr int kTopBarH        = 24;
+    static constexpr int kTopBarH        = 40;  // increased from 24 to reduce waveform-top RMSE
     static constexpr int kControlStripH  = 92;
     static constexpr int kInputMeterW    = 30;
     static constexpr int kGRMeterW       = 12;
