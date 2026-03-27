@@ -78,3 +78,15 @@ compare -metric RMSE /tmp/ref.png /tmp/mlim.png /dev/null 2>&1
 
 ## Dependencies
 Requires task 377
+
+## Blocker
+
+Empirical RMSE testing shows that darkening `displayGradientTop` causes regression, not improvement:
+
+- Baseline (task-377): Full=20.81%, Wave=19.04%
+- With `0xff242027` (proposed): Full=21.04%, Wave=19.38% — regression +0.23pp/+0.34pp
+- With `0xff282030` (intermediate): Full=20.97%, Wave=19.28% — regression +0.16pp/+0.24pp
+
+The constant was fine-tuned in task-368 specifically for wave RMSE. Any darkening from `0xff3A3540` causes measurable regression in both full and wave metrics. The pixel analysis assumed that reference's dark top (#262127) is pure background, but it appears to be a composite including waveform fill that M-LIM does not render in idle state.
+
+Acceptance criteria cannot be met with any darkening. The current value `0xff3A3540` remains optimal.
