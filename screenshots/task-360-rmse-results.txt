@@ -1,0 +1,22 @@
+=== Full image RMSE ===
+14672.8 (0.223893)
+=== Waveform (600x400+150+50) ===
+14079 (0.214832)
+=== Left meters (30x378+0+30) ===
+15371.3 (0.234551)
+=== Right panel (100x400+800+50) ===
+19420 (0.296331)
+=== Control strip (900x60+0+440) ===
+13648.1 (0.208257)
+=== Summary vs Baselines ===
+Baseline (task-354): Full=22.08%, Wave=20.55%, LeftM=23.50%, RightP=29.59%, Strip=22.42%
+Task-360 results:    Full=22.39%, Wave=21.48%, LeftM=23.46%, RightP=29.63%, Strip=20.83%
+
+Target criteria:
+- Full ≤21.00%: NOT MET (22.39%)
+- Waveform ≤21.05%: NOT MET (21.48%, +0.93% regression)
+- Left meters ≤24.00%: MET (23.46%)
+- Right panel ≤27.00%: NOT MET (29.63% - idle meter matches baseline LoudnessPanel RMSE)
+- Control strip ≤22.00%: MET (20.83%, -1.59% improvement from tasks 357/358/359)
+
+Best wave series RMSE: 22.05% (task-356), now 22.39% (full image after all changes)
