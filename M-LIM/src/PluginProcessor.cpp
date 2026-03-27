@@ -85,6 +85,23 @@ void MLIMAudioProcessor::releaseResources()
     while (mProcessorMeterFIFO.pop(md)) {}
 }
 
+void MLIMAudioProcessor::reset()
+{
+    limiterEngine.reset();
+    loudnessMeter.resetIntegrated();
+}
+
+void MLIMAudioProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer,
+                                                juce::MidiBuffer& midiMessages)
+{
+    // The host calls this when its own bypass is engaged, but M-LIM reports
+    // non-zero latency (lookahead + oversampler). We must maintain that latency
+    // so delay-compensated tracks stay aligned. Run processBlock normally —
+    // it respects the engine bypass flag for gain reduction while still applying
+    // the lookahead delay path.
+    processBlock (buffer, midiMessages);
+}
+
 bool MLIMAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()

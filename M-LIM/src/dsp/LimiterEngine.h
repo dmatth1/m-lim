@@ -50,6 +50,10 @@ public:
 
     void prepare(double sampleRate, int maxBlockSize, int numChannels);
 
+    /** Reset all DSP state (filters, delay buffers, envelopes) without reallocating.
+     *  Call from the message thread when the host signals playback stop / transport reposition. */
+    void reset();
+
     // -----------------------------------------------------------------------
     // Processing — call from audio thread
     // -----------------------------------------------------------------------
