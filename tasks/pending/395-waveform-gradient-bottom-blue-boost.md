@@ -1,4 +1,4 @@
-# Task: Waveform Gradient Bottom — Increase Blue Channel for Better Mid-Zone Match
+# Task 395: Waveform Gradient Bottom — Increase Blue Channel for Better Mid-Zone Match
 
 ## Description
 
@@ -29,20 +29,20 @@ None
 None
 
 ## Relevant Files
-Modify: `src/ui/Colours.h` — `displayGradientBottom` constant (line 23)
+Modify: `M-LIM/src/ui/Colours.h` — `displayGradientBottom` constant (line 23)
 
 ## Acceptance Criteria
-- [ ] Run: build → Expected: compiles clean
-- [ ] Run: compare -metric RMSE wave region → Expected: ≤ 17.00% (improvement from 17.29%)
-- [ ] Run: compare -metric RMSE full → Expected: ≤ 19.60% (no regression from 19.82%)
-- [ ] Save results to `screenshots/task-NNN-rmse-results.txt`
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: compiles clean
+- [ ] Run: `compare -metric RMSE` wave region → Expected: ≤ 17.00% (improvement from 17.29%)
+- [ ] Run: `compare -metric RMSE` full → Expected: ≤ 19.60% (no regression from 19.82%)
+- [ ] Save results to `screenshots/task-395-rmse-results.txt`
 
 ## Tests
 None
 
 ## Technical Details
 
-In `Colours.h`, change:
+In `M-LIM/src/ui/Colours.h`, change:
 ```cpp
 // BEFORE:
 const juce::Colour displayGradientBottom{ 0xff606898 };  // brightened from 506090 (task-389)

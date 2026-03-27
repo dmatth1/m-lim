@@ -1,4 +1,4 @@
-# Task: Waveform Top Gradient — Darken and Cool Slightly
+# Task 396: Waveform Top Gradient — Darken and Cool Slightly
 
 ## Description
 
@@ -28,21 +28,21 @@ None
 None
 
 ## Relevant Files
-Modify: `src/ui/Colours.h` — `displayGradientTop` constant (line 22)
+Modify: `M-LIM/src/ui/Colours.h` — `displayGradientTop` constant (line 22)
 
 ## Acceptance Criteria
-- [ ] Run: build → Expected: compiles clean
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: compiles clean
 - [ ] Run: pixel at y=50, x=320 → Expected: ≤ `#2E2830` (darker/cooler than current `#342C31`)
-- [ ] Run: compare -metric RMSE wave region → Expected: ≤ wave-20 baseline 17.29%
-- [ ] Run: compare -metric RMSE full → Expected: ≤ 19.82% (no regression)
-- [ ] Save results to `screenshots/task-NNN-rmse-results.txt`
+- [ ] Run: `compare -metric RMSE` wave region → Expected: ≤ wave-20 baseline 17.29%
+- [ ] Run: `compare -metric RMSE` full → Expected: ≤ 19.82% (no regression)
+- [ ] Save results to `screenshots/task-396-rmse-results.txt`
 
 ## Tests
 None
 
 ## Technical Details
 
-In `Colours.h`, change:
+In `M-LIM/src/ui/Colours.h`, change:
 ```cpp
 // BEFORE:
 const juce::Colour displayGradientTop   { 0xff332A2D };  // warm near-black shift toward reference 39332A (task-391)

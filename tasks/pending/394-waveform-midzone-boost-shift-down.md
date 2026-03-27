@@ -1,4 +1,4 @@
-# Task: Waveform Mid-Zone Brightness Boost — Shift Center Down to 58%
+# Task 394: Waveform Mid-Zone Brightness Boost — Shift Center Down to 58%
 
 ## Description
 
@@ -29,14 +29,14 @@ None
 None
 
 ## Relevant Files
-Modify: `src/ui/WaveformDisplay.cpp` — the `drawBackground()` method, two tent fill blocks
-Read: `src/ui/Colours.h` — reference for colour constants
+Modify: `M-LIM/src/ui/WaveformDisplay.cpp` — the `drawBackground()` method, two tent fill blocks
+Read: `M-LIM/src/ui/Colours.h` — reference for colour constants
 
 ## Acceptance Criteria
-- [ ] Run: build → Expected: compiles clean
-- [ ] Run: launch standalone + screenshot → Expected: pixel at y=300,x=320 is brighter than current `#5F688C`, closer to reference `#909AB5`
-- [ ] Run: compare -metric RMSE → Expected: wave region RMSE ≤ 16.50% (improvement from 17.29%)
-- [ ] Run: compare -metric RMSE → Expected: full image RMSE ≤ 19.50% (no regression from 19.82%)
+- [ ] Run: `cmake --build build --target MLIM_Standalone_Standalone -j$(nproc)` → Expected: compiles clean
+- [ ] Run: launch standalone + screenshot, measure pixel at y=300 x=320 → Expected: brighter than `#5F688C`, closer to reference `#909AB5`
+- [ ] Run: `compare -metric RMSE` wave region → Expected: ≤ 16.50% (improvement from 17.29%)
+- [ ] Run: `compare -metric RMSE` full → Expected: ≤ 19.50% (no regression from 19.82%)
 
 ## Tests
 None

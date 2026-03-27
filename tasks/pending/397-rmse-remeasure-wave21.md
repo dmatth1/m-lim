@@ -1,4 +1,4 @@
-# Task: RMSE Remeasure — Wave 21 Baseline
+# Task 397: RMSE Remeasure — Wave 21 Baseline
 
 ## Description
 
@@ -27,8 +27,8 @@ Read: `screenshots/task-393-rmse-results.txt` — wave-20 baseline (if it exists
 - [ ] Run: full image RMSE → Expected: ≤ wave-20 full baseline 19.82%
 - [ ] Run: wave region RMSE → Expected: ≤ wave-20 wave baseline 17.29%
 - [ ] Run: right region RMSE → Expected: ≤ wave-20 right baseline 23.09%
-- [ ] Save results to `screenshots/task-NNN-rmse-results.txt`
-- [ ] Save screenshot crop to `screenshots/task-NNN-wave21-crop.png`
+- [ ] Save results to `screenshots/task-397-rmse-results.txt`
+- [ ] Save screenshot crop to `screenshots/task-397-wave21-crop.png`
 
 ## Tests
 None
@@ -42,11 +42,11 @@ convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
 
 # Step 2: Build Standalone only
 export CCACHE_DIR=/build-cache
-cmake --build /workspace/M-LIM/build --target MLIM_Standalone -j$(nproc)
+cmake --build /workspace/build --target MLIM_Standalone_Standalone -j$(nproc)
 
 # Step 3: Launch and screenshot
 pkill -f "M-LIM" 2>/dev/null; sleep 1
-DISPLAY=:99 /workspace/M-LIM/build/MLIM_artefacts/Release/Standalone/M-LIM &>/dev/null &
+DISPLAY=:99 /workspace/build/MLIM_artefacts/Release/Standalone/M-LIM &>/dev/null &
 sleep 8
 DISPLAY=:99 scrot /tmp/task-w21-raw.png
 pkill -f "M-LIM"
@@ -80,10 +80,10 @@ echo "=== Control strip ==="
 compare -metric RMSE /tmp/w21-ctrl.png /tmp/ref-ctrl.png /dev/null 2>&1
 ```
 
-Save text results to `screenshots/task-NNN-rmse-results.txt`.
-Save `screenshots/task-NNN-wave21-crop.png` (the plugin crop image).
+Save text results to `screenshots/task-397-rmse-results.txt`.
+Save `screenshots/task-397-wave21-crop.png` (the plugin crop image).
 
-Commit: `worker-N: complete task NNN - wave 21 RMSE baseline (full X%, wave Y%, right Z%)`
+Commit: `worker-N: complete task 397 - wave 21 RMSE baseline (full X%, wave Y%, right Z%)`
 
 ## Dependencies
-Requires waveform-midzone-boost-shift-down, waveform-gradient-bottom-blue-boost, waveform-top-gradient-darken
+Requires tasks 394, 395, 396
