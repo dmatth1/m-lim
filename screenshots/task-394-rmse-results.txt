@@ -1,0 +1,16 @@
+Task 394: Waveform Mid-Zone Brightness Boost — Shift Center Down to 58%
+
+Changes: midTop 28%→36%, midMid 50%→58%, midBot 75%→82%, peak alpha 0.68→0.80
+         cTop 32%→40%, cMid 50%→58%, cBot 68%→76%, peak alpha 0.55→0.65
+
+=== Full image RMSE ===
+12869.9 (0.196382)  → 19.64%  (baseline 19.82% — improvement)
+
+=== Wave region RMSE ===
+11143.1 (0.170033)  → 17.00%  (baseline 17.29% — improvement)
+
+Pixel at y=300, x=320:
+  Before: ~#5F688C
+  After:  #6C7494
+  Reference: #909AB5
+  → Brighter than before, moving toward reference.

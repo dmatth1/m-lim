@@ -304,50 +304,50 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
     }
 
-    // Mid-zone brightness boost — two-pass tent centred at 50% height
-    // Extends from 28%–75%, peak alpha 0.68 at midpoint to close 40-53 unit gap.
+    // Mid-zone brightness boost — two-pass tent centred at 58% height
+    // Extends from 36%–82%, peak alpha 0.80 at midpoint to close 40-53 unit gap.
     {
-        const float midTop   = area.getY() + area.getHeight() * 0.28f;
-        const float midMid   = area.getY() + area.getHeight() * 0.50f;
-        const float midBot   = area.getY() + area.getHeight() * 0.75f;
+        const float midTop   = area.getY() + area.getHeight() * 0.36f;
+        const float midMid   = area.getY() + area.getHeight() * 0.58f;
+        const float midBot   = area.getY() + area.getHeight() * 0.82f;
         juce::Colour midFill { 0xff828AA5 };
 
-        // Rising half: transparent at 28% → 0.68 at 50%
+        // Rising half: transparent at 36% → 0.80 at 58%
         juce::ColourGradient riseGrad (
             midFill.withAlpha (0.0f),   0.0f, midTop,
-            midFill.withAlpha (0.68f),  0.0f, midMid,
+            midFill.withAlpha (0.80f),  0.0f, midMid,
             false);
         g.setGradientFill (riseGrad);
         g.fillRect (area.getX(), midTop, area.getWidth(), midMid - midTop);
 
-        // Falling half: 0.68 at 50% → transparent at 75%
+        // Falling half: 0.80 at 58% → transparent at 82%
         juce::ColourGradient fallGrad (
-            midFill.withAlpha (0.68f),  0.0f, midMid,
+            midFill.withAlpha (0.80f),  0.0f, midMid,
             midFill.withAlpha (0.0f),   0.0f, midBot,
             false);
         g.setGradientFill (fallGrad);
         g.fillRect (area.getX(), midMid, area.getWidth(), midBot - midMid);
     }
 
-    // Center tent brightness boost — 32%→50% rising, 50%→68% falling
+    // Center tent brightness boost — 40%→58% rising, 58%→76% falling
     // Addresses the 39-unit mid-zone gap (ref #6D7694 vs current #474F6C).
     {
-        const float cTop = area.getY() + area.getHeight() * 0.32f;
-        const float cMid = area.getY() + area.getHeight() * 0.50f;
-        const float cBot = area.getY() + area.getHeight() * 0.68f;
+        const float cTop = area.getY() + area.getHeight() * 0.40f;
+        const float cMid = area.getY() + area.getHeight() * 0.58f;
+        const float cBot = area.getY() + area.getHeight() * 0.76f;
         juce::Colour cCol { 0xff828AA5 };  // same steel-blue as midFillColour above
 
-        // Rising half: 0.0 at cTop → 0.55 at cMid
+        // Rising half: 0.0 at cTop → 0.65 at cMid
         juce::ColourGradient upGrad (
             cCol.withAlpha (0.0f),   0.0f, cTop,
-            cCol.withAlpha (0.55f),  0.0f, cMid,
+            cCol.withAlpha (0.65f),  0.0f, cMid,
             false);
         g.setGradientFill (upGrad);
         g.fillRect (area.getX(), cTop, area.getWidth(), cMid - cTop);
 
-        // Falling half: 0.55 at cMid → 0.0 at cBot
+        // Falling half: 0.65 at cMid → 0.0 at cBot
         juce::ColourGradient downGrad (
-            cCol.withAlpha (0.55f),  0.0f, cMid,
+            cCol.withAlpha (0.65f),  0.0f, cMid,
             cCol.withAlpha (0.0f),   0.0f, cBot,
             false);
         g.setGradientFill (downGrad);
