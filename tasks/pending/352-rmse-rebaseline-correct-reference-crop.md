@@ -1,4 +1,4 @@
-# Task 349: RMSE Re-Baseline With Correct Reference Crop
+# Task 352: RMSE Re-Baseline With Correct Reference Crop
 
 ## Description
 
@@ -36,13 +36,13 @@ None
 ## Relevant Files
 Read: `scripts/ui-test-helper.sh` — contains screenshot + compare helpers
 Read: `screenshots/task-343-rmse-results.txt` — gold-standard reference for correct methodology
-Modify: `screenshots/task-349-rmse-results.txt` — write fresh measurement results here
+Modify: `screenshots/task-352-rmse-results.txt` — write fresh measurement results here
 
 ## Acceptance Criteria
-- [ ] Run: `convert /reference-docs/reference-screenshots/prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref349.png && identify /tmp/ref349.png` → Expected: `900x500`
-- [ ] Run: full-image RMSE measurement with M-LIM standalone vs `/tmp/ref349.png` → Expected: result is documented; should be in range 21–24%
+- [ ] Run: `convert /reference-docs/reference-screenshots/prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref352.png && identify /tmp/ref352.png` → Expected: `900x500`
+- [ ] Run: full-image RMSE measurement with M-LIM standalone vs `/tmp/ref352.png` → Expected: result is documented; should be in range 21–24%
 - [ ] Sub-region measurements completed (waveform, left meters, right panel, control strip)
-- [ ] `screenshots/task-349-rmse-results.txt` created with all measurements and notes that task-348 results were invalid
+- [ ] `screenshots/task-352-rmse-results.txt` created with all measurements and notes that task-348 results were invalid
 
 ## Tests
 None
@@ -52,7 +52,7 @@ None
 **Correct reference generation command:**
 ```bash
 convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
-    -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref349.png
+    -crop 1712x1073+97+32 +repage -resize 900x500! /tmp/ref352.png
 ```
 
 **M-LIM standalone crop (unchanged from all prior tasks):**
@@ -64,7 +64,7 @@ convert /reference-docs/reference-screenshots/prol2-main-ui.jpg \
 
 **RMSE measurement:**
 ```bash
-compare -metric RMSE mlim-cropped.png /tmp/ref349.png /dev/null
+compare -metric RMSE mlim-cropped.png /tmp/ref352.png /dev/null
 # Normalized value (the parenthesised one) is the 0.0–1.0 RMSE
 ```
 
@@ -73,22 +73,22 @@ compare -metric RMSE mlim-cropped.png /tmp/ref349.png /dev/null
 # Waveform
 compare -metric RMSE \
     <(convert mlim-cropped.png -crop 600x400+150+50 +repage png:-) \
-    <(convert /tmp/ref349.png  -crop 600x400+150+50 +repage png:-) /dev/null
+    <(convert /tmp/ref352.png  -crop 600x400+150+50 +repage png:-) /dev/null
 
 # Left meters
 compare -metric RMSE \
     <(convert mlim-cropped.png -crop 30x378+0+30 +repage png:-) \
-    <(convert /tmp/ref349.png  -crop 30x378+0+30 +repage png:-) /dev/null
+    <(convert /tmp/ref352.png  -crop 30x378+0+30 +repage png:-) /dev/null
 
 # Right panel
 compare -metric RMSE \
     <(convert mlim-cropped.png -crop 100x400+800+50 +repage png:-) \
-    <(convert /tmp/ref349.png  -crop 100x400+800+50 +repage png:-) /dev/null
+    <(convert /tmp/ref352.png  -crop 100x400+800+50 +repage png:-) /dev/null
 
 # Control strip
 compare -metric RMSE \
     <(convert mlim-cropped.png -crop 900x60+0+440 +repage png:-) \
-    <(convert /tmp/ref349.png  -crop 900x60+0+440 +repage png:-) /dev/null
+    <(convert /tmp/ref352.png  -crop 900x60+0+440 +repage png:-) /dev/null
 ```
 
 ## Dependencies
