@@ -926,6 +926,11 @@
       "at": "2026-03-27T23:36:27Z",
       "action": "respawned worker-1, unstuck task 461",
       "reason": "log frozen 4+ cycles (~25 min), 8 lines unchanged \u2014 hung waiting on API"
+    },
+    {
+      "at": "2026-03-27T23:46:46Z",
+      "action": "respawned worker-2, unstuck task 468",
+      "reason": "log frozen 22+ min (12 lines since 23:28), 0% CPU \u2014 hung after completing task 475"
     }
   ],
   "learnings": [
