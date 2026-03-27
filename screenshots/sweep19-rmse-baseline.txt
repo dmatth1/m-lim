@@ -1,0 +1,12 @@
+Sweep 19 baseline (VisualParityAuditor) — 2026-03-27
+Full:    21.22%
+Wave:    19.44%  (region: x=0-640, full height)
+Left:    28.11%  (region: x=640-720, full height — structural floor from TopBar)
+Right:   23.57%  (region: x=720-900, full height)
+Control: 20.65%  (region: y=410-500, full width)
+
+Pixel-level analysis:
+- Waveform top background: M-LIM #3C3A49 vs Reference #262127 (20+ units too bright)
+- Level meter idle bottom: 0.44 alpha warm blue glow (task-372 only fixed top zone)
+- LUFS histogram: 0xff3A3540→0xff506090 gradient visible in left/right regions
+- Waveform idle fill: alpha 0.62, reference composite is 30-40 units brighter at bottom
