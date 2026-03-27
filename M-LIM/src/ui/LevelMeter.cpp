@@ -213,14 +213,14 @@ void LevelMeter::drawScale (juce::Graphics& g, float barTop, float barH) const
         // tick
         g.drawLine (scaleX, y, scaleX + 4.0f, y, 1.0f);
 
-        // label
+        // label — use full scale width, centred vertically around tick
         juce::String label = (mark == 0.0f) ? "0" : juce::String ((int) mark);
         g.drawText (label,
-                    (int) scaleX + 5,
+                    (int) scaleX,
                     (int) y - 5,
-                    kScaleWidth - 5,
+                    kScaleWidth,
                     10,
-                    juce::Justification::left,
+                    juce::Justification::centred,
                     false);
     }
 }
