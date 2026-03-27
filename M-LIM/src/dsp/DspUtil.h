@@ -22,14 +22,9 @@ inline float decibelsToGain(float dB)
 }
 
 // ---------------------------------------------------------------------------
-// Channel-linking blend helper.
-// Blends each element of perChGain toward the minimum across all channels.
-// @param perChGain  pointer to chCount gain values (modified in-place)
-// @param chCount    number of channels
-// @param link       blend factor 0=independent, 1=fully linked
-// ---------------------------------------------------------------------------
 // Clamps a linear threshold gain value to a safe [kDspUtilMinGain, 1.0f] range.
 // kDspUtilMinGain (1e-6f) prevents division-by-zero in gain calculations.
+// ---------------------------------------------------------------------------
 inline float clampThreshold(float linear) noexcept
 {
     return std::clamp(linear, kDspUtilMinGain, 1.0f);
@@ -44,6 +39,13 @@ inline bool floatBitsEqual(float a, float b) noexcept
     return std::memcmp(&a, &b, sizeof(float)) == 0;
 }
 
+// ---------------------------------------------------------------------------
+// Channel-linking blend helper.
+// Blends each element of perChGain toward the minimum across all channels.
+// @param perChGain  pointer to chCount gain values (modified in-place)
+// @param chCount    number of channels
+// @param link       blend factor 0=independent, 1=fully linked
+// ---------------------------------------------------------------------------
 inline void applyChannelLinking(float* perChGain, int chCount, float link) noexcept
 {
     if (chCount > 1 && link > 0.0f)

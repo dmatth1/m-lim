@@ -110,7 +110,7 @@ void LimiterEngine::applyPendingParams()
         // a full prepare() on the message thread.  Until then, keep processing
         // with the current (old) oversampling factor.
         mDeferredOversamplingChange.store(true);
-        mParamsDirty.store(false);  // suppress repeated triggers this block
+        // mParamsDirty was already cleared by the exchange(false) above.
         return;
     }
 
