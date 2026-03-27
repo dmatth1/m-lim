@@ -1,0 +1,18 @@
+Task 369: Waveform Idle Fill Simulation — RMSE Results
+=====================================================
+Methodology: scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+Reference:   prol2-main-ui.jpg, crop 1712x1073+97+32, resize 900x500!
+
+Alpha used: 0.62f (inputWaveform colour), fillFrac=0.56 (lower 56% of display)
+
+Wave 14 baseline (task-364):
+  Full RMSE:    22.25%
+  Wave region:  21.45%
+
+Task 369 results (alpha=0.62f):
+  Full RMSE:    21.91%  (improvement: -0.34pp)
+  Wave region:  20.49%  (improvement: -0.96pp)
+
+Acceptance criteria:
+  Wave RMSE ≤ 20.5%:    PASS (20.49%)
+  Full no regression:   PASS (21.91% < 22.25%)
