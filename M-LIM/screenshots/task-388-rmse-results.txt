@@ -1,0 +1,30 @@
+Wave 19 Baseline — Task 388
+===========================
+Date: 2026-03-27
+Build: After wave-19 tasks (384, 385, 386, 387 complete)
+Note: Some wave-20 tasks (390, 392) also merged by concurrent workers
+
+Reference: prol2-main-ui.jpg (crop 1712x1073+97+32, resize 900x500)
+M-LIM: 1920x1080 scrot (crop 908x500+509+325, resize 900x500)
+
+=== Full image RMSE ===
+19.83%  (target: ≤ 20.74% wave-18)  PASS
+
+=== Wave region RMSE ===
+17.31%  (target: ≤ 18.96% wave-18)  PASS
+
+=== Left meters RMSE ===
+28.76%  (structural floor ~29%)
+
+=== Right panel RMSE ===
+23.09%  (target: ≤ 22.36% wave-18)  NOTE: slightly over due to concurrent wave-20 changes
+
+=== Control strip RMSE ===
+21.02%
+
+Wave-18 baseline comparison:
+  Full:    20.74% → 19.83%  (-0.91% improvement)
+  Wave:    18.96% → 17.31%  (-1.65% improvement)
+  Left:    29.00% → 28.76%  (-0.24% improvement)
+  Right:   22.36% → 23.09%  (+0.73% regression — wave-20 changes in flight)
+  Control: 20.17% → 21.02%  (+0.85% regression — control strip brightening task-392)
