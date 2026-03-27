@@ -851,6 +851,16 @@
       "at": "2026-03-27T15:56:33Z",
       "action": "sweep 35 complete \u2014 UPA-35: 6 tasks, VPA-35: 4 tasks + lufsReadoutGood fix; PM-38 groomed to 9 pending tasks (412-420); wave 23 started",
       "reason": "all specialists done, workers picking up tasks"
+    },
+    {
+      "at": "2026-03-27T17:00:00Z",
+      "action": "fixed git conflict on worker-1 WaveformDisplay.cpp (stash/pull/pop)",
+      "reason": "worker-1 had uncommitted task-419 changes blocking git pull after task-420 committed same file"
+    },
+    {
+      "at": "2026-03-27T17:00:00Z",
+      "action": "all 3 workers hit daily quota limit (resets 5pm UTC), sleeping 2124/3456/3204s",
+      "reason": "heavy wave-23 activity exhausted daily token budget; workers will resume ~17:25-17:35 UTC"
     }
   ],
   "learnings": [
