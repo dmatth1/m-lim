@@ -1,0 +1,58 @@
+# Task 358: RMSE Remeasure After Tasks 355, 356, 357
+# Date: 2026-03-27
+# Build: cmake --build build -j$(nproc) → 0 errors
+# Tasks included: 355 (enlarge knob faces), 357 (waveform gridline alpha reduction)
+# Task 356 (knob face highlight metallic) was still active at measurement time
+
+## Methodology
+- Reference: convert /reference-docs/reference-screenshots/prol2-main-ui.jpg
+             -crop 1712x1073+97+32 +repage -resize 900x500! (CORRECT crop methodology)
+- M-LIM: launched on Xvfb :98, scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+
+## Full Image RMSE
+- Result:   22.33%
+- Baseline: 22.08% (task-354)
+- Target:   ≤ 22.08%
+- Delta:    +0.25% regression
+- Status:   ABOVE TARGET
+
+Note: Full-image RMSE has a structural floor from TopBar mismatch (JUCE dark ~37,37,37
+vs macOS light ~200,200,200 in reference). Sub-region RMSEs are the authoritative indicator.
+
+## Sub-Region RMSE Results
+
+### Waveform (600x400+150+50)
+- Result:   21.44%
+- Baseline: 20.55% (task-354)
+- Delta:    +0.89% regression
+- Note:     Task-357 reduced grid line alpha 0.6f→0.35f, label alpha 0.35f→0.25f.
+            Worker-2 measured same 21.44% in their task-357 completion, confirming the
+            gridline reduction moved waveform RMSE from 20.55% → 21.44%.
+
+### Left Meters (30x378+0+30)
+- Result:   23.31%
+- Baseline: 23.50% (task-354)
+- Delta:    -0.19% improvement
+- Status:   PASS ✓
+
+### Right Panel (100x400+800+50)
+- Result:   29.63%
+- Baseline: 29.59% (task-354)
+- Delta:    +0.04% (no meaningful change)
+- Status:   PASS ✓ (within 0.5% threshold)
+
+### Control Strip (900x60+0+440)
+- Result:   20.74%
+- Baseline: 22.42% (task-354)
+- Delta:    -1.68% improvement
+- Status:   PASS ✓ (strong improvement from task-355 enlarged knob faces)
+
+## Summary
+Control strip improved significantly (-1.68%) from task-355 (enlarged knob faces).
+Left meters improved slightly (-0.19%). Right panel unchanged (+0.04%).
+Waveform region regressed (+0.89%) due to task-357 gridline alpha reduction.
+Full-image RMSE at 22.33% is +0.25% above the 22.08% task-354 baseline.
+
+Best sub-region performance: Control Strip 20.74% (was 22.42%).
+Regression to address: Waveform 21.44% (was 20.55%) — gridline alpha change
+may need recalibration or a different approach to waveform rendering.
