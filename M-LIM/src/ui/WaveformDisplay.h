@@ -79,7 +79,7 @@ private:
     int frameCount_ = 0;           // how many frames have been written (up to kHistorySize)
 
     DisplayMode displayMode_ = DisplayMode::Fast;
-    float ceilingDB_ = -0.1f;   // output ceiling reference line (dBFS)
+    float ceilingDB_ = -0.5f;   // output ceiling reference line (dBFS); was -0.1f
     bool modeSelectorHovered_ = false;
 
     // ── Helpers ───────────────────────────────────────────────────────────
