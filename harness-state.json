@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "specialist_sweep",
+  "phase": "workers_running",
   "agents": 3,
   "model": "sonnet",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -831,6 +831,11 @@
       "at": "2026-03-27T12:30:46Z",
       "action": "wave 21 complete done=402, launching sweep 22",
       "reason": "Full=19.46% Wave=16.72% \u2014 Right/Control regressions persist, need targeted fix"
+    },
+    {
+      "at": "2026-03-27T13:49:32Z",
+      "action": "PM-37 groomed 11 needs-grooming tasks into 9 pending (403-411), merging 2 duplicate pairs; respawned 3 workers with fresh OAuth token after expiry; wave 22 running",
+      "reason": "PM-36 was killed blocking workers; OAuth token expired; workers idle since wave 21 task 397"
     }
   ],
   "learnings": [
