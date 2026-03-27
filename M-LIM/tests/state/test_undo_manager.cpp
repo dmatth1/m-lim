@@ -287,3 +287,178 @@ TEST_CASE("test_rapid_undo_redo_cycles_stable", "[UndoManager]")
     // No more redos available
     REQUIRE(manager.canRedo() == false);
 }
+
+// An action whose perform() always returns false
+class FailingAction : public juce::UndoableAction
+{
+public:
+    FailingAction(int& target, int newValue)
+        : target(target), newValue(newValue), oldValue(target) {}
+
+    bool perform() override { return false; }
+    bool undo() override
+    {
+        target = oldValue;
+        return true;
+    }
+
+private:
+    int& target;
+    int newValue;
+    int oldValue;
+};
+
+TEST_CASE("test_failed_perform_not_added_to_stack", "[UndoManager]")
+{
+    juce::UndoManager manager;
+
+    int value = 0;
+
+    manager.beginNewTransaction();
+    bool result = manager.perform(new FailingAction(value, 42));
+
+    // perform() should return false
+    REQUIRE(result == false);
+    // Value should be unchanged
+    REQUIRE(value == 0);
+    // Failed action must not be on the undo stack
+    REQUIRE(manager.canUndo() == false);
+}
+
+// An action with a known description
+class DescribedAction : public juce::UndoableAction
+{
+public:
+    DescribedAction(int& tgt, int nv, const juce::String& desc)
+        : target(tgt), newValue(nv), oldValue(tgt), description(desc) {}
+
+    bool perform() override
+    {
+        target = newValue;
+        return true;
+    }
+
+    bool undo() override
+    {
+        target = oldValue;
+        return true;
+    }
+
+    int getSizeInUnits() override { return 10; }
+
+private:
+    int& target;
+    int newValue;
+    int oldValue;
+    juce::String description;
+};
+
+TEST_CASE("test_undo_description_nonempty", "[UndoManager]")
+{
+    juce::UndoManager manager;
+
+    int value = 0;
+
+    manager.beginNewTransaction("Set to 42");
+    manager.perform(new DescribedAction(value, 42, "Set to 42"));
+
+    // JUCE uses the transaction name as the undo description
+    juce::String undoDesc = manager.getUndoDescription();
+    REQUIRE(undoDesc.isNotEmpty());
+    REQUIRE(undoDesc == "Set to 42");
+}
+
+TEST_CASE("test_canundo_canredo_alternation", "[UndoManager]")
+{
+    juce::UndoManager manager(10000, 100);
+
+    int value = 0;
+    const int count = 5;
+
+    // Perform 5 actions
+    for (int i = 1; i <= count; ++i)
+    {
+        manager.beginNewTransaction();
+        manager.perform(new SetValueAction(value, i * 10));
+    }
+    REQUIRE(value == 50);
+    REQUIRE(manager.canUndo() == true);
+    REQUIRE(manager.canRedo() == false);
+
+    // Undo all, checking flags at each step
+    for (int i = count; i >= 1; --i)
+    {
+        REQUIRE(manager.canUndo() == true);
+        manager.undo();
+
+        if (i > 1)
+        {
+            REQUIRE(manager.canUndo() == true);
+        }
+        else
+        {
+            REQUIRE(manager.canUndo() == false);
+        }
+        REQUIRE(manager.canRedo() == true);
+    }
+
+    REQUIRE(value == 0);
+    REQUIRE(manager.canUndo() == false);
+    REQUIRE(manager.canRedo() == true);
+
+    // Redo all, checking flags at each step
+    for (int i = 1; i <= count; ++i)
+    {
+        REQUIRE(manager.canRedo() == true);
+        manager.redo();
+
+        if (i < count)
+        {
+            REQUIRE(manager.canRedo() == true);
+        }
+        else
+        {
+            REQUIRE(manager.canRedo() == false);
+        }
+        REQUIRE(manager.canUndo() == true);
+    }
+
+    REQUIRE(value == 50);
+    REQUIRE(manager.canUndo() == true);
+    REQUIRE(manager.canRedo() == false);
+}
+
+TEST_CASE("test_history_limit_oldest_dropped", "[UndoManager]")
+{
+    // Limit to 3 transactions (3 * 10 units = 30)
+    const int limit = 3;
+    juce::UndoManager manager(limit * 10, 0);
+
+    int value = 0;
+    const int totalActions = 10;
+
+    for (int i = 1; i <= totalActions; ++i)
+    {
+        manager.beginNewTransaction();
+        manager.perform(new SetValueAction(value, i));
+    }
+    REQUIRE(value == totalActions);
+
+    // Count available undos
+    int undoCount = 0;
+    while (manager.canUndo())
+    {
+        manager.undo();
+        ++undoCount;
+    }
+
+    // Should have at most `limit` undos
+    REQUIRE(undoCount <= limit);
+    REQUIRE(undoCount >= 1);
+
+    // After undoing everything, canRedo should be true but canUndo false
+    REQUIRE(manager.canUndo() == false);
+    // Oldest entries were dropped, so we can't undo further
+    // canRedo should still be false after the limit test since we just undid
+    REQUIRE(manager.canRedo() == true);
+}
