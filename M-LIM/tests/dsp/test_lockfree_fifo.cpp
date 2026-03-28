@@ -406,3 +406,126 @@ TEST_CASE("test_isempty_isfull_transitions", "[lockfree_fifo]")
 
     CHECK(fifo.isEmpty());
 }
+
+// ============================================================
+// Capacity-zero construction: no crash, and push returns false
+// once the (rounded-up) ring buffer is full.
+// nextPowerOfTwo(0) == 2, giving a ring of 2 slots that holds
+// 1 item before reporting full.  After that one slot is taken,
+// any further push must return false.
+// ============================================================
+
+TEST_CASE("test_capacity_zero_push_returns_false", "[lockfree_fifo]")
+{
+    // Constructing with capacity 0 must not crash.
+    LockFreeFIFO<MeterData> fifo(0);
+
+    // The implementation rounds up to a power-of-two >= 2, so capacity >= 2.
+    CHECK(fifo.capacity() >= 2);
+    CHECK((fifo.capacity() & (fifo.capacity() - 1)) == 0);  // power of two
+
+    // Initially the FIFO is empty.
+    CHECK(fifo.isEmpty());
+    CHECK_FALSE(fifo.isFull());
+
+    // Fill all available slots.
+    int pushed = 0;
+    MeterData d;
+    d.inputLevelL = 1.0f;
+    while (fifo.push(d))
+        ++pushed;
+
+    // At least one item fits (the ring can always hold capacity-1 items).
+    CHECK(pushed >= 1);
+
+    // FIFO is now full; further pushes must return false.
+    CHECK(fifo.isFull());
+    CHECK_FALSE(fifo.push(d));
+}
+
+// ============================================================
+// Capacity-zero construction: pop from empty returns false and
+// does not crash.
+// ============================================================
+
+TEST_CASE("test_capacity_zero_pop_returns_false", "[lockfree_fifo]")
+{
+    LockFreeFIFO<MeterData> fifo(0);
+
+    // Pop from an empty FIFO must return false without modifying the out-item
+    // in any harmful way (no crash, no UB).
+    MeterData out;
+    out.inputLevelL = 99.0f;  // sentinel value
+    CHECK_FALSE(fifo.pop(out));
+
+    // isEmpty() must still be true
+    CHECK(fifo.isEmpty());
+}
+
+// ============================================================
+// Concurrent torn-read test: producer pushes items where ALL
+// float fields equal the same value (float(i % 10000)).
+// Consumer verifies every popped item has all fields equal —
+// a torn read would produce a mix of two different values.
+// ============================================================
+
+TEST_CASE("test_concurrent_data_no_torn_reads", "[lockfree_fifo]")
+{
+    LockFreeFIFO<MeterData> fifo(256);
+    constexpr int N = 10000;
+    std::atomic<int> tornReads{0};
+
+    std::thread producer([&]() {
+        for (int i = 0; i < N; ++i)
+        {
+            const float v = static_cast<float>(i % 10000);
+            MeterData item;
+            item.inputLevelL    = v;
+            item.inputLevelR    = v;
+            item.outputLevelL   = v;
+            item.outputLevelR   = v;
+            item.gainReduction  = v;
+            item.truePeakL      = v;
+            item.truePeakR      = v;
+            item.momentaryLUFS  = v;
+            item.shortTermLUFS  = v;
+            item.integratedLUFS = v;
+            item.loudnessRange  = v;
+            item.waveformSample = v;
+            while (!fifo.push(item)) {}  // spin until space
+        }
+    });
+
+    int received = 0;
+    std::thread consumer([&]() {
+        while (received < N)
+        {
+            MeterData popped;
+            if (fifo.pop(popped))
+            {
+                ++received;
+                const float ref = popped.inputLevelL;
+                // All fields must equal ref; any deviation signals a torn read
+                bool torn = (popped.inputLevelR    != ref)
+                         || (popped.outputLevelL   != ref)
+                         || (popped.outputLevelR   != ref)
+                         || (popped.gainReduction  != ref)
+                         || (popped.truePeakL      != ref)
+                         || (popped.truePeakR      != ref)
+                         || (popped.momentaryLUFS  != ref)
+                         || (popped.shortTermLUFS  != ref)
+                         || (popped.integratedLUFS != ref)
+                         || (popped.loudnessRange  != ref)
+                         || (popped.waveformSample != ref);
+                if (torn)
+                    ++tornReads;
+            }
+        }
+    });
+
+    producer.join();
+    consumer.join();
+
+    REQUIRE(received == N);
+    CHECK(tornReads.load() == 0);
+}
