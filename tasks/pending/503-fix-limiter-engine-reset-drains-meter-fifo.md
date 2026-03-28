@@ -1,4 +1,4 @@
-# Task: LimiterEngine::reset() should drain mMeterFIFO
+# Task 503: LimiterEngine::reset() should drain mMeterFIFO
 
 ## Description
 `LimiterEngine::reset()` clears all DSP state (delay buffers, envelope state, filters) but

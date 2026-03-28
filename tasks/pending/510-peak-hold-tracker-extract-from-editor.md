@@ -1,4 +1,4 @@
-# Task: Extract `PeakHoldState` Struct from `PluginEditor` to Reduce Duplication
+# Task 510: Extract `PeakHoldState` Struct from `PluginEditor` to Reduce Duplication
 
 ## Description
 

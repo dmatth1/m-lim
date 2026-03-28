@@ -1,4 +1,4 @@
-# Task: Loudness Panel Histogram — Add Warm Amber Idle Bars
+# Task 507: Loudness Panel Histogram — Add Warm Amber Idle Bars
 
 ## Description
 The reference Pro-L 2 shows an active loudness histogram with warm amber/orange bars distributed across the LUFS range (centered around -14 LUFS for streaming content). At idle, M-LIM shows only the dark grid structure with no bars, creating a large RMSE gap in the Right panel zone (currently 23.32%).

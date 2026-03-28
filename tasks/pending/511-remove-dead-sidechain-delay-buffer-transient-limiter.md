@@ -1,4 +1,4 @@
-# Remove Dead Code: mSidechainDelayBuffers in TransientLimiter
+# Task 511: mSidechainDelayBuffers in TransientLimiter
 
 ## Description
 `TransientLimiter` allocates and writes to `mSidechainDelayBuffers` and `mSidechainWritePos`

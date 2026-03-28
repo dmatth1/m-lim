@@ -1,4 +1,4 @@
-# Task: NaN/Inf Input Robustness Tests for LevelingLimiter and TransientLimiter
+# Task 516: NaN/Inf Input Robustness Tests for LevelingLimiter and TransientLimiter
 
 ## Description
 Neither `LevelingLimiter` nor `TransientLimiter` has any tests verifying behavior when

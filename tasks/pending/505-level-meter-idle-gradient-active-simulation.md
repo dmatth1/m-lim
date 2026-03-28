@@ -1,4 +1,4 @@
-# Task: Level Meter Idle Gradient — Simulate Active Fill at ~-6 dBFS
+# Task 505: Level Meter Idle Gradient — Simulate Active Fill at ~-6 dBFS
 
 ## Description
 The reference Pro-L 2 image shows active audio with level meters filled to approximately -6 dBFS. Our idle state (no audio) shows a very subtle gradient that results in very dark meters (e.g., RGB 62, 70, 90 at mid-height). The reference shows warm amber/yellow at the warning zone (top ~10% of filled area) and neutral steel-blue in the safe zone (bottom ~75% of meter).

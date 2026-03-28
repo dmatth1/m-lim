@@ -1,4 +1,4 @@
-# Task: Structurally Enforce Stage 2 Detection Source in `LevelingLimiter`
+# Task 506: Structurally Enforce Stage 2 Detection Source in `LevelingLimiter`
 
 ## Description
 

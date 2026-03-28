@@ -1,4 +1,4 @@
-# Task: Remove `dynamicEnhance` Dead Field from `AlgorithmParams`
+# Task 512: Remove `dynamicEnhance` Dead Field from `AlgorithmParams`
 
 ## Description
 

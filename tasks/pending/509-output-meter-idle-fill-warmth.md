@@ -1,4 +1,4 @@
-# Task: Output Level Meter — Add Idle Warm Fill to Match Reference
+# Task 509: Output Level Meter — Add Idle Warm Fill to Match Reference
 
 ## Description
 The output level meter (rightmost 100px strip, rendered by `LevelMeter` in `PluginEditor`) shows at idle as very dark (sampled pixel: RGB 58, 61, 83). The reference Pro-L 2 shows output meters with active signal, appearing with warm/green-blue fill colors in the lower portion.
@@ -55,4 +55,4 @@ This gives:
 Expected RMSE improvement: ~0.5-1.0pp for Right zone, ~0.3pp for Full.
 
 ## Dependencies
-Requires level-meter-idle-gradient-active-simulation task (implements the base idle simulation gradient)
+Requires task 505 (level-meter-idle-gradient-active-simulation implements the base idle simulation gradient)

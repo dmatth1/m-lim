@@ -1,4 +1,4 @@
-# Task: Lighten meterSafe to Match Reference Safe-Zone Fill Color
+# Task 508: Lighten meterSafe to Match Reference Safe-Zone Fill Color
 
 ## Description
 The `meterSafe` color constant in `Colours.h` (#6879A0 = RGB 104, 121, 160) is too dark and too blue-saturated compared to the reference Pro-L 2 safe-zone fill color measured as approximately RGB(129, 130, 138). This color is used in:

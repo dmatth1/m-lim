@@ -1,4 +1,4 @@
-# Task: Parameter Normalization Boundary Precision Tests
+# Task 517: Parameter Normalization Boundary Precision Tests
 
 ## Description
 `test_parameter_state.cpp` verifies parameter ranges and round-trip serialization but does

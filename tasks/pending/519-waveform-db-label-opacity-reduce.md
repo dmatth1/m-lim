@@ -1,4 +1,4 @@
-# Task: Waveform Display — Reduce dB Overlay Label Opacity
+# Task 519: Waveform Display — Reduce dB Overlay Label Opacity
 
 ## Description
 The dB overlay labels on the waveform display (drawn as left-aligned text at each grid line) currently render at `textSecondary.withAlpha(0.55f)`. The reference Pro-L 2 shows these labels as very subtle, barely visible markers — approximately 0.30-0.35 opacity.

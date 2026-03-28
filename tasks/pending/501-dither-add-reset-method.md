@@ -1,4 +1,4 @@
-# Task: Add `Dither::reset()` to Separate State-Clear from Coefficient Recomputation
+# Task 501: Add `Dither::reset()` to Separate State-Clear from Coefficient Recomputation
 
 ## Description
 

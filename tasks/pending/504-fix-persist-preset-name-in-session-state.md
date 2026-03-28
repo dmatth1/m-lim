@@ -1,4 +1,4 @@
-# Task: Persist current preset name in session state
+# Task 504: Persist current preset name in session state
 
 ## Description
 `MLIMAudioProcessor::getStateInformation()` only serializes the APVTS parameter tree.

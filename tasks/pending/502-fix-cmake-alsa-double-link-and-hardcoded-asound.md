@@ -1,4 +1,4 @@
-# Task: Fix CMakeLists.txt ALSA double-link and hardcoded asound in tests
+# Task 502: Fix CMakeLists.txt ALSA double-link and hardcoded asound in tests
 
 ## Description
 Two CMake build issues related to ALSA:
