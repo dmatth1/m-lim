@@ -236,6 +236,51 @@ float TransientLimiter::softSaturate(float x, float amount)
 }
 
 // ---------------------------------------------------------------------------
+// processBypassDelay
+// ---------------------------------------------------------------------------
+/**
+ * @brief Transparent bypass: route audio through the lookahead delay buffer
+ *        at unity gain. No peak detection, no gain reduction — just shift.
+ *
+ * This keeps the output latency equal to mLookaheadSamples so that the host
+ * delay compensation remains valid while the plugin is bypassed.
+ * When lookahead == 0 the function is a no-op (no delay to maintain).
+ */
+void TransientLimiter::processBypassDelay(float** channelData, int numChannels, int numSamples)
+{
+    juce::ScopedNoDenormals noDenormals;
+    if (mDelayBuffers.empty() || numChannels <= 0 || numSamples <= 0)
+        return;
+
+    const int chCount   = std::min(numChannels, mNumChannels);
+    const int bufSize   = mMaxLookaheadSamples + 1;
+    const int lookahead = mLookaheadSamples;
+
+    if (lookahead == 0)
+        return;  // no delay to maintain; audio passes through unchanged
+
+    for (int s = 0; s < numSamples; ++s)
+    {
+        for (int ch = 0; ch < chCount; ++ch)
+        {
+            const float inputSample = channelData[ch][s];
+
+            // Read the sample that entered the delay buffer `lookahead` steps ago
+            const int readPos = (mWritePos[ch] + bufSize - lookahead) % bufSize;
+            channelData[ch][s] = mDelayBuffers[ch][readPos];
+
+            // Write current input into the buffer and advance the write pointer
+            mDelayBuffers[ch][mWritePos[ch]] = inputSample;
+            mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
+        }
+    }
+
+    // Keep gain state at unity (no GR in bypass)
+    std::fill(mGainState.begin(), mGainState.begin() + chCount, 1.0f);
+    mCurrentGRdB = 0.0f;
+}
+
+// ---------------------------------------------------------------------------
 // process
 // ---------------------------------------------------------------------------
 /**

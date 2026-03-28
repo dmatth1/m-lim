@@ -499,6 +499,44 @@ TEST_CASE("test_smaller_block_sizes_no_crash", "[PluginProcessor]")
 }
 
 // ============================================================================
+// test_internal_bypass_maintains_host_latency
+// Toggle the plugin internal bypass parameter; getLatencySamples() must not
+// change — the host delay compensation value stays fixed.
+// ============================================================================
+TEST_CASE("test_internal_bypass_maintains_host_latency", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    juce::MidiBuffer midi;
+    proc.prepareToPlay (44100.0, 512);
+
+    // Set lookahead > 0 so latency is non-zero
+    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
+        param->setValueNotifyingHost (param->convertTo0to1 (2.0f));
+
+    // Process a block to apply params
+    juce::AudioBuffer<float> buf (2, 512);
+    buf.clear();
+    proc.processBlock (buf, midi);
+
+    const int latencyActive = proc.getLatencySamples();
+    INFO ("Latency with bypass off: " << latencyActive);
+    REQUIRE (latencyActive > 0);
+
+    // Engage internal bypass
+    if (auto* param = proc.apvts.getParameter (ParamID::bypass))
+        param->setValueNotifyingHost (1.0f);
+
+    buf.clear();
+    proc.processBlock (buf, midi);
+
+    const int latencyBypassed = proc.getLatencySamples();
+    INFO ("Latency with bypass on: " << latencyBypassed);
+
+    // Host-reported latency must be identical whether bypass is on or off
+    REQUIRE (latencyBypassed == latencyActive);
+}
+
+// ============================================================================
 // test_mixed_block_sizes_bounded
 // Alternate between 512 and 64-sample blocks across 50 total process calls.
 // Output must remain finite and never exceed the output ceiling.

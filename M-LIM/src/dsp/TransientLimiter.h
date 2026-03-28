@@ -44,6 +44,11 @@ public:
     void process(float** channelData, int numChannels, int numSamples,
                  const float* const* sidechainData = nullptr);
 
+    /** Transparent bypass: pass audio through the lookahead delay buffer at unity
+     *  gain (no gain reduction applied). This advances the delay buffer so that
+     *  the reported latency remains constant whether bypass is on or off. */
+    void processBypassDelay(float** channelData, int numChannels, int numSamples);
+
     /** Set lookahead time in milliseconds (0–5 ms). */
     void setLookahead(float ms);
 

@@ -213,6 +213,15 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     const float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
     if (mBypass.load())
     {
+        // Transparent bypass: pass audio through the full delay path (upsample →
+        // TransientLimiter delay buffer at unity gain → downsample) so the output
+        // latency matches getLatencySamples() and host delay compensation stays valid.
+        juce::dsp::AudioBlock<float> upBlock, upSideBlock;
+        stepUpsample(buffer, upBlock, upSideBlock);
+        const int upSamples  = static_cast<int>(upBlock.getNumSamples());
+        const int upChannels = static_cast<int>(upBlock.getNumChannels());
+        mTransientLimiter.processBypassDelay(mUpPtrs.data(), upChannels, upSamples);
+        mOversampler.downsample(buffer);
         pushBypassMeterData(buffer, inLevelL, inLevelR, numChannels, numSamples);
         return;
     }

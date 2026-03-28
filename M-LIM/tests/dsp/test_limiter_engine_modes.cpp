@@ -45,13 +45,21 @@ static float maxAbs(const juce::AudioBuffer<float>& buf)
 
 // ============================================================================
 // test_bypass_passes_signal_unchanged
-// In bypass mode, the output should equal the input (within float precision).
+// In bypass mode with lookahead=0, the output should equal the input (within
+// float precision). With zero lookahead there is no delay buffer to traverse.
 // ============================================================================
 TEST_CASE("test_bypass_passes_signal_unchanged", "[LimiterEngineModes]")
 {
     LimiterEngine engine;
     engine.prepare(kSR, kBS, 2);
+    engine.setLookahead(0.0f);  // zero lookahead: no delay in bypass path
     engine.setBypass(true);
+    // Warm up so params apply
+    {
+        juce::AudioBuffer<float> warm(2, kBS);
+        warm.clear();
+        engine.process(warm);
+    }
 
     const float amp = 2.0f;  // above normal ceiling, but bypass ignores it
     juce::AudioBuffer<float> ref = makeSine(amp);

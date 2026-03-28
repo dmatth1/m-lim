@@ -231,13 +231,22 @@ TEST_CASE("test_meter_data_populated", "[LimiterEngine]")
 
 // ============================================================================
 // test_bypass_passes_signal_unchanged
-// In bypass mode, the output should equal the input (within float precision).
+// In bypass mode with lookahead=0, the output should equal the input (within
+// float precision). With lookahead=0 there is no delay to maintain so audio
+// passes through the bypass path unmodified.
 // ============================================================================
 TEST_CASE("test_bypass_passes_signal_unchanged", "[LimiterEngine]")
 {
     LimiterEngine engine;
     engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setLookahead(0.0f);  // zero lookahead: no delay in bypass path
     engine.setBypass(true);
+    // Warm up so params apply
+    {
+        juce::AudioBuffer<float> warm(2, kBlockSize);
+        warm.clear();
+        engine.process(warm);
+    }
 
     const float amp = 2.0f;  // above ceiling, but bypass ignores ceiling
     juce::AudioBuffer<float> ref = makeSine(amp, kBlockSize);
@@ -1960,4 +1969,103 @@ TEST_CASE("test_channel_link_transients_passes_fraction_to_limiter", "[LimiterEn
     // fractional value (0.5) was forwarded rather than being clamped to 1.0
     REQUIRE(ch1_half < ch1_independent);
     REQUIRE(ch1_half > ch1_linked);
+}
+
+// ============================================================================
+// test_bypass_delays_audio_by_reported_latency
+// With lookahead = 2 ms, engage bypass, feed an impulse at sample 0.
+// The impulse must appear at sample getLatencySamples() in the output, not at 0.
+// ============================================================================
+TEST_CASE("test_bypass_delays_audio_by_reported_latency", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setLookahead(2.0f);   // 2 ms lookahead
+    // Force params to apply
+    {
+        juce::AudioBuffer<float> warm(2, kBlockSize);
+        warm.clear();
+        engine.process(warm);
+    }
+    engine.setBypass(true);
+
+    const int reportedLatency = engine.getLatencySamples();
+    INFO("Reported latency = " << reportedLatency << " samples");
+    REQUIRE(reportedLatency > 0);
+
+    // Feed impulse at sample 0, then silence, total > reportedLatency samples
+    const int totalSamples = reportedLatency + kBlockSize;
+    std::vector<float> impulseOut(totalSamples, 0.0f);
+    int offset = 0;
+    bool firstBlock = true;
+    while (offset < totalSamples)
+    {
+        const int n = std::min(kBlockSize, totalSamples - offset);
+        juce::AudioBuffer<float> buf(2, n);
+        buf.clear();
+        if (firstBlock)
+        {
+            buf.setSample(0, 0, 1.0f);
+            buf.setSample(1, 0, 1.0f);
+            firstBlock = false;
+        }
+        engine.process(buf);
+        for (int s = 0; s < n; ++s)
+            impulseOut[offset + s] = buf.getSample(0, s);
+        offset += n;
+    }
+
+    // Find the peak position in the output
+    int peakPos = 0;
+    float peakVal = 0.0f;
+    for (int i = 0; i < totalSamples; ++i)
+    {
+        if (std::abs(impulseOut[i]) > peakVal)
+        {
+            peakVal = std::abs(impulseOut[i]);
+            peakPos = i;
+        }
+    }
+
+    INFO("Impulse peak at sample " << peakPos << ", expected ~" << reportedLatency);
+    // The impulse must be delayed by approximately the reported latency.
+    // Allow ±2 samples tolerance for rounding in lookahead + oversampler latency.
+    REQUIRE(peakPos >= reportedLatency - 2);
+    REQUIRE(peakPos <= reportedLatency + 2);
+    // And it must NOT appear at sample 0 (which would mean no delay)
+    REQUIRE(impulseOut[0] < 0.01f);
+}
+
+// ============================================================================
+// test_bypass_applies_no_gain_reduction
+// With bypass=true, feed a sine at 0 dBFS. Output amplitude must match input
+// (delayed by latency but no GR applied).
+// ============================================================================
+TEST_CASE("test_bypass_applies_no_gain_reduction", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setLookahead(2.0f);
+    engine.setBypass(true);
+
+    const float inputAmplitude = 1.0f;  // 0 dBFS — would normally trigger heavy GR
+
+    // Warm up the delay buffer with the actual signal, then measure steady-state output.
+    // After enough blocks, the delay buffer is filled with the sine and output amplitude
+    // matches input amplitude.
+    float maxOut = 0.0f;
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(inputAmplitude, kBlockSize);
+        engine.process(buf);
+        if (block >= 10)  // skip initial fill transient
+            maxOut = std::max(maxOut, maxAbsValue(buf));
+    }
+
+    INFO("Max output amplitude in bypass: " << maxOut << " (input was " << inputAmplitude << ")");
+    // Output should be within 1% of input amplitude (unity gain through delay)
+    REQUIRE(maxOut == Catch::Approx(inputAmplitude).margin(0.01f));
+
+    // Gain reduction must be 0 in bypass
+    REQUIRE(engine.getGainReduction() == Catch::Approx(0.0f).margin(0.1f));
 }
