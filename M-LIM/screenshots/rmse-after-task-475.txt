@@ -1,0 +1,33 @@
+RMSE Re-Measurement After Tasks 410-475
+=========================================
+Date: 2026-03-28
+Methodology:
+  Reference: prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!
+  M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+
+RMSE Results:
+  Full:          19.46%  (raw: 12755.7 / 65535)
+  Wave:          15.89%  (raw: 10412.5 / 65535, crop 640x500+0+0)
+  Left Meters:   25.85%  (raw: 16939.2 / 65535, crop 80x500+640+0)
+  Right Panel:   26.45%  (raw: 17335.6 / 65535, crop 180x500+720+0)
+  Control Strip:  18.96%  (raw: 12426.7 / 65535, crop 900x90+0+410)
+
+Comparison to Previous Baselines:
+                    task-354    task-409    current     delta (vs 409)
+  Full:             22.08%      18.95%      19.46%      +0.51pp
+  Wave:             20.55%      16.06%      15.89%      -0.17pp (improved)
+  Left Meters:      23.50%      N/A         25.85%      N/A
+  Right Panel:      29.59%      N/A         26.45%      N/A
+  Control Strip:    22.42%      N/A         18.96%      N/A
+
+Analysis:
+  - Wave region continues to improve: 20.55% → 16.06% → 15.89%
+  - Right Panel still highest RMSE at 26.45%, but improved from 29.59% baseline
+  - Left Meters at 25.85% slightly higher than 23.50% baseline (likely meter state differences)
+  - Control Strip improved significantly: 22.42% → 18.96%
+  - Full RMSE slightly higher than task-409 (19.46% vs 18.95%), likely due to
+    idle-state meter rendering differences between captures
+  - Overall trend: steady improvement in waveform and control areas;
+    meter regions still have the most room for improvement
+
+Highest RMSE subregion: Right Panel (26.45%) — priority target for next visual parity round
