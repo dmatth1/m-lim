@@ -45,13 +45,11 @@ bool MLIMAudioProcessor::producesMidi() const { return false; }
 bool MLIMAudioProcessor::isMidiEffect() const { return false; }
 double MLIMAudioProcessor::getTailLengthSeconds() const
 {
-    const double sr = getSampleRate();
-    if (sr > 0.0)
-        return static_cast<double>(getLatencySamples()) / sr;
-    // Fallback before prepareToPlay (sr == 0): use lookahead only
-    if (pLookahead != nullptr)
-        return static_cast<double>(pLookahead->load()) * 0.001;
-    return 0.0;
+    // Tail length represents how long the plugin produces output after input
+    // stops — NOT the plugin latency (which the host handles via getLatencySamples()).
+    // The limiter's release envelope can take up to 1000 ms (max release param),
+    // plus the leveling limiter's adaptive release. Use a conservative constant.
+    return 2.0;
 }
 
 int MLIMAudioProcessor::getNumPrograms()                              { return 1; }

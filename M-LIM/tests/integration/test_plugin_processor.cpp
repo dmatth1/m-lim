@@ -266,19 +266,16 @@ TEST_CASE("test_latency_reported", "[PluginProcessor]")
 
 // ============================================================================
 // test_tail_length_reflects_lookahead
-// getTailLengthSeconds() must return a value >= the current lookahead time so
-// the host sends extra silent blocks to drain the lookahead buffer.
+// getTailLengthSeconds() must return a value covering the worst-case release
+// envelope, not just the lookahead. It should be >= 1.0s (max release = 1000 ms).
 // ============================================================================
 TEST_CASE("test_tail_length_reflects_lookahead", "[PluginProcessor]")
 {
     MLIMAudioProcessor proc;
     proc.prepareToPlay (kSampleRate, kBlockSize);
 
-    // Set lookahead to 2 ms
-    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
-        param->setValueNotifyingHost (param->convertTo0to1 (2.0f));
-
-    REQUIRE (proc.getTailLengthSeconds() >= 0.002);
+    // Tail length should cover worst-case release time, regardless of lookahead
+    REQUIRE (proc.getTailLengthSeconds() >= 1.0);
 }
 
 // ============================================================================
@@ -436,16 +433,14 @@ TEST_CASE("test_bus_layout_stereo_supported", "[PluginProcessor]")
 
 // ============================================================================
 // test_tail_length_positive
-// After prepareToPlay(), getTailLengthSeconds() must be > 0 because the
-// default lookahead is 1 ms.
+// getTailLengthSeconds() must be > 0 and cover the worst-case release time.
 // ============================================================================
 TEST_CASE("test_tail_length_positive", "[PluginProcessor]")
 {
     MLIMAudioProcessor proc;
     proc.prepareToPlay (kSampleRate, kBlockSize);
 
-    // Default lookahead is 1 ms → tail = 0.001 s > 0
-    REQUIRE (proc.getTailLengthSeconds() > 0.0);
+    REQUIRE (proc.getTailLengthSeconds() >= 1.0);
 }
 
 // ============================================================================
@@ -685,8 +680,9 @@ TEST_CASE("test_loudness_target_syncs_to_panel_on_state_restore", "[PluginProces
 
 // ============================================================================
 // test_tail_length_includes_oversampler
-// After prepareToPlay with 2x oversampling, getTailLengthSeconds() must be
-// >= getLatencySamples() / sampleRate (i.e. includes oversampler latency).
+// getTailLengthSeconds() is independent of oversampling — it covers the
+// worst-case release time, not the latency. The host handles latency
+// compensation separately via getLatencySamples().
 // ============================================================================
 TEST_CASE("test_tail_length_includes_oversampler", "[PluginProcessor]")
 {
@@ -698,15 +694,28 @@ TEST_CASE("test_tail_length_includes_oversampler", "[PluginProcessor]")
 
     proc.prepareToPlay (kSampleRate, kBlockSize);
 
-    const int    latencySamples  = proc.getLatencySamples();
-    const double tailSec         = proc.getTailLengthSeconds();
-    const double expectedMinSec  = static_cast<double>(latencySamples) / kSampleRate - 0.001;
+    // Tail length should still cover worst-case release regardless of oversampling
+    REQUIRE(proc.getTailLengthSeconds() >= 1.0);
+}
 
-    INFO("latencySamples=" << latencySamples << " tailSec=" << tailSec
-         << " expectedMin=" << expectedMinSec);
+// ============================================================================
+// test_tail_length_covers_release
+// getTailLengthSeconds() must be >= 1.0s to cover the maximum release time
+// of 1000 ms, independent of latency or sample rate.
+// ============================================================================
+TEST_CASE("test_tail_length_covers_release", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
 
-    REQUIRE(latencySamples >= 0);
-    REQUIRE(tailSec >= expectedMinSec);
+    const double tail = proc.getTailLengthSeconds();
+
+    // Must cover max release time (1000 ms) with margin
+    REQUIRE(tail >= 1.0);
+
+    // Tail length should NOT equal latency — they are different concepts
+    const double latencySec = static_cast<double>(proc.getLatencySamples()) / kSampleRate;
+    REQUIRE(tail > latencySec);
 }
 
 // ============================================================================
