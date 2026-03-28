@@ -1036,6 +1036,11 @@
       "at": "2026-03-28T02:35:00Z",
       "action": "respawned workers 2+3 (skip 16-17min backoff); tasks 507, knob-face-shadow done",
       "reason": "worker-2 had 1026s backoff, worker-3 had 972s. 21 pending tasks. Worker-1 finishing task 509."
+    },
+    {
+      "at": "2026-03-28T02:40:00Z",
+      "action": "respawned worker-1 (skip 855s backoff); task 509 done (500 total)",
+      "reason": "500 tasks done milestone. Worker-2 already claiming task 512, worker-3 initializing."
     }
   ],
   "learnings": [
