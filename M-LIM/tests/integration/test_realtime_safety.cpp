@@ -438,6 +438,129 @@ TEST_CASE("test_bypass_toggle_no_torn_output", "[RealtimeSafety]")
 }
 
 // ============================================================================
+// test_no_alloc_during_state_restore
+//
+// A background thread calls setStateInformation() (simulating preset load or
+// A/B toggle) while the main thread runs processBlock() under AllocGuard.
+// The audio thread must not allocate even when replaceState() fires.
+// ============================================================================
+TEST_CASE("test_no_alloc_during_state_restore", "[RealtimeSafety]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay(kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+    juce::MidiBuffer         midiBuffer;
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer);
+        proc.processBlock(buffer, midiBuffer);
+    }
+
+    // Capture valid state data to replay in the background thread
+    juce::MemoryBlock stateData;
+    proc.getStateInformation(stateData);
+
+    std::atomic<bool> done{false};
+
+    // Background thread: repeatedly call setStateInformation (message thread work)
+    std::thread stateRestorer([&]() {
+        while (!done.load(std::memory_order_relaxed))
+        {
+            proc.setStateInformation(stateData.getData(),
+                                     static_cast<int>(stateData.getSize()));
+        }
+    });
+
+    // Audio thread: process under AllocGuard — must not allocate
+    int totalAllocs = 0;
+    for (int block = 0; block < 100; ++block)
+    {
+        fillTone(buffer);
+        AllocGuard guard;
+        proc.processBlock(buffer, midiBuffer);
+        totalAllocs += guard.count();
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    stateRestorer.join();
+
+    INFO("Total allocations during concurrent state restore: " << totalAllocs);
+    REQUIRE(totalAllocs == 0);
+}
+
+// ============================================================================
+// test_no_alloc_during_parameter_sweep
+//
+// A background thread rapidly sweeps all parameters via setValueNotifyingHost
+// while the main thread runs processBlock() under AllocGuard. APVTS parameter
+// changes should be atomic and allocation-free on the audio thread.
+// ============================================================================
+TEST_CASE("test_no_alloc_during_parameter_sweep", "[RealtimeSafety]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay(kSampleRate, kBlockSize);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+    juce::MidiBuffer         midiBuffer;
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer);
+        proc.processBlock(buffer, midiBuffer);
+    }
+
+    // Collect all parameters for sweeping
+    auto& params = proc.apvts.processor.getParameters();
+
+    std::atomic<bool> done{false};
+
+    // Background thread: sweep all parameters rapidly
+    std::thread paramSweeper([&]() {
+        int iter = 0;
+        while (!done.load(std::memory_order_relaxed))
+        {
+            for (auto* param : params)
+            {
+                if (done.load(std::memory_order_relaxed))
+                    break;
+
+                // Skip oversampling factor — it triggers memory reallocation
+                if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param))
+                {
+                    if (ranged->getParameterID() == ParamID::oversamplingFactor)
+                        continue;
+                }
+
+                // Sweep normalised value between 0 and 1
+                float t = static_cast<float>(iter % 11) / 10.0f;
+                param->setValueNotifyingHost(t);
+            }
+            ++iter;
+        }
+    });
+
+    // Audio thread: process under AllocGuard — must not allocate
+    int totalAllocs = 0;
+    for (int block = 0; block < 100; ++block)
+    {
+        fillTone(buffer);
+        AllocGuard guard;
+        proc.processBlock(buffer, midiBuffer);
+        totalAllocs += guard.count();
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    paramSweeper.join();
+
+    INFO("Total allocations during concurrent parameter sweep: " << totalAllocs);
+    REQUIRE(totalAllocs == 0);
+}
+
+// ============================================================================
 // test_concurrent_param_changes_no_allocation
 // A background thread hammers parameter setters while the audio thread
 // processes 100 blocks under AllocGuard. The audio thread must not allocate.
