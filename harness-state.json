@@ -946,6 +946,11 @@
       "at": "2026-03-28T00:25:31Z",
       "action": "specialist sweep 38 complete (PM+VPA done, UIParityAuditor still running)",
       "reason": "PM groomed 14 tasks (486-499). VPA: no RMSE (no reference mount), created RMSE re-measure task + waveform cool shift task. p=32."
+    },
+    {
+      "at": "2026-03-28T00:26:19Z",
+      "action": "respawned workers 1 and 3",
+      "reason": "worker-1: 1494s backoff (~25 min), worker-3: 1800s backoff (30 min). p=32 needs throughput."
     }
   ],
   "learnings": [
