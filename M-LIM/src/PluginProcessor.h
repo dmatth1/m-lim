@@ -92,6 +92,11 @@ private:
     std::atomic<bool>  mOversamplingChangePending { false };
     std::atomic<int>   mPendingOversamplingFactor { 0 };
 
+    // Dirty flag: set by parameterChanged() on the message thread; cleared on the
+    // audio thread before calling pushAllParametersToEngine(). Initialized to true
+    // so the first processBlock always pushes defaults.
+    std::atomic<bool>  mParametersDirty { true };
+
     // -----------------------------------------------------------------------
     // APVTS::Listener — called on message thread when params change
     // -----------------------------------------------------------------------

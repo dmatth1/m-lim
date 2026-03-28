@@ -15,15 +15,23 @@ MLIMAudioProcessor::MLIMAudioProcessor()
 {
     initParameterPointers();
 
-    // Listen for parameter changes that need special handling (oversampling, lookahead)
-    apvts.addParameterListener (ParamID::oversamplingFactor, this);
-    apvts.addParameterListener (ParamID::lookahead,         this);
+    // Listen for ALL parameter changes — sets the dirty flag so processBlock
+    // knows to call pushAllParametersToEngine(). Oversampling/lookahead IDs also
+    // get their special handling inside parameterChanged().
+    for (auto* param : apvts.processor.getParameters())
+    {
+        if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param))
+            apvts.addParameterListener (p->getParameterID(), this);
+    }
 }
 
 MLIMAudioProcessor::~MLIMAudioProcessor()
 {
-    apvts.removeParameterListener (ParamID::oversamplingFactor, this);
-    apvts.removeParameterListener (ParamID::lookahead,         this);
+    for (auto* param : apvts.processor.getParameters())
+    {
+        if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param))
+            apvts.removeParameterListener (p->getParameterID(), this);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -123,10 +131,13 @@ void MLIMAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Push all parameter values to the engine (real-time safe atomic reads).
+    // Push parameters to the engine only when something has changed (dirty flag set
+    // by parameterChanged on the message thread, or by prepareToPlay). This avoids
+    // ~20 atomic loads + function calls per buffer in the common steady-state case.
     // NOTE: oversamplingFactor changes are deferred — do NOT call setOversamplingFactor
     // here (it allocates memory). Changes are handled via parameterChanged + prepareToPlay.
-    pushAllParametersToEngine();
+    if (mParametersDirty.exchange (false))
+        pushAllParametersToEngine();
 
     limiterEngine.process (buffer);
 
@@ -216,6 +227,9 @@ void MLIMAudioProcessor::handleAsyncUpdate()
 
 void MLIMAudioProcessor::parameterChanged (const juce::String& paramID, float newValue)
 {
+    // Mark parameters dirty so processBlock will push them on the next audio callback.
+    mParametersDirty.store (true);
+
     if (paramID == ParamID::oversamplingFactor)
     {
         mPendingOversamplingFactor.store (static_cast<int> (newValue));
