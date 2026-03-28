@@ -32,9 +32,6 @@ void TransientLimiter::prepare(double operatingSampleRate, int /*maxBlockSize*/,
     mWritePos.assign(numChannels, 0);
     mGainState.assign(numChannels, 1.0f);
 
-    mSidechainDelayBuffers.assign(numChannels, std::vector<float>(mMaxLookaheadSamples + 1, 0.0f));
-    mSidechainWritePos.assign(numChannels, 0);
-
     // Pre-allocate sliding-window maximum deques (no audio-thread heap allocs)
     const int deqCap = mMaxLookaheadSamples + 1;
     mMainDeques.resize(numChannels);
@@ -535,11 +532,6 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
                 mDelayBuffers[ch][mWritePos[ch]] = inputSample;
                 mWritePos[ch] = (mWritePos[ch] + 1) % bufSize;
 
-                if (sidechainData != nullptr)
-                {
-                    mSidechainDelayBuffers[ch][mSidechainWritePos[ch]] = sidechainData[ch][s];
-                    mSidechainWritePos[ch] = (mSidechainWritePos[ch] + 1) % bufSize;
-                }
             }
 
             if (mGainState[ch] < minGain)

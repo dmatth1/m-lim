@@ -109,10 +109,6 @@ private:
     std::vector<std::vector<float>> mDelayBuffers;
     std::vector<int> mWritePos;
 
-    // Per-channel circular delay buffers for sidechain detection signal
-    std::vector<std::vector<float>> mSidechainDelayBuffers;
-    std::vector<int> mSidechainWritePos;
-
     // Per-channel smoothed gain state (linear, 0–1; 1 = unity, <1 = reducing)
     std::vector<float> mGainState;
 
