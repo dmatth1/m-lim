@@ -107,7 +107,11 @@ juce::String PresetManager::getCurrentPresetName() const
 
 juce::File PresetManager::presetFileForName(const juce::String& name) const
 {
-    return presetDirectory.getChildFile(name + ".xml");
+    auto candidate = presetDirectory.getChildFile(name + ".xml");
+    // Reject paths that resolve outside the preset directory (e.g. "../evil").
+    if (!candidate.isAChildOf(presetDirectory) && candidate != presetDirectory)
+        return {};
+    return candidate;
 }
 
 juce::File PresetManager::findPresetFile(const juce::String& name) const

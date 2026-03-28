@@ -414,3 +414,73 @@ TEST_CASE("test_factory_presets_exist", "[PresetManager]")
     REQUIRE(pm.getCurrentPresetName() == "Default");
 #endif
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// test_dotdot_traversal_save_no_escape
+//
+// savePreset("../evil", ...) must not write a file outside the preset dir.
+// Either it sanitises the name and writes safely inside the dir, or it
+// returns false / writes nothing.  Either way the parent directory must NOT
+// contain "evil.xml".
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_dotdot_traversal_save_no_escape", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Attempt to write a file outside the preset directory via ../
+    pm.savePreset("../evil", proc.apvts);
+
+    // The file must NOT have been created in the parent directory
+    auto escaped = tmp.dir.getParentDirectory().getChildFile("evil.xml");
+    // Clean up in case it was accidentally created, then fail the test
+    bool wasCreated = escaped.existsAsFile();
+    escaped.deleteFile();
+    REQUIRE_FALSE(wasCreated);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// test_dotdot_traversal_load_returns_false
+//
+// loadPreset("../evil", ...) for a non-existent file outside the preset dir
+// must return false without reading anything.
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_dotdot_traversal_load_returns_false", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Ensure no "evil.xml" exists outside the preset dir
+    auto outsideFile = tmp.dir.getParentDirectory().getChildFile("evil.xml");
+    outsideFile.deleteFile();
+
+    bool result = pm.loadPreset("../evil", proc.apvts);
+    REQUIRE(result == false);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// test_nested_dotdot_traversal_no_escape
+//
+// savePreset("../../deep/escape", ...) must not write outside the preset dir
+// regardless of nesting depth.
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_nested_dotdot_traversal_no_escape", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    pm.savePreset("../../deep/escape", proc.apvts);
+
+    // Walk up two levels and check for "deep/escape.xml"
+    auto twoUp = tmp.dir.getParentDirectory().getParentDirectory();
+    auto escaped = twoUp.getChildFile("deep").getChildFile("escape.xml");
+    bool wasCreated = escaped.existsAsFile();
+    escaped.deleteFile();
+    REQUIRE_FALSE(wasCreated);
+}
