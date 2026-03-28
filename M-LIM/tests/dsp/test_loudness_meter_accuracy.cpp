@@ -332,3 +332,136 @@ TEST_CASE("test_lra_gate_excludes_near_70_lufs", "[LoudnessMeterAccuracy]")
     // or all in the same histogram bin (single-level, same percentiles).
     REQUIRE(lra == 0.0f);
 }
+
+// ---------------------------------------------------------------------------
+// test_lra_constant_signal_zero
+// A constant-level signal should produce LRA ≈ 0 LU since there is no
+// loudness variation across time.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_constant_signal_zero", "[LoudnessMeterAccuracy]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // Amplitude for -23 LUFS at 1 kHz
+    const float amp = static_cast<float>(std::pow(10.0, (-23.0 + 0.691) / 20.0));
+
+    // Feed 10 seconds of constant-level tone
+    feedSine(meter, 1000.0, amp, kSampleRate, 10.0);
+
+    const float lra = meter.getLoudnessRange();
+    INFO("LRA of constant signal: " << lra << " LU (expected < 0.5)");
+
+    REQUIRE(lra < 0.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_lra_alternating_loud_quiet
+// Alternating between -23 LUFS and -33 LUFS sections should produce an
+// LRA in the range [8.0, 12.0] LU (approximately 10 LU difference).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_lra_alternating_loud_quiet", "[LoudnessMeterAccuracy]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    const float loudAmp  = static_cast<float>(std::pow(10.0, (-23.0 + 0.691) / 20.0));
+    const float quietAmp = static_cast<float>(std::pow(10.0, (-33.0 + 0.691) / 20.0));
+
+    // Alternate loud/quiet in 5s segments for 30 seconds total
+    for (int i = 0; i < 3; ++i)
+    {
+        feedSine(meter, 1000.0, loudAmp,  kSampleRate, 5.0);
+        feedSine(meter, 1000.0, quietAmp, kSampleRate, 5.0);
+    }
+
+    const float lra = meter.getLoudnessRange();
+    INFO("LRA of alternating -23/-33 LUFS: " << lra << " LU (expected 8-12)");
+
+    REQUIRE(lra >= 8.0f);
+    REQUIRE(lra <= 12.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_absolute_gate_excludes_quiet_blocks
+// A signal at -80 LUFS is below the absolute gate (-70 LUFS), so integrated
+// loudness should return -inf (no windows pass the gate).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_absolute_gate_excludes_quiet_blocks", "[LoudnessMeterAccuracy]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // Amplitude for -80 LUFS at 1 kHz
+    const float amp = static_cast<float>(std::pow(10.0, (-80.0 + 0.691) / 20.0));
+
+    // Feed 5 seconds of very quiet signal
+    feedSine(meter, 1000.0, amp, kSampleRate, 5.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Integrated LUFS of -80 LUFS signal: " << integrated << " (expected -inf)");
+
+    REQUIRE(std::isinf(integrated));
+    REQUIRE(integrated < 0.0f);
+}
+
+// ---------------------------------------------------------------------------
+// test_reset_integrated_discards_history
+// After resetIntegrated(), the integrated LUFS should reflect only post-reset
+// signal, not the pre-reset history.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_reset_integrated_discards_history", "[LoudnessMeterAccuracy]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // Phase 1: feed a loud signal (-14 LUFS) for 5 seconds
+    const float loudAmp = static_cast<float>(std::pow(10.0, (-14.0 + 0.691) / 20.0));
+    feedSine(meter, 1000.0, loudAmp, kSampleRate, 5.0);
+
+    const float intBefore = meter.getIntegratedLUFS();
+    INFO("Integrated before reset: " << intBefore);
+    REQUIRE(!std::isinf(intBefore));
+    REQUIRE(intBefore > -15.5f);
+    REQUIRE(intBefore < -12.5f);
+
+    // Reset
+    meter.resetIntegrated();
+
+    // Phase 2: feed a quiet signal (-30 LUFS) for 2 seconds
+    const float quietAmp = static_cast<float>(std::pow(10.0, (-30.0 + 0.691) / 20.0));
+    feedSine(meter, 1000.0, quietAmp, kSampleRate, 2.0);
+
+    const float intAfter = meter.getIntegratedLUFS();
+    INFO("Integrated after reset + quiet signal: " << intAfter);
+
+    // Post-reset integrated should reflect only the -30 LUFS signal, not the -14 LUFS history
+    REQUIRE(intAfter > -31.5f);
+    REQUIRE(intAfter < -28.5f);
+}
+
+// ---------------------------------------------------------------------------
+// test_relative_gating_loud_burst_dominates
+// 20 seconds of silence followed by 5 seconds of -23 LUFS burst.
+// The absolute gate excludes silence; the relative gate further filters.
+// Integrated LUFS should be close to -23 LUFS (the burst level).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_relative_gating_loud_burst_dominates", "[LoudnessMeterAccuracy]")
+{
+    LoudnessMeter meter;
+    meter.prepare(kSampleRate, 2);
+
+    // 20 seconds of silence
+    feedSilence(meter, kSampleRate, 20.0);
+
+    // 5 seconds of -23 LUFS burst
+    const float burstAmp = static_cast<float>(std::pow(10.0, (-23.0 + 0.691) / 20.0));
+    feedSine(meter, 1000.0, burstAmp, kSampleRate, 5.0);
+
+    const float integrated = meter.getIntegratedLUFS();
+    INFO("Integrated LUFS (silence + burst): " << integrated << " (expected ~-23)");
+
+    // Silence is gated out, so integrated should be close to the burst level
+    REQUIRE(integrated > -24.5f);
+    REQUIRE(integrated < -21.5f);
+}
