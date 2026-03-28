@@ -884,3 +884,106 @@ TEST_CASE("test_mono_meter_fifo_populated", "[PluginProcessor]")
     INFO ("inputLevelL = " << md.inputLevelL);
     REQUIRE (md.inputLevelL > 0.0f);
 }
+
+// ============================================================================
+// test_processBlockBypassed_maintains_latency
+// processBlockBypassed() must delegate to processBlock() so the lookahead
+// delay path remains active. Feed an impulse at sample 0; the output impulse
+// must appear at the reported latency offset, not at sample 0.
+// ============================================================================
+TEST_CASE("test_processBlockBypassed_maintains_latency", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    juce::MidiBuffer midi;
+    proc.prepareToPlay (44100.0, 512);
+
+    // Set lookahead so the reported latency is > 0
+    if (auto* param = proc.apvts.getParameter (ParamID::lookahead))
+        param->setValueNotifyingHost (param->convertTo0to1 (2.0f));
+
+    // Warm-up block to apply params
+    {
+        juce::AudioBuffer<float> warm (2, 512);
+        warm.clear();
+        proc.processBlockBypassed (warm, midi);
+    }
+
+    const int reportedLatency = proc.getLatencySamples();
+    INFO ("Reported latency = " << reportedLatency);
+    REQUIRE (reportedLatency > 0);
+
+    // Feed impulse at sample 0 through processBlockBypassed, then silence
+    const int totalSamples = reportedLatency + 512;
+    std::vector<float> capturedL (totalSamples, 0.0f);
+    int offset = 0;
+    bool firstBlock = true;
+
+    while (offset < totalSamples)
+    {
+        const int n = std::min (512, totalSamples - offset);
+        juce::AudioBuffer<float> buf (2, n);
+        buf.clear();
+        if (firstBlock)
+        {
+            buf.setSample (0, 0, 1.0f);
+            buf.setSample (1, 0, 1.0f);
+            firstBlock = false;
+        }
+        proc.processBlockBypassed (buf, midi);
+        for (int s = 0; s < n; ++s)
+            capturedL[offset + s] = buf.getSample (0, s);
+        offset += n;
+    }
+
+    // Find where the impulse peak appears
+    int peakPos = 0;
+    float peakVal = 0.0f;
+    for (int i = 0; i < totalSamples; ++i)
+    {
+        if (std::abs (capturedL[i]) > peakVal)
+        {
+            peakVal = std::abs (capturedL[i]);
+            peakPos = i;
+        }
+    }
+
+    INFO ("Impulse peak at sample " << peakPos << ", expected ~" << reportedLatency);
+    // Allow ±2 samples tolerance
+    REQUIRE (peakPos >= reportedLatency - 2);
+    REQUIRE (peakPos <= reportedLatency + 2);
+    // Must NOT appear at sample 0 (no delay = regression)
+    REQUIRE (capturedL[0] < 0.01f);
+}
+
+// ============================================================================
+// test_processBlockBypassed_populates_meter_fifo
+// processBlockBypassed() must invoke processBlock() internally, which pushes
+// meter data onto the FIFO. After calling it, the FIFO must have at least
+// one entry.
+// ============================================================================
+TEST_CASE("test_processBlockBypassed_populates_meter_fifo", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    juce::MidiBuffer midi;
+    proc.prepareToPlay (44100.0, 512);
+
+    // Drain any stale FIFO entries from prepare
+    {
+        MeterData drain;
+        while (proc.getMeterFIFO().pop (drain)) {}
+    }
+
+    // Feed audio via processBlockBypassed
+    juce::AudioBuffer<float> buf (2, 512);
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        float* data = buf.getWritePointer (ch);
+        for (int i = 0; i < 512; ++i)
+            data[i] = 0.5f * std::sin (6.283185307f * 440.0f * i / 44100.0f);
+    }
+    proc.processBlockBypassed (buf, midi);
+
+    // Meter FIFO must have at least one entry
+    MeterData md;
+    REQUIRE (proc.getMeterFIFO().pop (md));
+}
