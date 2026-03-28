@@ -74,5 +74,6 @@ The `loadPreset()` / `loadNextPreset()` / `loadPreviousPreset()` methods should 
 `mCurrentPresetName` as they do their work.
 
 ## Dependencies
-Coordinate with task 490 (persist A/B state) — both modify `getStateInformation()` /
-`setStateInformation()` and should use the same `<MLIMState>` XML wrapper.
+Requires task 490 (persist A/B state) — task 490 introduces the `<MLIMState>` XML wrapper
+in `getStateInformation()` / `setStateInformation()`. This task adds `<PresetName>` inside
+that wrapper. Must wait for task 490 to merge to avoid conflicting XML format changes.

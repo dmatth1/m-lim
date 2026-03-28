@@ -1,7 +1,7 @@
 # Task 520: RMSE Remeasure After Wave-23 Visual Parity Tasks
 
 ## Description
-After completing the wave-23 visual parity tasks (505 metersafe-lighten, 507 loudness-histogram-idle-fill, 508 level-meter-idle-gradient, 509 output-meter-idle-fill, 519 waveform-db-label-opacity), capture a fresh RMSE measurement using the standard methodology and record the new baseline.
+After completing wave-23 visual parity tasks (505, 507, 508, 509, 519) and wave-24 tasks (521 algo-button-color, 522 waveform-lower-zone-brightness), capture a fresh RMSE measurement using the standard methodology and record the new baseline. If tasks 521/522 are not yet done when this task is picked up, measure anyway — their impact can be measured in a subsequent pass.
 
 Build the standalone, launch headlessly, capture screenshot, crop, resize, and compare against the reference.
 
@@ -34,4 +34,4 @@ RMSE methodology (from harness instructions):
 Save results to `screenshots/wave23-rmse-results.txt`.
 
 ## Dependencies
-Requires tasks 505, 507, 508, 509, 519 (all wave-23 visual parity tasks)
+None (tasks 505, 507, 508, 509, 519 are all completed)
