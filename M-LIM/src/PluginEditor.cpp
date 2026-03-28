@@ -23,6 +23,7 @@ MLIMAudioProcessorEditor::MLIMAudioProcessorEditor (MLIMAudioProcessor& p)
     inputMeter_.setShowScale (true);
     addAndMakeVisible (outputMeter_);
     outputMeter_.setShowScale (false);
+    outputMeter_.setIdleSimulationLevel (-0.5f);
     addAndMakeVisible (grMeter_);
     addAndMakeVisible (loudnessPanel_);
     addAndMakeVisible (controlStrip_);

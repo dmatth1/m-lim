@@ -87,9 +87,12 @@ void LevelMeter::drawChannel (juce::Graphics& g,
     // Reference Pro-L 2 shows filled meter with warm zone (top) and safe zone (bottom).
     // Task 505: redesigned to match active-fill appearance at idle.
     {
-        const float simFillTop = barTop + barH * 0.10f;  // 10% = unfilled (dark)
-        const float dangerY    = barTop + barH * 0.15f;  // danger zone at 10-15%
-        const float warnY      = barTop + barH * 0.25f;  // warning zone at 15-25%
+        const float simNorm    = dbToNorm (idleSimLevel_);
+        const float simFillTop = barTop + barH * (1.0f - simNorm);
+        const float dangerFrac = (1.0f - simNorm) + 0.05f;  // danger zone just below top
+        const float warnFrac   = (1.0f - simNorm) + 0.15f;  // warning zone further below
+        const float dangerY    = barTop + barH * dangerFrac;
+        const float warnY      = barTop + barH * warnFrac;
 
         juce::ColourGradient idleGrad (
             MLIMColours::barTrackBackground,                     0.0f, barTop,

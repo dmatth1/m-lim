@@ -33,6 +33,10 @@ public:
     /** Show or hide the dB scale labels on the right edge. Default: true. */
     void setShowScale (bool show) { showScale_ = show; repaint(); }
 
+    /** Set the simulated idle level in dBFS for the idle fill gradient.
+        Default is -6 dBFS. Use -0.5 for output meters (near-ceiling). */
+    void setIdleSimulationLevel (float dBFS) noexcept { idleSimLevel_ = dBFS; }
+
     void paint (juce::Graphics& g) override;
     void resized() override;
     void mouseDown (const juce::MouseEvent& e) override;
@@ -55,6 +59,7 @@ private:
     bool  clipL_  = false;
     bool  clipR_  = false;
     bool  showScale_ = true;
+    float idleSimLevel_ = -6.0f;
 
     /** Map a dB value to a normalised 0-1 position (0 = bottom, 1 = top). */
     static float dbToNorm (float db) noexcept;
