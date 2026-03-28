@@ -986,6 +986,11 @@
       "at": "2026-03-28T01:25:39Z",
       "action": "launched specialist sweep 39 (6 non-PM in parallel)",
       "reason": "d=482, 21 completions since sweep 38 at d=461"
+    },
+    {
+      "at": "2026-03-28T01:31:24Z",
+      "action": "respawned worker-3",
+      "reason": "1026s backoff (~17 min); a=0, p=12"
     }
   ],
   "learnings": [
