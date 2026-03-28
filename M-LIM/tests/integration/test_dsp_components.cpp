@@ -170,7 +170,7 @@ TEST_CASE("test_dsp_chain_basic", "[DSPIntegration]")
     transient.process(upPtrs.data(), upChannels, upSamples, sidePtrs.data());
 
     // --- Step 4: LevelingLimiter ---
-    leveling.process(upPtrs.data(), upChannels, upSamples, sidePtrs.data());
+    leveling.process(upPtrs.data(), upChannels, upSamples);
 
     // --- Step 5: Downsample ---
     oversampler.downsample(mainBuf);
@@ -241,7 +241,7 @@ TEST_CASE("test_dsp_chain_with_oversampling", "[DSPIntegration]")
         upPtrs[ch] = upBlock.getChannelPointer(ch);
 
     transient.process(upPtrs.data(), upChannels, upSamples, nullptr);
-    leveling.process(upPtrs.data(), upChannels, upSamples, nullptr);
+    leveling.process(upPtrs.data(), upChannels, upSamples);
 
     oversampler.downsample(mainBuf);
 

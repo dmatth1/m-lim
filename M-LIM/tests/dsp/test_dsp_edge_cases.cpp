@@ -80,7 +80,7 @@ TEST_CASE("test_all_dsp_zero_length_buffer", "[DSPEdgeCases]")
         LevelingLimiter ll;
         ll.prepare(kSR44, 512, 2);
         float* channels[2] = { nullptr, nullptr };
-        ll.process(channels, 2, 0, nullptr);
+        ll.process(channels, 2, 0);
     }
 }
 
@@ -159,7 +159,7 @@ TEST_CASE("test_all_dsp_single_sample_buffer", "[DSPEdgeCases]")
         float ch0[1] = { 0.5f };
         float ch1[1] = { 0.5f };
         float* channels[2] = { ch0, ch1 };
-        ll.process(channels, 2, 1, nullptr);
+        ll.process(channels, 2, 1);
         REQUIRE(std::isfinite(ch0[0]));
         REQUIRE(std::isfinite(ch1[0]));
     }
@@ -274,7 +274,7 @@ TEST_CASE("test_inf_input_does_not_cause_crash", "[DSPEdgeCases]")
         float ch0[4] = { posInf, negInf, 0.5f, 0.5f };
         float ch1[4] = { posInf, negInf, 0.5f, 0.5f };
         float* channels[2] = { ch0, ch1 };
-        ll.process(channels, 2, 4, nullptr);  // must not crash
+        ll.process(channels, 2, 4);  // must not crash
     }
 }
 
@@ -337,7 +337,7 @@ TEST_CASE("test_denormal_input_handling", "[DSPEdgeCases]")
         ll.prepare(kSR44, 512, 2);
         std::vector<float> ch0(128, denorm), ch1(128, denorm);
         float* channels[2] = { ch0.data(), ch1.data() };
-        ll.process(channels, 2, 128, nullptr);
+        ll.process(channels, 2, 128);
         for (int i = 0; i < 128; ++i)
         {
             REQUIRE(std::isfinite(ch0[i]));
@@ -423,12 +423,12 @@ TEST_CASE("test_sample_rate_change_reprepare", "[DSPEdgeCases]")
         ll.prepare(kSR44, 512, 2);
         std::vector<float> ch0(512, 0.3f), ch1(512, 0.3f);
         float* ch[2] = { ch0.data(), ch1.data() };
-        ll.process(ch, 2, 512, nullptr);
+        ll.process(ch, 2, 512);
 
         ll.prepare(kSR96, 512, 2);
         std::fill(ch0.begin(), ch0.end(), 0.3f);
         std::fill(ch1.begin(), ch1.end(), 0.3f);
-        ll.process(ch, 2, 512, nullptr);
+        ll.process(ch, 2, 512);
         for (int i = 0; i < 512; ++i)
         {
             REQUIRE(std::isfinite(ch0[i]));
@@ -500,7 +500,7 @@ TEST_CASE("test_very_high_sample_rate", "[DSPEdgeCases]")
         ll.prepare(kSR192, 512, 2);
         std::vector<float> ch0(512, 0.5f), ch1(512, 0.5f);
         float* ch[2] = { ch0.data(), ch1.data() };
-        ll.process(ch, 2, 512, nullptr);
+        ll.process(ch, 2, 512);
         for (int i = 0; i < 512; ++i)
             REQUIRE(std::isfinite(ch0[i]));
     }
@@ -565,7 +565,7 @@ TEST_CASE("test_silence_passthrough", "[DSPEdgeCases]")
         const int n = 512;
         std::vector<float> ch0(n, 0.0f), ch1(n, 0.0f);
         float* ch[2] = { ch0.data(), ch1.data() };
-        ll.process(ch, 2, n, nullptr);
+        ll.process(ch, 2, n);
         for (int i = 0; i < n; ++i)
         {
             REQUIRE(std::abs(ch0[i]) < 1e-6f);
@@ -618,7 +618,7 @@ TEST_CASE("test_denormal_input_leveling_limiter", "[DSPEdgeCases][denormal]")
 
     std::vector<float> ch0(n, denorm), ch1(n, denorm);
     float* channels[2] = { ch0.data(), ch1.data() };
-    ll.process(channels, 2, n, nullptr);
+    ll.process(channels, 2, n);
 
     for (int i = 0; i < n; ++i)
     {

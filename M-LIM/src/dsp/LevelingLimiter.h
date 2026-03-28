@@ -12,7 +12,7 @@
  * stereo channel linking.
  *
  * Signal flow per sample:
- *   1. Detect peak on each channel (or sidechain input)
+ *   1. Detect peak on each channel
  *   2. Compute required gain to stay below 0 dBFS
  *   3. Channel linking: blend per-channel gains toward minimum
  *   4. Smooth gain: exponential attack + shaped exponential release
@@ -31,10 +31,9 @@ public:
     void reset();
 
     /** Process audio in-place.
-     *  When sidechainData is non-null, use it for envelope following while
-     *  applying gain reduction to channelData. When null, follow channelData. */
-    void process(float** channelData, int numChannels, int numSamples,
-                 const float* const* sidechainData = nullptr);
+     *  The envelope follower always detects on channelData (post-Stage-1 audio).
+     *  For stream reset without reconfiguring, call reset() instead of prepare(). */
+    void process(float** channelData, int numChannels, int numSamples);
 
     /** Set the limiter threshold in linear scale (e.g. 0.891 for -1 dBFS).
      *  Defaults to 1.0 (0 dBFS). Should be called whenever the output ceiling changes. */

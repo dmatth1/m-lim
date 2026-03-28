@@ -143,7 +143,7 @@ float LevelingLimiter::computeRequiredGain(float peakAbs) const
  * gentle, program-dependent level control after fast peaks have been caught.
  *
  * Algorithm per sample:
- *   1. Detect per-channel peak (from sidechain if provided, else from main audio).
+ *   1. Detect per-channel peak from main audio (post-Stage-1).
  *   2. Compute required gain: threshold / peak, or 1.0 if below threshold.
  *   3. Apply channel linking: blend per-channel gains toward the minimum.
  *   4. Smooth gain with a first-order IIR in linear domain:
@@ -160,8 +160,7 @@ float LevelingLimiter::computeRequiredGain(float peakAbs) const
  *
  * @note No heap allocation occurs in this function. Thread safety: audio thread only.
  */
-void LevelingLimiter::process(float** channelData, int numChannels, int numSamples,
-                               const float* const* sidechainData)
+void LevelingLimiter::process(float** channelData, int numChannels, int numSamples)
 {
     juce::ScopedNoDenormals noDenormals;
     if (mGainState.empty() || numChannels <= 0 || numSamples <= 0)
@@ -203,10 +202,7 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
         // --- 1. Compute required gain per channel ----------------------------
         for (int ch = 0; ch < chCount; ++ch)
         {
-            const float* detectCh = (sidechainData != nullptr)
-                                        ? sidechainData[ch]
-                                        : channelData[ch];
-            perChRequiredGain[ch] = computeRequiredGain(std::abs(detectCh[s]));
+            perChRequiredGain[ch] = computeRequiredGain(std::abs(channelData[ch][s]));
         }
 
         // --- 2. Channel linking -----------------------------------------------
