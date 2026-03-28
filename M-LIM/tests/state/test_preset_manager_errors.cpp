@@ -159,3 +159,135 @@ TEST_CASE("test_load_preset_missing_parameters", "[PresetManagerErrors]")
     REQUIRE_NOTHROW(gainParam->get());
     REQUIRE_NOTHROW(ceilParam->get());
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_truncated_xml_load_returns_false", "[PresetManagerErrors]")
+{
+    TempDir tmp;
+    ErrorTestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // First save a valid preset so we have valid XML to truncate from
+    pm.savePreset("Valid", proc.apvts);
+    auto presetFile = tmp.dir.getChildFile("Valid.xml");
+    REQUIRE(presetFile.existsAsFile());
+
+    // Overwrite with just the first 20 bytes (truncated XML)
+    auto fullText = presetFile.loadFileAsString();
+    REQUIRE(fullText.length() > 20);
+    presetFile.replaceWithText(fullText.substring(0, 20));
+
+    // loadPreset must return false, no crash
+    bool loaded = pm.loadPreset("Valid", proc.apvts);
+    REQUIRE(loaded == false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_failed_save_does_not_add_to_index", "[PresetManagerErrors]")
+{
+    TempDir tmp;
+    ErrorTestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Save a valid preset first
+    pm.savePreset("Good", proc.apvts);
+
+    // Now point preset directory at an unwritable location
+    pm.setPresetDirectory(juce::File("/proc/mlim_unwritable_test_dir2"));
+
+    // Attempt to save — should fail
+    bool saved = pm.savePreset("Bad", proc.apvts);
+    REQUIRE(saved == false);
+
+    // Reset to the temp dir and verify "Bad" is not in the index
+    pm.setPresetDirectory(tmp.dir);
+    auto names = pm.getPresetNames();
+    REQUIRE_FALSE(names.contains("Bad"));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_whitespace_only_name_no_crash", "[PresetManagerErrors]")
+{
+    TempDir tmp;
+    ErrorTestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Saving with whitespace-only name must not crash
+    REQUIRE_NOTHROW(pm.savePreset("   ", proc.apvts));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_unicode_preset_name_roundtrip", "[PresetManagerErrors]")
+{
+    TempDir tmp;
+    ErrorTestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Set a known parameter value
+    setParam(proc.apvts, "gain", -9.0f);
+
+    // Save with a Unicode name
+    juce::String unicodeName = juce::String::fromUTF8("テスト");
+    bool saved = pm.savePreset(unicodeName, proc.apvts);
+    REQUIRE(saved == true);
+
+    // Change parameter to a different value
+    setParam(proc.apvts, "gain", 0.0f);
+    REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(0.0f).epsilon(0.01f));
+
+    // Load the unicode-named preset and verify the parameter is restored
+    bool loaded = pm.loadPreset(unicodeName, proc.apvts);
+    REQUIRE(loaded == true);
+    REQUIRE(getParam(proc.apvts, "gain") == Catch::Approx(-9.0f).epsilon(0.01f));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_concurrent_save_load_no_crash", "[PresetManagerErrors]")
+{
+    TempDir tmp;
+    ErrorTestProcessor proc1;
+    ErrorTestProcessor proc2;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Save an initial preset so load has something to find
+    pm.savePreset("Concurrent", proc1.apvts);
+
+    std::atomic<bool> running{true};
+    std::atomic<bool> crashed{false};
+
+    // Thread 1: repeatedly saves
+    std::thread saver([&]() {
+        try {
+            while (running.load()) {
+                pm.savePreset("Concurrent", proc1.apvts);
+            }
+        } catch (...) {
+            crashed.store(true);
+        }
+    });
+
+    // Thread 2: repeatedly loads
+    std::thread loader([&]() {
+        try {
+            while (running.load()) {
+                pm.loadPreset("Concurrent", proc2.apvts);
+            }
+        } catch (...) {
+            crashed.store(true);
+        }
+    });
+
+    // Let them run for 200ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    running.store(false);
+
+    saver.join();
+    loader.join();
+
+    REQUIRE(crashed.load() == false);
+}
