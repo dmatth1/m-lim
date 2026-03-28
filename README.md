@@ -28,16 +28,12 @@ Works in any DAW on macOS. VST3, AU, and Standalone formats.
 
 ## Download & Install
 
-*Coming soon — macOS installer will be available here.*
-
-<!--
 **[Download M-LIM Installer (macOS)](https://github.com/dmatth1/m-lim/releases/latest/download/M-LIM-macOS-Installer.pkg)**
 
 1. Download the installer
 2. Right-click → Open (required for unsigned installer)
 3. Click Install (installs both VST3 and AU)
 4. Rescan plugins in your DAW
--->
 
 ---
 
