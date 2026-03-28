@@ -240,25 +240,45 @@ void MLIMAudioProcessor::parameterChanged (const juce::String& paramID, float ne
 void MLIMAudioProcessor::initParameterPointers()
 {
     pInputGain             = apvts.getRawParameterValue (ParamID::inputGain);
+    jassert (pInputGain != nullptr);
     pOutputCeiling         = apvts.getRawParameterValue (ParamID::outputCeiling);
+    jassert (pOutputCeiling != nullptr);
     pAlgorithm             = apvts.getRawParameterValue (ParamID::algorithm);
+    jassert (pAlgorithm != nullptr);
     pLookahead             = apvts.getRawParameterValue (ParamID::lookahead);
+    jassert (pLookahead != nullptr);
     pAttack                = apvts.getRawParameterValue (ParamID::attack);
+    jassert (pAttack != nullptr);
     pRelease               = apvts.getRawParameterValue (ParamID::release);
+    jassert (pRelease != nullptr);
     pChannelLinkTransients = apvts.getRawParameterValue (ParamID::channelLinkTransients);
+    jassert (pChannelLinkTransients != nullptr);
     pChannelLinkRelease    = apvts.getRawParameterValue (ParamID::channelLinkRelease);
+    jassert (pChannelLinkRelease != nullptr);
     pTruePeakEnabled       = apvts.getRawParameterValue (ParamID::truePeakEnabled);
+    jassert (pTruePeakEnabled != nullptr);
     pOversamplingFactor    = apvts.getRawParameterValue (ParamID::oversamplingFactor);
+    jassert (pOversamplingFactor != nullptr);
     pDCFilterEnabled       = apvts.getRawParameterValue (ParamID::dcFilterEnabled);
+    jassert (pDCFilterEnabled != nullptr);
     pDitherEnabled         = apvts.getRawParameterValue (ParamID::ditherEnabled);
+    jassert (pDitherEnabled != nullptr);
     pDitherBitDepth        = apvts.getRawParameterValue (ParamID::ditherBitDepth);
+    jassert (pDitherBitDepth != nullptr);
     pDitherNoiseShaping    = apvts.getRawParameterValue (ParamID::ditherNoiseShaping);
+    jassert (pDitherNoiseShaping != nullptr);
     pBypass                = apvts.getRawParameterValue (ParamID::bypass);
+    jassert (pBypass != nullptr);
     pUnityGainMode         = apvts.getRawParameterValue (ParamID::unityGainMode);
+    jassert (pUnityGainMode != nullptr);
     pSidechainHPFreq       = apvts.getRawParameterValue (ParamID::sidechainHPFreq);
+    jassert (pSidechainHPFreq != nullptr);
     pSidechainLPFreq       = apvts.getRawParameterValue (ParamID::sidechainLPFreq);
+    jassert (pSidechainLPFreq != nullptr);
     pSidechainTilt         = apvts.getRawParameterValue (ParamID::sidechainTilt);
+    jassert (pSidechainTilt != nullptr);
     pDelta                 = apvts.getRawParameterValue (ParamID::delta);
+    jassert (pDelta != nullptr);
 }
 
 void MLIMAudioProcessor::pushAllParametersToEngine()
