@@ -1902,3 +1902,62 @@ TEST_CASE("test_process_more_channels_than_prepared_bounded", "[LimiterEngine]")
         }
     }
 }
+
+// ============================================================================
+// test_channel_link_transients_passes_fraction_to_limiter
+// setChannelLinkTransients(50.0f) should pass 0.5 to the TransientLimiter.
+// We verify behaviorally: at 50% the quiet channel receives partial GR —
+// strictly more output than fully linked (max GR) and less than independent (no GR).
+// ============================================================================
+TEST_CASE("test_channel_link_transients_passes_fraction_to_limiter", "[LimiterEngine]")
+{
+    auto runWithLinkPercent = [&](float pct) -> float
+    {
+        LimiterEngine engine;
+        engine.prepare(kSampleRate, kBlockSize, 2);
+        engine.setOutputCeiling(0.0f);        // 0 dBFS ceiling
+        engine.setChannelLinkTransients(pct);
+        engine.setChannelLinkRelease(0.0f);   // disable release linking so transient stage dominates
+
+        // Ch0: loud (4.0 = +12 dBFS), Ch1: quiet (0.05 = well below ceiling)
+        juce::AudioBuffer<float> buf(2, kBlockSize);
+        float* ch0 = buf.getWritePointer(0);
+        float* ch1 = buf.getWritePointer(1);
+
+        // Warm up to fill the lookahead buffer; inspect the last block
+        float ch1Peak = 0.0f;
+        for (int block = 0; block < 10; ++block)
+        {
+            for (int i = 0; i < kBlockSize; ++i)
+            {
+                ch0[i] = 4.0f;
+                ch1[i] = 0.05f;
+            }
+            engine.process(buf);
+            ch1Peak = 0.0f;
+            const float* out1 = buf.getReadPointer(1);
+            for (int i = 0; i < kBlockSize; ++i)
+                ch1Peak = std::max(ch1Peak, std::abs(out1[i]));
+        }
+        return ch1Peak;
+    };
+
+    const float ch1_independent = runWithLinkPercent(0.0f);   // no linking
+    const float ch1_linked      = runWithLinkPercent(100.0f); // full linking
+    const float ch1_half        = runWithLinkPercent(50.0f);  // half linking
+
+    INFO("ch1_independent=" << ch1_independent
+         << " ch1_half=" << ch1_half
+         << " ch1_linked=" << ch1_linked);
+
+    // With independent processing the quiet channel passes almost unmodified
+    REQUIRE(ch1_independent > 0.04f);
+
+    // With full linking the quiet channel receives heavy GR from the loud channel
+    REQUIRE(ch1_linked < ch1_independent);
+
+    // At 50% the quiet channel must be between the two extremes, confirming the
+    // fractional value (0.5) was forwarded rather than being clamped to 1.0
+    REQUIRE(ch1_half < ch1_independent);
+    REQUIRE(ch1_half > ch1_linked);
+}

@@ -1902,7 +1902,6 @@ TEST_CASE("test_soft_saturate_small_signal", "[TransientLimiter]")
     }
 }
 
-// ---------------------------------------------------------------------------
 // test_latency_in_original_rate_samples_when_prepared_at_upsampled_rate
 //   When TransientLimiter is prepared at an upsampled rate (as LimiterEngine
 //   does for oversampling), getLatencyInSamples() must return the latency
@@ -1959,4 +1958,45 @@ TEST_CASE("test_latency_no_oversampling_unaffected", "[TransientLimiter]")
 
     INFO("reported=" << reported << " expected=" << expected);
     REQUIRE(reported == Catch::Approx(expected).margin(1));
+}
+
+// ---------------------------------------------------------------------------
+// test_channel_link_fifty_percent_partially_links
+//   At link=0.5 the quiet channel's gain reduction must be between what it
+//   would receive with fully independent processing (no reduction) and fully
+//   linked processing (maximum reduction).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_channel_link_fifty_percent_partially_links", "[TransientLimiter]")
+{
+    auto runWithLink = [&](float link) -> float
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 2);
+        limiter.setAlgorithmParams(getAlgorithmParams(LimiterAlgorithm::Transparent));
+        limiter.setLookahead(0.0f);
+        limiter.setThreshold(1.0f);
+        limiter.setChannelLink(link);
+
+        // Ch0: loud (2.0 = +6 dBFS), Ch1: well below threshold (0.1)
+        std::vector<std::vector<float>> buf(2, std::vector<float>(kBlockSize));
+        std::fill(buf[0].begin(), buf[0].end(), 2.0f);
+        std::fill(buf[1].begin(), buf[1].end(), 0.1f);
+
+        auto ptrs = makePtrs(buf);
+        limiter.process(ptrs.data(), 2, kBlockSize);
+
+        return blockPeak(buf[1]);
+    };
+
+    const float ch1_independent = runWithLink(0.0f);  // ~0.1 (no reduction on quiet channel)
+    const float ch1_linked      = runWithLink(1.0f);  // reduced (loud ch drives GR)
+    const float ch1_half        = runWithLink(0.5f);  // must be between the two
+
+    INFO("ch1_independent=" << ch1_independent
+         << " ch1_half=" << ch1_half
+         << " ch1_linked=" << ch1_linked);
+
+    // Half-linked must be strictly between independent and fully-linked
+    REQUIRE(ch1_half < ch1_independent);
+    REQUIRE(ch1_half > ch1_linked);
 }

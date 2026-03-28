@@ -41,14 +41,14 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     // Prepare limiters at the upsampled rate
     mTransientLimiter.prepare(usSampleRate, usBlockSize, numChannels, sampleRate);
     mTransientLimiter.setLookahead(mLookaheadMs.load());
-    mTransientLimiter.setChannelLink(mChannelLinkTransients.load());
+    mTransientLimiter.setChannelLink(mChannelLinkTransients.load() * 0.01f);
     mTransientLimiter.setAlgorithmParams(
         getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load())));
 
     mLevelingLimiter.prepare(usSampleRate, usBlockSize, numChannels);
     mLevelingLimiter.setAttack(mAttackMs.load());
     mLevelingLimiter.setRelease(mReleaseMs.load());
-    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load());
+    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load() * 0.01f);
     mLevelingLimiter.setAlgorithmParams(
         getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load())));
 
@@ -161,12 +161,12 @@ void LimiterEngine::applyPendingParams()
     AlgorithmParams params = getAlgorithmParams(algo);
 
     mTransientLimiter.setLookahead(mLookaheadMs.load());
-    mTransientLimiter.setChannelLink(mChannelLinkTransients.load());
+    mTransientLimiter.setChannelLink(mChannelLinkTransients.load() * 0.01f);
     mTransientLimiter.setAlgorithmParams(params);
 
     mLevelingLimiter.setAttack(mAttackMs.load());
     mLevelingLimiter.setRelease(mReleaseMs.load());
-    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load());
+    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load() * 0.01f);
     mLevelingLimiter.setAlgorithmParams(params);
 
     // Keep limiter thresholds in sync with the current output ceiling

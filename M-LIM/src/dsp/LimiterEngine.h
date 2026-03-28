@@ -152,8 +152,8 @@ private:
     std::atomic<float> mLookaheadMs { 1.0f };
     std::atomic<float> mAttackMs    { 10.0f };
     std::atomic<float> mReleaseMs   { 100.0f };
-    std::atomic<float> mChannelLinkTransients { 1.0f };
-    std::atomic<float> mChannelLinkRelease    { 1.0f };
+    std::atomic<float> mChannelLinkTransients { 75.0f };
+    std::atomic<float> mChannelLinkRelease    { 100.0f };
     std::atomic<int>   mOversamplingFactor    { 0 };
     std::atomic<int>   mDitherBitDepth        { 24 };
     std::atomic<int>   mDitherNoiseShaping    { 0 };

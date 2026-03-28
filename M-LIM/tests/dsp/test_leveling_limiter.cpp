@@ -1223,3 +1223,51 @@ TEST_CASE("test_null_sidechain_uses_main_for_detection", "[LevelingLimiter]")
     float peakOut = blockPeak(main[0]);
     REQUIRE(peakOut <= 1.0f + 1e-3f);
 }
+
+// ---------------------------------------------------------------------------
+// test_channel_link_fifty_percent_partially_links
+//   At link=0.5 the quiet channel's output must be between the fully-independent
+//   result (no extra reduction) and the fully-linked result (maximum reduction).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_channel_link_fifty_percent_partially_links", "[LevelingLimiter]")
+{
+    auto runWithLink = [&](float link) -> float
+    {
+        LevelingLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 2);
+
+        AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+        params.adaptiveRelease = false;
+        limiter.setAlgorithmParams(params);
+        limiter.setThreshold(1.0f);
+        limiter.setAttack(0.0f);
+        limiter.setRelease(100.0f);
+        limiter.setChannelLink(link);
+
+        // Ch0: loud (3.0 = well above threshold), Ch1: quiet (0.1 = below threshold)
+        std::vector<std::vector<float>> buf(2, std::vector<float>(kBlockSize));
+
+        // Warm up the envelope for several blocks
+        for (int block = 0; block < 30; ++block)
+        {
+            std::fill(buf[0].begin(), buf[0].end(), 3.0f);
+            std::fill(buf[1].begin(), buf[1].end(), 0.1f);
+            auto ptrs = makePtrs(buf);
+            limiter.process(ptrs.data(), 2, kBlockSize, nullptr);
+        }
+
+        return blockPeak(buf[1]);
+    };
+
+    const float ch1_independent = runWithLink(0.0f);  // ~0.1 (no reduction on quiet channel)
+    const float ch1_linked      = runWithLink(1.0f);  // reduced (loud ch drives GR)
+    const float ch1_half        = runWithLink(0.5f);  // must be between the two
+
+    INFO("ch1_independent=" << ch1_independent
+         << " ch1_half=" << ch1_half
+         << " ch1_linked=" << ch1_linked);
+
+    // Half-linked must be strictly between independent and fully-linked
+    REQUIRE(ch1_half < ch1_independent);
+    REQUIRE(ch1_half > ch1_linked);
+}
