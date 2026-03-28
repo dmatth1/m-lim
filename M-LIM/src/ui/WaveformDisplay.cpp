@@ -421,7 +421,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
             y - 6.0f,
             labelW,
             12.0f);
-        g.setColour (MLIMColours::textSecondary.withAlpha (0.55f));
+        g.setColour (MLIMColours::textSecondary.withAlpha (0.35f));
         g.drawText (label, labelRect, juce::Justification::centredRight, false);
     }
 
