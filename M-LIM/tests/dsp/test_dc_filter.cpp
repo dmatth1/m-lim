@@ -201,3 +201,118 @@ TEST_CASE("test_single_sample_blocks", "[DCFilter]")
 
     REQUIRE(std::abs(dc) < 1e-3);
 }
+
+TEST_CASE("test_cutoff_near_5hz_minus3db", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // 2 seconds = 10 cycles of 5 Hz; pole at R≈0.9993 settles in ~6600 samples
+    const int numSamples = 88200;
+    const double freq = 5.0;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * freq * i / kSampleRate));
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure RMS of latter half (steady state, 5 cycles)
+    double sumSq = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sumSq += signal[i] * signal[i];
+    double rmsOut = std::sqrt(sumSq / (numSamples - start));
+
+    double rmsIn = std::sqrt(0.5); // unit sine RMS = 1/sqrt(2)
+    double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
+
+    // First-order HP at cutoff → -3 dB; tolerance ±1.5 dB
+    REQUIRE(attenuationDb > -4.5);
+    REQUIRE(attenuationDb < -1.5);
+}
+
+TEST_CASE("test_1hz_heavily_attenuated", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // 2 seconds = 2 cycles of 1 Hz; filter settles well before the midpoint
+    const int numSamples = 88200;
+    const double freq = 1.0;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * freq * i / kSampleRate));
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure RMS of latter half (1 full cycle of 1 Hz)
+    double sumSq = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sumSq += signal[i] * signal[i];
+    double rmsOut = std::sqrt(sumSq / (numSamples - start));
+
+    double rmsIn = std::sqrt(0.5);
+    double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
+
+    // First-order HP at 1/5 of cutoff → ~-14 dB; require > 12 dB attenuation
+    REQUIRE(attenuationDb < -12.0);
+}
+
+TEST_CASE("test_20hz_passes_with_little_attenuation", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // 1 second = 20 cycles of 20 Hz; well above cutoff
+    const int numSamples = 44100;
+    const double freq = 20.0;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * freq * i / kSampleRate));
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure RMS of latter half (10 full cycles)
+    double sumSq = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sumSq += signal[i] * signal[i];
+    double rmsOut = std::sqrt(sumSq / (numSamples - start));
+
+    double rmsIn = std::sqrt(0.5);
+    double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
+
+    // At 4× the cutoff, first-order HP attenuates by only ~-0.26 dB
+    REQUIRE(std::abs(attenuationDb) < 1.5);
+}
+
+TEST_CASE("test_cutoff_scales_with_sample_rate", "[DCFilter]")
+{
+    constexpr double sr = 96000.0;
+    DCFilter filter;
+    filter.prepare(sr);
+
+    // 2 seconds at 96 kHz = 192000 samples = 10 cycles of 5 Hz
+    const int numSamples = 192000;
+    const double freq = 5.0;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = static_cast<float>(std::sin(kTwoPi * freq * i / sr));
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure RMS of latter half (5 cycles of 5 Hz)
+    double sumSq = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sumSq += signal[i] * signal[i];
+    double rmsOut = std::sqrt(sumSq / (numSamples - start));
+
+    double rmsIn = std::sqrt(0.5);
+    double attenuationDb = 20.0 * std::log10(rmsOut / rmsIn);
+
+    // R recomputed for 96 kHz: first-order HP at cutoff → -3 dB; tolerance ±1.5 dB
+    REQUIRE(attenuationDb > -4.5);
+    REQUIRE(attenuationDb < -1.5);
+}
