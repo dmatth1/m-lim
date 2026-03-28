@@ -1031,6 +1031,11 @@
       "at": "2026-03-28T02:20:00Z",
       "action": "tasks 505, 506, 519 completed; opus workers efficient (short 300s backoffs)",
       "reason": "task 505 RMSE improvement: Full 22.08\u219219.30%, Left 23.50\u219218.58%. All workers in ~5min backoff, will auto-resume."
+    },
+    {
+      "at": "2026-03-28T02:35:00Z",
+      "action": "respawned workers 2+3 (skip 16-17min backoff); tasks 507, knob-face-shadow done",
+      "reason": "worker-2 had 1026s backoff, worker-3 had 972s. 21 pending tasks. Worker-1 finishing task 509."
     }
   ],
   "learnings": [
