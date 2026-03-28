@@ -26,28 +26,12 @@ set(MLIM_TEST_CASES
     state/test_ab_state.cpp
 )
 
-# Catch2 test executable — DSP sources come from MLIMLib
+# Catch2 test executable — DSP/UI sources come from MLIMLib
 add_executable(MLIMTests
     test_main.cpp
     catch2/catch_amalgamated.cpp
     ${MLIM_TEST_CASES}
     dsp/test_limiter_algorithm.cpp
-    # Parameters.cpp is not in MLIMLib (it lives in the plugin target), so
-    # include it directly here for the parameter-state integration tests.
-    ../src/Parameters.cpp
-    # PluginProcessor and PluginEditor — needed for processor integration tests
-    ../src/PluginProcessor.cpp
-    ../src/PluginEditor.cpp
-    # UI components required by PluginEditor
-    ../src/ui/LookAndFeel.cpp
-    ../src/ui/AlgorithmSelector.cpp
-    ../src/ui/RotaryKnob.cpp
-    ../src/ui/LevelMeter.cpp
-    ../src/ui/ControlStrip.cpp
-    ../src/ui/WaveformDisplay.cpp
-    ../src/ui/LoudnessPanel.cpp
-    ../src/ui/GainReductionMeter.cpp
-    ../src/ui/TopBar.cpp
 )
 
 target_include_directories(MLIMTests
@@ -60,9 +44,6 @@ target_compile_definitions(MLIMTests
     PRIVATE
         CATCH_AMALGAMATED_CUSTOM_MAIN
         MLIM_PRESETS_DIR="${CMAKE_SOURCE_DIR}/presets"
-        # JucePlugin_Name is normally provided by juce_add_plugin; define it
-        # for the standalone test binary so PluginProcessor.cpp compiles.
-        JucePlugin_Name="M-LIM"
 )
 
 target_link_libraries(MLIMTests
