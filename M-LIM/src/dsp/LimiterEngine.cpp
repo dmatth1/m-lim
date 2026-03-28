@@ -440,61 +440,19 @@ void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
 
 void LimiterEngine::setInputGain(float dB)
 {
-    const float newLinear = decibelsToGain(dB);
-    if (floatBitsEqual(mInputGainLinear.load(std::memory_order_relaxed), newLinear))
-        return;
-    mInputGainLinear.store(newLinear);
-    mParamsDirty.store(true);  // unity-gain ceiling depends on input gain
+    setIfChanged(mInputGainLinear, decibelsToGain(dB));
 }
 
 void LimiterEngine::setOutputCeiling(float dB)
 {
-    const float newLinear = decibelsToGain(dB);
-    if (floatBitsEqual(mOutputCeilingLinear.load(std::memory_order_relaxed), newLinear))
-        return;
-    mOutputCeilingLinear.store(newLinear);
-    mParamsDirty.store(true);  // limiter thresholds must track ceiling
+    setIfChanged(mOutputCeilingLinear, decibelsToGain(dB));
 }
 
-void LimiterEngine::setLookahead(float ms)
-{
-    if (floatBitsEqual(mLookaheadMs.load(std::memory_order_relaxed), ms))
-        return;
-    mLookaheadMs.store(ms);
-    mParamsDirty.store(true);
-}
-
-void LimiterEngine::setAttack(float ms)
-{
-    if (floatBitsEqual(mAttackMs.load(std::memory_order_relaxed), ms))
-        return;
-    mAttackMs.store(ms);
-    mParamsDirty.store(true);
-}
-
-void LimiterEngine::setRelease(float ms)
-{
-    if (floatBitsEqual(mReleaseMs.load(std::memory_order_relaxed), ms))
-        return;
-    mReleaseMs.store(ms);
-    mParamsDirty.store(true);
-}
-
-void LimiterEngine::setChannelLinkTransients(float pct)
-{
-    if (floatBitsEqual(mChannelLinkTransients.load(std::memory_order_relaxed), pct))
-        return;
-    mChannelLinkTransients.store(pct);
-    mParamsDirty.store(true);
-}
-
-void LimiterEngine::setChannelLinkRelease(float pct)
-{
-    if (floatBitsEqual(mChannelLinkRelease.load(std::memory_order_relaxed), pct))
-        return;
-    mChannelLinkRelease.store(pct);
-    mParamsDirty.store(true);
-}
+void LimiterEngine::setLookahead(float ms)           { setIfChanged(mLookaheadMs, ms); }
+void LimiterEngine::setAttack(float ms)               { setIfChanged(mAttackMs, ms); }
+void LimiterEngine::setRelease(float ms)              { setIfChanged(mReleaseMs, ms); }
+void LimiterEngine::setChannelLinkTransients(float pct) { setIfChanged(mChannelLinkTransients, pct); }
+void LimiterEngine::setChannelLinkRelease(float pct)  { setIfChanged(mChannelLinkRelease, pct); }
 
 void LimiterEngine::setOversamplingFactor(int factor)
 {
@@ -520,21 +478,8 @@ void LimiterEngine::setDitherEnabled(bool enabled)
     mDitherEnabled.store(enabled);
 }
 
-void LimiterEngine::setDitherBitDepth(int bits)
-{
-    if (mDitherBitDepth.load(std::memory_order_relaxed) == bits)
-        return;
-    mDitherBitDepth.store(bits);
-    mParamsDirty.store(true);
-}
-
-void LimiterEngine::setDitherNoiseShaping(int mode)
-{
-    if (mDitherNoiseShaping.load(std::memory_order_relaxed) == mode)
-        return;
-    mDitherNoiseShaping.store(mode);
-    mParamsDirty.store(true);
-}
+void LimiterEngine::setDitherBitDepth(int bits)     { setIfChanged(mDitherBitDepth, bits); }
+void LimiterEngine::setDitherNoiseShaping(int mode) { setIfChanged(mDitherNoiseShaping, mode); }
 
 void LimiterEngine::setBypass(bool bypass)
 {
@@ -546,13 +491,7 @@ void LimiterEngine::setDeltaMode(bool delta)
     mDeltaMode.store(delta);
 }
 
-void LimiterEngine::setUnityGain(bool unity)
-{
-    if (mUnityGain.load(std::memory_order_relaxed) == unity)
-        return;
-    mUnityGain.store(unity);
-    mParamsDirty.store(true);  // ceiling changes when unity-gain mode changes
-}
+void LimiterEngine::setUnityGain(bool unity)  { setIfChanged(mUnityGain, unity); }
 
 void LimiterEngine::setSidechainHPFreq(float hz)
 {

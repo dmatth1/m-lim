@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DspUtil.h"
 #include "MeterData.h"
 #include "LimiterAlgorithm.h"
 #include "TransientLimiter.h"
@@ -185,6 +186,29 @@ private:
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    // Store value and mark dirty if changed (float version)
+    void setIfChanged(std::atomic<float>& param, float newValue) {
+        if (!floatBitsEqual(param.load(std::memory_order_relaxed), newValue)) {
+            param.store(newValue);
+            mParamsDirty.store(true);
+        }
+    }
+    // Store value and mark dirty if changed (int version)
+    void setIfChanged(std::atomic<int>& param, int newValue) {
+        if (param.load(std::memory_order_relaxed) != newValue) {
+            param.store(newValue);
+            mParamsDirty.store(true);
+        }
+    }
+    // Store value and mark dirty if changed (bool version)
+    void setIfChanged(std::atomic<bool>& param, bool newValue) {
+        if (param.load(std::memory_order_relaxed) != newValue) {
+            param.store(newValue);
+            mParamsDirty.store(true);
+        }
+    }
+
     void applyPendingParams();
     void snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
                               float inLevelL, float inLevelR,
