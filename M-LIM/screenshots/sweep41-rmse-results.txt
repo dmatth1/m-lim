@@ -1,0 +1,53 @@
+VisualParityAuditor — Sweep 41 RMSE Measurement
+=================================================
+Date: 2026-03-28
+
+Methodology
+-----------
+- Built MLIM_Standalone (Release, ccache)
+- Launched on Xvfb :99 with openbox WM
+- Window resized to 900x600 via xdotool
+- Editor area cropped: 900x500+0+100 (removing standalone chrome)
+- Reference: prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!
+- compare -metric RMSE (normalized 0.0–1.0)
+
+Results
+-------
+  Full:           20.10%  (raw: 13174.2 / 65535)
+  Wave:           16.51%  (raw: 10816.6 / 65535, crop 640x500+0+0)
+  Left Meters:    26.10%  (raw: 17102.7 / 65535, crop 80x500+640+0)
+  Right Panel:    27.37%  (raw: 17938.9 / 65535, crop 180x500+720+0)
+  Control Strip:  19.04%  (raw: 12478.5 / 65535, crop 900x90+0+410)
+
+Comparison to Previous Baselines
+---------------------------------
+                    task-354    task-475    sweep-41
+  Full:             22.08%      19.46%      20.10%
+  Wave:             20.55%      15.89%      16.51%
+  Left Meters:      23.50%      25.85%      26.10%
+  Right Panel:      29.59%      26.45%      27.37%
+  Control Strip:    22.42%      18.96%      19.04%
+
+Analysis
+--------
+Values are within ~1pp of task-475 measurements. Small increases likely due to
+different window positioning/sizing methodology (xdotool resize vs prior scrot-crop).
+Overall visual state is consistent with task-475 baseline.
+
+Key Visual Issues Identified (6 new tasks created)
+---------------------------------------------------
+1. Control strip gradient too bright (#53525F vs ref #424044) — ~15-20 units
+2. Loudness panel readout background too bright (#363244 vs ref #171518) — ~30 units
+3. GR meter has no idle structural fill (dark #313141 vs ref bright #67739A)
+4. Output meter too wide (100px vs ref ~40px), displacing histogram space
+5. Status bar too bright with overly vivid green toggle
+6. GAIN knob in waveform overlay instead of control strip
+7. Style selector is 2x4 button grid instead of compact dropdown
+
+Priority for RMSE reduction:
+  1. Reduce output meter width (→ right panel RMSE, biggest layout fix)
+  2. Darken loudness panel background (→ right panel RMSE)
+  3. Add GR meter idle fill (→ left meters RMSE)
+  4. Darken control strip gradient (→ control strip RMSE)
+  5. Add GAIN knob to control strip (→ control strip RMSE)
+  6. Style selector dropdown mode (→ control strip RMSE)

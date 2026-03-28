@@ -68,8 +68,8 @@ namespace MLIMColours
     const juce::Colour loudnessHistogramBottom { 0xff303040 };  // task-429: darkened −16 to match reference
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
-    const juce::Colour controlStripTop    { 0xff5D5D6A };  // task-427: +8 brightness (R=93, G=93, B=106)
-    const juce::Colour controlStripBottom { 0xff444350 };  // task-427: +8 brightness (R=68, G=67, B=80)
+    const juce::Colour controlStripTop    { 0xff4D4D56 };  // sweep-41: darkened to match reference ~(66,64,68)
+    const juce::Colour controlStripBottom { 0xff383842 };  // sweep-41: darkened to match reference control strip
 
     // Top bar gradient background
     const juce::Colour topBarGradientTop    { 0xff4A4650 };
