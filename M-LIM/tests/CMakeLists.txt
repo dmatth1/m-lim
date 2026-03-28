@@ -12,6 +12,7 @@ set(MLIM_TEST_CASES
     dsp/test_true_peak.cpp
     dsp/test_loudness_meter_accuracy.cpp
     dsp/test_dsp_edge_cases.cpp
+    dsp/test_dsp_util.cpp
     integration/test_dsp_components.cpp
     integration/test_parameter_state.cpp
     integration/test_plugin_processor.cpp
