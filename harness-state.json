@@ -941,6 +941,11 @@
       "at": "2026-03-28T00:20:40Z",
       "action": "ran PM specialist-38 after 24 min timeout on VPA/UIParityAuditor",
       "reason": "VPA and UIParityAuditor exceeded 24 min with no commits (no reference image mounted); PM running to groom existing specialist tasks"
+    },
+    {
+      "at": "2026-03-28T00:25:31Z",
+      "action": "specialist sweep 38 complete (PM+VPA done, UIParityAuditor still running)",
+      "reason": "PM groomed 14 tasks (486-499). VPA: no RMSE (no reference mount), created RMSE re-measure task + waveform cool shift task. p=32."
     }
   ],
   "learnings": [
