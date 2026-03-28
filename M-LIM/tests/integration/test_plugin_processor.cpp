@@ -805,3 +805,82 @@ TEST_CASE("test_set_state_correct_tag_replaces_state", "[PluginProcessor]")
     // State must now reflect procA's value
     REQUIRE (rawGainB->load() == Catch::Approx (12.0f).margin (0.01f));
 }
+
+// ============================================================================
+// test_mono_processblock_no_crash
+// Configure the processor with a mono in/out bus layout, call prepareToPlay,
+// then process 10 blocks of mono sine audio. No crash; all output samples finite.
+// ============================================================================
+TEST_CASE("test_mono_processblock_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Switch to mono layout
+    juce::AudioProcessor::BusesLayout monoLayout;
+    monoLayout.inputBuses.add  (juce::AudioChannelSet::mono());
+    monoLayout.outputBuses.add (juce::AudioChannelSet::mono());
+
+    REQUIRE (proc.isBusesLayoutSupported (monoLayout));
+    proc.setBusesLayout (monoLayout);
+
+    proc.prepareToPlay (44100.0, 512);
+
+    juce::MidiBuffer midi;
+    const int blockSize = 512;
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf (1, blockSize);
+        float* ch = buf.getWritePointer (0);
+        for (int i = 0; i < blockSize; ++i)
+            ch[i] = 0.5f * std::sin (6.283185307f * 440.0f * i / 44100.0f);
+
+        REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+        const float* out = buf.getReadPointer (0);
+        for (int i = 0; i < blockSize; ++i)
+        {
+            INFO ("Block " << block << " sample " << i << " = " << out[i]);
+            REQUIRE (std::isfinite (out[i]));
+        }
+    }
+}
+
+// ============================================================================
+// test_mono_meter_fifo_populated
+// After processing mono audio, the meter FIFO must contain at least one entry
+// with inputLevelL > 0 (signal was measured on the mono channel).
+// ============================================================================
+TEST_CASE("test_mono_meter_fifo_populated", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    juce::AudioProcessor::BusesLayout monoLayout;
+    monoLayout.inputBuses.add  (juce::AudioChannelSet::mono());
+    monoLayout.outputBuses.add (juce::AudioChannelSet::mono());
+
+    proc.setBusesLayout (monoLayout);
+    proc.prepareToPlay (44100.0, 512);
+
+    juce::MidiBuffer midi;
+    const int blockSize = 512;
+
+    // Process a few blocks with a non-trivial signal
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf (1, blockSize);
+        float* ch = buf.getWritePointer (0);
+        for (int i = 0; i < blockSize; ++i)
+            ch[i] = 0.5f * std::sin (6.283185307f * 1000.0f * i / 44100.0f);
+        proc.processBlock (buf, midi);
+    }
+
+    // At least one MeterData item must be available in the FIFO
+    MeterData md;
+    bool gotData = proc.getMeterFIFO().pop (md);
+    REQUIRE (gotData);
+
+    // Input level on the mono channel (reported as L) must be non-zero
+    INFO ("inputLevelL = " << md.inputLevelL);
+    REQUIRE (md.inputLevelL > 0.0f);
+}
