@@ -298,7 +298,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::ColourGradient fillGrad (
             MLIMColours::inputWaveform.withAlpha (0.0f),   0.0f, fillTop,
-            MLIMColours::inputWaveform.withAlpha (0.82f),  0.0f, area.getBottom(),  // task-406: reduced from 0.88 to reduce blue cast
+            MLIMColours::inputWaveform.withAlpha (0.70f),  0.0f, area.getBottom(),  // task-522: reduced from 0.82 to brighten lower zone
             false);
         g.setGradientFill (fillGrad);
         g.fillRect (area.getX(), fillTop, area.getWidth(), area.getBottom() - fillTop);
@@ -386,7 +386,7 @@ void WaveformDisplay::drawBackground (juce::Graphics& g,
 
         juce::ColourGradient lGrad (
             lFill.withAlpha (0.0f),   0.0f, lTop,
-            lFill.withAlpha (0.35f),  0.0f, area.getBottom(),
+            lFill.withAlpha (0.50f),  0.0f, area.getBottom(),  // task-522: increased from 0.35 to brighten lower zone
             false);
         g.setGradientFill (lGrad);
         g.fillRect (area.getX(), lTop, area.getWidth(), area.getBottom() - lTop);
