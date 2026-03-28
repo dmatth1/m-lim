@@ -1026,6 +1026,11 @@
       "at": "2026-03-28T02:00:00Z",
       "action": "respawned all 3 workers with model=opus",
       "reason": "user switched model to opus[1m]; all workers were in rate-limit backoff after completing tasks 487, 508, 511"
+    },
+    {
+      "at": "2026-03-28T02:20:00Z",
+      "action": "tasks 505, 506, 519 completed; opus workers efficient (short 300s backoffs)",
+      "reason": "task 505 RMSE improvement: Full 22.08\u219219.30%, Left 23.50\u219218.58%. All workers in ~5min backoff, will auto-resume."
     }
   ],
   "learnings": [
