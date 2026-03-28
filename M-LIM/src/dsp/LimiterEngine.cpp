@@ -67,22 +67,26 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mSidechainFilter.prepare(sampleRate, maxBlockSize);
 
     // True peak detectors at the original output rate
-    mTruePeakL.prepare(sampleRate);
-    mTruePeakR.prepare(sampleRate);
-    mTruePeakEnforceL.prepare(sampleRate);
-    mTruePeakEnforceR.prepare(sampleRate);
+    for (auto& tp : mTruePeakDetectors)
+        tp.prepare(sampleRate);
+    for (auto& tp : mTruePeakEnforcers)
+        tp.prepare(sampleRate);
 
     // DC filters at original rate
-    mDCFilterL.prepare(sampleRate);
-    mDCFilterR.prepare(sampleRate);
+    for (auto& dcf : mDCFilters)
+        dcf.prepare(sampleRate);
 
     // Dithers at original rate
-    mDitherL.prepare(sampleRate);
-    mDitherR.prepare(sampleRate);
-    mDitherL.setBitDepth(mDitherBitDepth.load());
-    mDitherR.setBitDepth(mDitherBitDepth.load());
-    mDitherL.setNoiseShaping(mDitherNoiseShaping.load());
-    mDitherR.setNoiseShaping(mDitherNoiseShaping.load());
+    {
+        const int bitDepth    = mDitherBitDepth.load();
+        const int noiseShaping = mDitherNoiseShaping.load();
+        for (auto& d : mDithers)
+        {
+            d.prepare(sampleRate);
+            d.setBitDepth(bitDepth);
+            d.setNoiseShaping(noiseShaping);
+        }
+    }
 
     // Pre-allocate working buffers so process() has no heap allocations
     mPreLimitBuffer.setSize(numChannels, maxBlockSize);
@@ -106,18 +110,18 @@ void LimiterEngine::reset()
     mLevelingLimiter.reset();
 
     // True peak detectors
-    mTruePeakL.reset();
-    mTruePeakR.reset();
-    mTruePeakEnforceL.reset();
-    mTruePeakEnforceR.reset();
+    for (auto& tp : mTruePeakDetectors)
+        tp.reset();
+    for (auto& tp : mTruePeakEnforcers)
+        tp.reset();
 
     // DC filters
-    mDCFilterL.reset();
-    mDCFilterR.reset();
+    for (auto& dcf : mDCFilters)
+        dcf.reset();
 
     // Dither state — re-prepare to clear noise-shaping error buffers
-    mDitherL.prepare (mSampleRate);
-    mDitherR.prepare (mSampleRate);
+    for (auto& d : mDithers)
+        d.prepare(mSampleRate);
 
     // Sidechain filter — clear IIR state without reallocating coefficients
     mSidechainFilter.reset();
@@ -179,10 +183,15 @@ void LimiterEngine::applyPendingParams()
         mLevelingLimiter.setThreshold(ceiling);
     }
 
-    mDitherL.setBitDepth(mDitherBitDepth.load());
-    mDitherR.setBitDepth(mDitherBitDepth.load());
-    mDitherL.setNoiseShaping(mDitherNoiseShaping.load());
-    mDitherR.setNoiseShaping(mDitherNoiseShaping.load());
+    {
+        const int bitDepth     = mDitherBitDepth.load();
+        const int noiseShaping = mDitherNoiseShaping.load();
+        for (auto& d : mDithers)
+        {
+            d.setBitDepth(bitDepth);
+            d.setNoiseShaping(noiseShaping);
+        }
+    }
 }
 
 // ============================================================================
@@ -336,19 +345,14 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
     if (!mTruePeakEnabled.load())
         return;
 
-    mTruePeakEnforceL.resetPeak();
-    mTruePeakEnforceL.processBlock(buffer.getReadPointer(0), numSamples);
-    float tpL = mTruePeakEnforceL.getPeak();
-
-    float tpR = tpL;
-    if (numChannels > 1)
+    float worstPeak = 0.0f;
+    for (int ch = 0; ch < numChannels; ++ch)
     {
-        mTruePeakEnforceR.resetPeak();
-        mTruePeakEnforceR.processBlock(buffer.getReadPointer(1), numSamples);
-        tpR = mTruePeakEnforceR.getPeak();
+        mTruePeakEnforcers[ch].resetPeak();
+        mTruePeakEnforcers[ch].processBlock(buffer.getReadPointer(ch), numSamples);
+        worstPeak = std::max(worstPeak, mTruePeakEnforcers[ch].getPeak());
     }
 
-    const float worstPeak = std::max(tpL, tpR);
     if (worstPeak > ceiling)
     {
         const float gain = ceiling / worstPeak;
@@ -357,9 +361,8 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
         // The FIR state now reflects the pre-correction signal, which is out of
         // sync with the scaled output.  Reset fully so the next block starts with
         // a FIR that matches the actual output rather than the uncorrected samples.
-        mTruePeakEnforceL.reset();
-        if (numChannels > 1)
-            mTruePeakEnforceR.reset();
+        for (int ch = 0; ch < numChannels; ++ch)
+            mTruePeakEnforcers[ch].reset();
     }
 }
 
@@ -368,9 +371,8 @@ void LimiterEngine::stepDCFilter(juce::AudioBuffer<float>& buffer,
 {
     if (!mDCFilterEnabled.load())
         return;
-    mDCFilterL.process(buffer.getWritePointer(0), numSamples);
-    if (numChannels > 1)
-        mDCFilterR.process(buffer.getWritePointer(1), numSamples);
+    for (int ch = 0; ch < numChannels; ++ch)
+        mDCFilters[ch].process(buffer.getWritePointer(ch), numSamples);
 }
 
 void LimiterEngine::stepDither(juce::AudioBuffer<float>& buffer,
@@ -378,9 +380,8 @@ void LimiterEngine::stepDither(juce::AudioBuffer<float>& buffer,
 {
     if (!mDitherEnabled.load())
         return;
-    mDitherL.process(buffer.getWritePointer(0), numSamples);
-    if (numChannels > 1)
-        mDitherR.process(buffer.getWritePointer(1), numSamples);
+    for (int ch = 0; ch < numChannels; ++ch)
+        mDithers[ch].process(buffer.getWritePointer(ch), numSamples);
 }
 
 void LimiterEngine::stepDeltaMode(juce::AudioBuffer<float>& buffer,
@@ -407,16 +408,16 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
     // True peak detection
     if (mTruePeakEnabled.load())
     {
-        mTruePeakL.processBlock(buffer.getReadPointer(0), numSamples);
-        if (numChannels > 1)
-            mTruePeakR.processBlock(buffer.getReadPointer(1), numSamples);
-        else
-            mTruePeakR.processBlock(buffer.getReadPointer(0), numSamples);
+        for (int ch = 0; ch < kMaxChannels; ++ch)
+        {
+            const int srcCh = (ch < numChannels) ? ch : 0;
+            mTruePeakDetectors[ch].processBlock(buffer.getReadPointer(srcCh), numSamples);
+        }
     }
 
     mGRdB.store(totalGR);
-    mTruePkL.store(mTruePeakL.getPeak());
-    mTruePkR.store(mTruePeakR.getPeak());
+    mTruePkL.store(mTruePeakDetectors[0].getPeak());
+    mTruePkR.store(mTruePeakDetectors[1].getPeak());
 
     // Push meter data to FIFO (non-blocking — drop if full)
     MeterData md;
@@ -425,8 +426,8 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
     md.outputLevelL  = outLevelL;
     md.outputLevelR  = outLevelR;
     md.gainReduction = totalGR;
-    md.truePeakL     = mTruePeakL.getPeak();
-    md.truePeakR     = mTruePeakR.getPeak();
+    md.truePeakL     = mTruePeakDetectors[0].getPeak();
+    md.truePeakR     = mTruePeakDetectors[1].getPeak();
 
     // Waveform: one GR sample per block for the scrolling WaveformDisplay
     md.waveformSample = totalGR;

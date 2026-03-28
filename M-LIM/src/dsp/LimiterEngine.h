@@ -14,6 +14,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 #include <atomic>
+#include <array>
 #include <vector>
 
 /**
@@ -117,19 +118,17 @@ private:
     // -----------------------------------------------------------------------
     // DSP components
     // -----------------------------------------------------------------------
+    static constexpr int kMaxChannels = 2;
+
     Oversampler      mOversampler;
     Oversampler      mSidechainOversampler;  // mirrors mOversampler for sidechain path
     TransientLimiter mTransientLimiter;
     LevelingLimiter  mLevelingLimiter;
-    TruePeakDetector mTruePeakL;        // display/metering
-    TruePeakDetector mTruePeakR;        // display/metering
-    TruePeakDetector mTruePeakEnforceL; // post-ceiling enforcement
-    TruePeakDetector mTruePeakEnforceR; // post-ceiling enforcement
+    std::array<TruePeakDetector, kMaxChannels> mTruePeakDetectors;  // display/metering
+    std::array<TruePeakDetector, kMaxChannels> mTruePeakEnforcers;  // post-ceiling enforcement
     SidechainFilter  mSidechainFilter;
-    DCFilter         mDCFilterL;
-    DCFilter         mDCFilterR;
-    Dither           mDitherL;
-    Dither           mDitherR;
+    std::array<DCFilter, kMaxChannels> mDCFilters;
+    std::array<Dither,   kMaxChannels> mDithers;
 
     // -----------------------------------------------------------------------
     // Configuration (set from any thread, read on audio thread)
