@@ -220,8 +220,9 @@ private:
     std::atomic<int>       mHistorySize {0};       // valid element count (0..kMaxHistoryBlocks)
 
     // Pre-allocated working buffers — filled in updateIntegratedAndLRA() without alloc.
-    std::vector<double> mWindowPowers;  // 400 ms window mean-squares
-    std::vector<double> mPrefixSums;    // prefix sums over history (size = kMaxHistoryBlocks+1)
+    std::vector<double> mWindowPowers;     // 400 ms window mean-squares (used by computeIntegratedLUFS)
+    std::vector<double> mLraWindowPowers;  // 3 s window mean-squares (used by computeLRA)
+    std::vector<double> mPrefixSums;       // prefix sums over history (size = kMaxHistoryBlocks+1)
 
     // -----------------------------------------------------------------------
     // LRA histogram: 900 bins covering [-70, +20) LUFS at 0.1 LU resolution.

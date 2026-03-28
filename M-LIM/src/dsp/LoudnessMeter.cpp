@@ -43,6 +43,7 @@ void LoudnessMeter::prepare(double sampleRate, int numChannels)
 
     // Pre-allocate working buffers for updateIntegratedAndLRA
     mWindowPowers.assign(static_cast<size_t>(kMaxHistoryBlocks), 0.0);
+    mLraWindowPowers.assign(static_cast<size_t>(kMaxHistoryBlocks), 0.0);
     mPrefixSums.resize(static_cast<size_t>(kMaxHistoryBlocks + 1), 0.0);
 
     // Reset LRA histogram
@@ -368,7 +369,8 @@ float LoudnessMeter::computeLRA()
     const int numWin3s = n - kShortTermBlocks + 1;
 
     // Pass 1: compute the ungated mean power of windows above the absolute gate (-70 LUFS).
-    // Use mWindowPowers as scratch storage (pre-allocated, no heap alloc).
+    // Use mLraWindowPowers as scratch storage (pre-allocated, no heap alloc).
+    // NOTE: mWindowPowers is owned by computeIntegratedLUFS() — do not write to it here.
     const double absGateLinear = lufsToLinear(static_cast<float>(kAbsGateLUFS));
     double sumAbsGated = 0.0;
     int    cntAbsGated = 0;
@@ -378,7 +380,7 @@ float LoudnessMeter::computeLRA()
         const double sum = mPrefixSums[static_cast<size_t>(i + kShortTermBlocks)]
                          - mPrefixSums[static_cast<size_t>(i)];
         const double power = sum / kShortTermBlocks;
-        mWindowPowers[static_cast<size_t>(i)] = power;
+        mLraWindowPowers[static_cast<size_t>(i)] = power;
         if (power > absGateLinear)
         {
             sumAbsGated += power;
@@ -405,7 +407,7 @@ float LoudnessMeter::computeLRA()
 
     for (int i = 0; i < numWin3s; ++i)
     {
-        const double power = mWindowPowers[static_cast<size_t>(i)];
+        const double power = mLraWindowPowers[static_cast<size_t>(i)];
         if (power > absGateLinear && power > relGateLinear)
         {
             const float l = powerToLUFS(power);
