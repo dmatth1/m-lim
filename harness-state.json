@@ -1041,6 +1041,11 @@
       "at": "2026-03-28T02:40:00Z",
       "action": "respawned worker-1 (skip 855s backoff); task 509 done (500 total)",
       "reason": "500 tasks done milestone. Worker-2 already claiming task 512, worker-3 initializing."
+    },
+    {
+      "at": "2026-03-28T02:55:00Z",
+      "action": "respawned workers 2+3 (stuck after backoff, no new pending attempt)",
+      "reason": "containers up 15min but logs showed no activity after 5min backoff expired. Worker-1 still building task 503 @110% CPU."
     }
   ],
   "learnings": [
