@@ -2809,3 +2809,95 @@ TEST_CASE("test_getlatencysamples_0p1ms_4x_48k", "[LimiterEngine]")
     REQUIRE(lookaheadPortion == 5);
     REQUIRE(reported == tl.getLatencyInSamples() + oversamplerLatency);
 }
+
+TEST_CASE("LimiterEngine — true peak enforce FIR continuity across blocks",
+          "[LimiterEngine][TruePeak]")
+{
+    // This test verifies that after true peak enforcement triggers corrective gain,
+    // the FIR filter state is continuous (not cold-reset) so the next block's
+    // true peak detection is accurate from sample 0.
+    //
+    // Strategy: use a signal with high inter-sample peaks (a frequency near Nyquist/2).
+    // Set a tight ceiling so enforcement triggers. Then verify the next block's
+    // true peak measurement is accurate (not degraded by a cold FIR warm-up gap).
+
+    constexpr double sampleRate = 48000.0;
+    constexpr int blockSize = 128;
+    constexpr int numChannels = 2;
+
+    LimiterEngine engine;
+    engine.setTruePeakEnabled(true);
+    engine.setOutputCeiling(-1.0f);  // -1 dB ceiling
+    engine.setInputGain(0.0f);
+    engine.setLookahead(1.0f);       // 1 ms lookahead
+    engine.setBypass(false);
+    engine.prepare(sampleRate, blockSize, numChannels);
+
+    // Process several blocks of a signal that generates inter-sample peaks.
+    // Frequency near Nyquist/4 creates significant inter-sample content.
+    const double freq = sampleRate / 4.2;  // ~11428 Hz at 48k — strong ISPs
+    const float amplitude = 0.95f;         // just under 0 dBFS
+
+    // Warm up the engine with a few blocks so limiters settle
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf(numChannels, blockSize);
+        const int sampleOffset = block * blockSize;
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* data = buf.getWritePointer(ch);
+            for (int i = 0; i < blockSize; ++i)
+                data[i] = amplitude * static_cast<float>(
+                    std::sin(kTwoPi * freq * (sampleOffset + i) / sampleRate));
+        }
+        engine.process(buf);
+    }
+
+    // Now process a "boundary" block and capture its output
+    juce::AudioBuffer<float> boundaryBlock(numChannels, blockSize);
+    {
+        const int sampleOffset = 20 * blockSize;
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* data = boundaryBlock.getWritePointer(ch);
+            for (int i = 0; i < blockSize; ++i)
+                data[i] = amplitude * static_cast<float>(
+                    std::sin(kTwoPi * freq * (sampleOffset + i) / sampleRate));
+        }
+    }
+    engine.process(boundaryBlock);
+
+    // Process the very next block — this is where a cold FIR would miss ISPs
+    juce::AudioBuffer<float> nextBlock(numChannels, blockSize);
+    {
+        const int sampleOffset = 21 * blockSize;
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* data = nextBlock.getWritePointer(ch);
+            for (int i = 0; i < blockSize; ++i)
+                data[i] = amplitude * static_cast<float>(
+                    std::sin(kTwoPi * freq * (sampleOffset + i) / sampleRate));
+        }
+    }
+    engine.process(nextBlock);
+
+    // Verify: check true peak of the output using an independent detector
+    // The output should not exceed the ceiling (in linear)
+    const float ceilingLinear = std::pow(10.0f, -1.0f / 20.0f); // -1 dB ≈ 0.891
+
+    TruePeakDetector verifier;
+    verifier.prepare(sampleRate);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        verifier.reset();
+        verifier.processBlock(nextBlock.getReadPointer(ch), blockSize);
+        float detectedPeak = verifier.getPeak();
+
+        // Allow small tolerance (0.1 dB above ceiling) for true peak enforcement
+        const float toleranceLinear = ceilingLinear * 1.012f; // ~0.1 dB margin
+        INFO("ch=" << ch << " detectedPeak=" << detectedPeak
+             << " ceiling=" << ceilingLinear << " tolerance=" << toleranceLinear);
+        CHECK(detectedPeak <= toleranceLinear);
+    }
+}

@@ -372,11 +372,14 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
         const float gain = ceiling / worstPeak;
         buffer.applyGain(0, numSamples, gain);
 
-        // The FIR state now reflects the pre-correction signal, which is out of
-        // sync with the scaled output.  Reset fully so the next block starts with
-        // a FIR that matches the actual output rather than the uncorrected samples.
+        // Reprocess the corrected buffer so FIR state reflects the actual output.
+        // Using resetPeak() + processBlock() instead of reset() preserves FIR
+        // continuity across blocks, avoiding a cold-FIR warm-up gap (~12 samples).
         for (int ch = 0; ch < numChannels; ++ch)
-            mTruePeakEnforcers[ch].reset();
+        {
+            mTruePeakEnforcers[ch].resetPeak();
+            mTruePeakEnforcers[ch].processBlock(buffer.getReadPointer(ch), numSamples);
+        }
     }
 }
 
