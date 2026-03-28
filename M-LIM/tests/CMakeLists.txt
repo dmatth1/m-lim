@@ -25,6 +25,7 @@ set(MLIM_TEST_CASES
     state/test_preset_manager.cpp
     state/test_preset_manager_errors.cpp
     state/test_ab_state.cpp
+    integration/test_state_cross_component.cpp
 )
 
 # Catch2 test executable — DSP/UI sources come from MLIMLib
