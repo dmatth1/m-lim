@@ -1,0 +1,36 @@
+RMSE Measurement — Wave-23 Baseline (Task 520)
+Date: 2026-03-28
+Build: Release (Standalone)
+
+Methodology:
+  Reference: prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!
+  M-LIM:     scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+
+Results:
+  Full:    19.47%  (prev baseline task-354: 22.08%)  ↓ improved by 2.61pp
+  Wave:    15.90%  (prev baseline task-354: 20.55%)  ↓ improved by 4.65pp
+  Left:    25.85%  (prev baseline task-354: 23.50%)  ↑ regressed by 2.35pp
+  Right:   26.44%  (prev baseline task-354: 29.59%)  ↓ improved by 3.15pp
+  Control: 18.97%  (prev baseline task-354: 22.42%)  ↓ improved by 3.45pp
+
+Subregion crops:
+  Wave:    640x500+0+0
+  Left:     80x500+640+0
+  Right:   180x500+720+0
+  Control: 900x90+0+410
+
+Summary:
+  Overall Full RMSE improved from 22.08% to 19.47% (2.61pp reduction).
+  Biggest improvement in Wave region (4.65pp), confirming wave-23 visual
+  parity tasks (505, 507, 508, 509, 519, 521) had positive impact.
+  Left region regressed slightly (2.35pp), possibly due to input meter
+  or GR meter changes in recent tasks. Right panel and control strip
+  both improved significantly.
+
+Completed wave-23 visual tasks included:
+  505 - level-meter-idle-gradient-active-simulation
+  507 - loudness-histogram-idle-warm-fill
+  508 - metersafe-lighten-neutral
+  509 - output-meter-idle-fill-warmth
+  519 - waveform-db-label-opacity-reduce
+  521 - algo-button-inactive-color-reduce-blue
