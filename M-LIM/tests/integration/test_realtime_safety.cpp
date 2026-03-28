@@ -18,10 +18,13 @@
 #include "PluginProcessor.h"
 #include "Parameters.h"
 #include "dsp/LimiterEngine.h"
+#include "dsp/LimiterAlgorithm.h"
 #include "dsp/Oversampler.h"
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
+#include <thread>
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -257,4 +260,233 @@ TEST_CASE("test_oversampling_steady_state_no_alloc", "[RealtimeSafety]")
     }
 
     REQUIRE(allocCount == 0);
+}
+
+// ============================================================================
+// test_threshold_sweep_no_nan
+// A background thread sweeps the output ceiling from -20 to 0 dBFS while the
+// audio thread processes 200 blocks at 0 dBFS amplitude. No output sample may
+// be NaN or Inf.
+// ============================================================================
+TEST_CASE("test_threshold_sweep_no_nan", "[RealtimeSafety]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, kNumChannels);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer, 0.9f);
+        engine.process(buffer);
+    }
+
+    std::atomic<bool> done{false};
+
+    // Background: sweep ceiling continuously
+    std::thread sweeper([&]() {
+        float dB = -20.0f;
+        const float step = 0.1f;
+        while (!done.load(std::memory_order_relaxed))
+        {
+            engine.setOutputCeiling(dB);
+            dB += step;
+            if (dB > 0.0f) dB = -20.0f;
+        }
+    });
+
+    int nanCount = 0;
+    for (int block = 0; block < 200; ++block)
+    {
+        fillTone(buffer, 0.9f);
+        engine.process(buffer);
+
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        {
+            const float* data = buffer.getReadPointer(ch);
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                if (!std::isfinite(data[i]))
+                    ++nanCount;
+            }
+        }
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    sweeper.join();
+
+    INFO("NaN/Inf samples during threshold sweep: " << nanCount);
+    REQUIRE(nanCount == 0);
+}
+
+// ============================================================================
+// test_algorithm_switch_no_overshoot
+// A background thread cycles through all 8 algorithms while the audio thread
+// processes 200 blocks of loud audio. No output sample may exceed 1.01f.
+// ============================================================================
+TEST_CASE("test_algorithm_switch_no_overshoot", "[RealtimeSafety]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, kNumChannels);
+    engine.setOutputCeiling(0.0f);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer, 0.9f);
+        engine.process(buffer);
+    }
+
+    std::atomic<bool> done{false};
+
+    std::thread algoSwitcher([&]() {
+        int idx = 0;
+        const LimiterAlgorithm algos[] = {
+            LimiterAlgorithm::Transparent, LimiterAlgorithm::Punchy,
+            LimiterAlgorithm::Dynamic,     LimiterAlgorithm::Aggressive,
+            LimiterAlgorithm::Allround,    LimiterAlgorithm::Bus,
+            LimiterAlgorithm::Safe,        LimiterAlgorithm::Modern
+        };
+        while (!done.load(std::memory_order_relaxed))
+        {
+            engine.setAlgorithm(algos[idx % 8]);
+            ++idx;
+        }
+    });
+
+    int overshootCount = 0;
+    for (int block = 0; block < 200; ++block)
+    {
+        fillTone(buffer, 0.9f);
+        engine.process(buffer);
+
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        {
+            const float* data = buffer.getReadPointer(ch);
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                if (!std::isfinite(data[i]) || std::abs(data[i]) > 1.01f)
+                    ++overshootCount;
+            }
+        }
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    algoSwitcher.join();
+
+    INFO("Overshoot samples during algorithm switching: " << overshootCount);
+    REQUIRE(overshootCount == 0);
+}
+
+// ============================================================================
+// test_bypass_toggle_no_torn_output
+// A background thread alternates bypass on/off while the audio thread
+// processes 200 blocks. All output samples must be finite.
+// ============================================================================
+TEST_CASE("test_bypass_toggle_no_torn_output", "[RealtimeSafety]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, kNumChannels);
+    engine.setOutputCeiling(0.0f);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer, 0.5f);
+        engine.process(buffer);
+    }
+
+    std::atomic<bool> done{false};
+
+    std::thread bypassToggler([&]() {
+        bool bypass = false;
+        while (!done.load(std::memory_order_relaxed))
+        {
+            engine.setBypass(bypass);
+            bypass = !bypass;
+        }
+        engine.setBypass(false);
+    });
+
+    int badCount = 0;
+    for (int block = 0; block < 200; ++block)
+    {
+        fillTone(buffer, 0.5f);
+        engine.process(buffer);
+
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        {
+            const float* data = buffer.getReadPointer(ch);
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                if (!std::isfinite(data[i]))
+                    ++badCount;
+            }
+        }
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    bypassToggler.join();
+
+    INFO("Non-finite samples during bypass toggling: " << badCount);
+    REQUIRE(badCount == 0);
+}
+
+// ============================================================================
+// test_concurrent_param_changes_no_allocation
+// A background thread hammers parameter setters while the audio thread
+// processes 100 blocks under AllocGuard. The audio thread must not allocate.
+// ============================================================================
+TEST_CASE("test_concurrent_param_changes_no_allocation", "[RealtimeSafety]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, kNumChannels);
+    engine.setOutputCeiling(0.0f);
+
+    juce::AudioBuffer<float> buffer(kNumChannels, kBlockSize);
+
+    // Warm up (outside measured region)
+    for (int i = 0; i < 10; ++i)
+    {
+        fillTone(buffer, 0.5f);
+        engine.process(buffer);
+    }
+
+    std::atomic<bool> done{false};
+
+    // Background thread: hammer setters as fast as possible
+    std::thread paramHammer([&]() {
+        int iter = 0;
+        while (!done.load(std::memory_order_relaxed))
+        {
+            engine.setOutputCeiling(static_cast<float>(-(iter % 20)));
+            engine.setInputGain(static_cast<float>((iter % 12) - 6));
+            engine.setAttack(0.1f + static_cast<float>(iter % 10) * 0.5f);
+            engine.setRelease(10.0f + static_cast<float>(iter % 20) * 5.0f);
+            engine.setBypass((iter % 4) == 0);
+            ++iter;
+        }
+        engine.setBypass(false);
+    });
+
+    // Audio thread: process under AllocGuard — must not allocate
+    int totalAllocs = 0;
+    for (int block = 0; block < 100; ++block)
+    {
+        fillTone(buffer, 0.5f);
+        AllocGuard guard;
+        engine.process(buffer);
+        totalAllocs += guard.count();
+    }
+
+    done.store(true, std::memory_order_relaxed);
+    paramHammer.join();
+
+    INFO("Total allocations during concurrent param changes: " << totalAllocs);
+    REQUIRE(totalAllocs == 0);
 }
