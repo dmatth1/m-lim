@@ -1021,6 +1021,11 @@
       "at": "2026-03-28T01:56:00Z",
       "action": "set worker model to opus[1m]",
       "reason": "user request"
+    },
+    {
+      "at": "2026-03-28T02:00:00Z",
+      "action": "respawned all 3 workers with model=opus",
+      "reason": "user switched model to opus[1m]; all workers were in rate-limit backoff after completing tasks 487, 508, 511"
     }
   ],
   "learnings": [
