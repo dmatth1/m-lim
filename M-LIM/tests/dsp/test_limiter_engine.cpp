@@ -1807,3 +1807,98 @@ TEST_CASE("test_dither_before_true_peak_enforcement", "[LimiterEngine]")
         REQUIRE(tpR <= toleranceLin);
     }
 }
+
+// ============================================================================
+// test_process_fewer_channels_than_prepared_no_crash
+// prepare(2 channels) then process with a 1-channel buffer — must not crash and
+// output must be finite. The engine uses min(buffer.getNumChannels(), mNumChannels)
+// so it should process 1 channel without touching channel-1 state.
+// ============================================================================
+TEST_CASE("test_process_fewer_channels_than_prepared_no_crash", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    // Create a mono (1-channel) buffer with a moderately loud signal
+    juce::AudioBuffer<float> monoBuf(1, kBlockSize);
+    {
+        float* data = monoBuf.getWritePointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = 0.5f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+    }
+
+    // Must not crash
+    REQUIRE_NOTHROW(engine.process(monoBuf));
+
+    // Output on the single channel must be finite
+    const float* out = monoBuf.getReadPointer(0);
+    for (int i = 0; i < kBlockSize; ++i)
+    {
+        INFO("Sample " << i << " = " << out[i]);
+        REQUIRE(std::isfinite(out[i]));
+    }
+}
+
+// ============================================================================
+// test_process_zero_channels_no_crash
+// prepare(2 channels) then process with a 0-channel buffer — must not crash.
+// The engine short-circuits when numChannels == 0 and the loop should not execute.
+// ============================================================================
+TEST_CASE("test_process_zero_channels_no_crash", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    // 0-channel buffer — getNumChannels() returns 0
+    juce::AudioBuffer<float> zeroChanBuf(0, kBlockSize);
+
+    // Must not crash; the engine returns early when numChannels == 0
+    REQUIRE_NOTHROW(engine.process(zeroChanBuf));
+}
+
+// ============================================================================
+// test_process_more_channels_than_prepared_bounded
+// prepare(1 channel) then process with a 2-channel buffer. The engine uses
+// min(buffer.getNumChannels(), mNumChannels) = min(2, 1) = 1, so only channel 0
+// is processed. Channel 1 is left unmodified. Both channels must be finite.
+// ============================================================================
+TEST_CASE("test_process_more_channels_than_prepared_bounded", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 1);
+    engine.setOutputCeiling(0.0f);
+
+    // Stereo buffer filled with a 1kHz sine at 0.5 amplitude on both channels
+    juce::AudioBuffer<float> stereoBuf(2, kBlockSize);
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        float* data = stereoBuf.getWritePointer(ch);
+        for (int i = 0; i < kBlockSize; ++i)
+            data[i] = 0.5f * static_cast<float>(std::sin(kTwoPi * 1000.0 * i / kSampleRate));
+    }
+
+    // Must not crash
+    REQUIRE_NOTHROW(engine.process(stereoBuf));
+
+    // Channel 0 must be finite (was processed by the engine)
+    {
+        const float* ch0 = stereoBuf.getReadPointer(0);
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("Ch0 sample " << i << " = " << ch0[i]);
+            REQUIRE(std::isfinite(ch0[i]));
+        }
+    }
+
+    // Channel 1 must also be finite (was not touched by the engine — still the original sine)
+    {
+        const float* ch1 = stereoBuf.getReadPointer(1);
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("Ch1 sample " << i << " = " << ch1[i]);
+            REQUIRE(std::isfinite(ch1[i]));
+        }
+    }
+}
