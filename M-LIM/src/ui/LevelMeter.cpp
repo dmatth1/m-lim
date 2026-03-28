@@ -83,31 +83,34 @@ void LevelMeter::drawChannel (juce::Graphics& g,
                                         kSegH, kSegGap,
                                         MLIMColours::barTrackBackground.brighter (0.25f));
 
-    // Idle structural gradient — simulate active audio at ~-6 dBFS.
-    // Reference Pro-L 2 shows filled meter with warm zone (top) and safe zone (bottom).
-    // Task 505: redesigned to match active-fill appearance at idle.
+    // Idle structural gradient — simulate active audio.
+    // Input meters (showScale_) use higher alpha for vivid appearance.
+    // Output meters (no scale) use lower alpha for darker idle look matching reference.
     {
         const float simNorm    = dbToNorm (idleSimLevel_);
         const float simFillTop = barTop + barH * (1.0f - simNorm);
-        const float dangerFrac = (1.0f - simNorm) + 0.05f;  // danger zone just below top
-        const float warnFrac   = (1.0f - simNorm) + 0.15f;  // warning zone further below
+        const float dangerFrac = (1.0f - simNorm) + 0.05f;
+        const float warnFrac   = (1.0f - simNorm) + 0.15f;
         const float dangerY    = barTop + barH * dangerFrac;
         const float warnY      = barTop + barH * warnFrac;
+
+        // Scale idle alpha based on meter type
+        const float aScale = showScale_ ? 1.0f : 0.18f;
 
         juce::ColourGradient idleGrad (
             MLIMColours::barTrackBackground,                     0.0f, barTop,
             MLIMColours::barTrackBackground,                     0.0f, simFillTop,
             false);
         idleGrad.addColour ((simFillTop - barTop) / barH + 0.001f,
-                            MLIMColours::meterDanger.withAlpha (0.65f));
+                            MLIMColours::meterDanger.withAlpha (0.65f * aScale));
         idleGrad.addColour ((dangerY - barTop) / barH,
-                            MLIMColours::meterWarning.withAlpha (0.65f));
+                            MLIMColours::meterWarning.withAlpha (0.65f * aScale));
         idleGrad.addColour ((warnY - barTop) / barH,
-                            MLIMColours::grMeterLow.withAlpha (0.60f));
+                            MLIMColours::grMeterLow.withAlpha (0.60f * aScale));
         idleGrad.addColour (0.85f,
-                            MLIMColours::meterSafe.withAlpha (0.88f));
+                            MLIMColours::meterSafe.withAlpha (0.88f * aScale));
         idleGrad.addColour (1.0f,
-                            MLIMColours::meterSafe.brighter (0.3f).withAlpha (0.88f));
+                            MLIMColours::meterSafe.brighter (0.3f).withAlpha (0.88f * aScale));
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
@@ -232,8 +235,8 @@ void LevelMeter::paint (juce::Graphics& g)
 
     // Fill entire meter component with cool blue-purple gradient to match reference background
     {
-        const float bgAlphaTop = showScale_ ? 0.55f : 0.15f;
-        const float bgAlphaBot = showScale_ ? 0.65f : 0.25f;
+        const float bgAlphaTop = showScale_ ? 0.55f : 0.08f;
+        const float bgAlphaBot = showScale_ ? 0.65f : 0.12f;
         juce::ColourGradient bgGrad (
             MLIMColours::meterSafe.darker (0.6f).withAlpha (bgAlphaTop),  0.0f, y,
             MLIMColours::meterSafe.withAlpha (bgAlphaBot),                0.0f, y + h,
