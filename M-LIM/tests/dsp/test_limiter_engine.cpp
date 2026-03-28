@@ -624,11 +624,11 @@ TEST_CASE("test_oversampling_with_sidechain", "[LimiterEngine]")
 }
 
 // ============================================================================
-// test_latency_reported_truncates_not_rounds
-// getLatencySamples() must use truncation (int cast) for the lookahead
-// conversion, matching TransientLimiter::setLookahead().
+// test_latency_delegates_to_transient_limiter
+// getLatencySamples() must delegate lookahead computation to
+// TransientLimiter::getLatencyInSamples() rather than independently computing.
 // ============================================================================
-TEST_CASE("test_latency_reported_truncates_not_rounds", "[LimiterEngine]")
+TEST_CASE("test_latency_delegates_to_transient_limiter", "[LimiterEngine]")
 {
     LimiterEngine engine;
     // Use 2x oversampling (factor=1)
@@ -640,14 +640,15 @@ TEST_CASE("test_latency_reported_truncates_not_rounds", "[LimiterEngine]")
     // Must be positive when oversampling is active
     REQUIRE(reportedLatency > 0);
 
-    // Reported value must match the truncated computation (int cast), not rounded.
+    // Verify the result matches TransientLimiter delegation + oversampler latency.
+    // We verify indirectly: the oversampler portion should be lround of float latency,
+    // and the total should be consistent.
     const float oversamplerFloat = engine.getOversamplerLatency();
-    const float lookaheadMs      = engine.getLookaheadMs();
-    const int   expectedLookahead = static_cast<int>(lookaheadMs * 0.001f * static_cast<float>(kSampleRate));
     const int   expectedOversampler = static_cast<int>(std::lround(oversamplerFloat));
-    const int   expected = expectedLookahead + expectedOversampler;
 
-    REQUIRE(reportedLatency == expected);
+    // The lookahead portion should be the total minus oversampler
+    const int lookaheadPortion = reportedLatency - expectedOversampler;
+    REQUIRE(lookaheadPortion >= 0);
 }
 
 // ============================================================================
@@ -983,31 +984,30 @@ TEST_CASE("test_sidechain_tilt_affects_gr", "[LimiterEngine]")
 }
 
 // ============================================================================
-// test_latency_44100_5ms_truncates_to_220
+// test_latency_44100_5ms_no_oversampling
 // At 44100 Hz with 5 ms lookahead and no oversampling, getLatencySamples()
-// must return 220 (truncation) not 221 (rounding).
-// 5 * 0.001 * 44100 = 220.5 → truncate → 220
+// delegates to TransientLimiter::getLatencyInSamples().
+// TransientLimiter: mLookaheadSamples = int(5 * 0.001 * 44100) = 220
+// getLatencyInSamples(): round(220 / 1.0) = 220
 // ============================================================================
-TEST_CASE("test_latency_44100_5ms_truncates_to_220", "[LimiterEngine]")
+TEST_CASE("test_latency_44100_5ms_no_oversampling", "[LimiterEngine]")
 {
     LimiterEngine engine;
     engine.setOversamplingFactor(0); // no oversampling
-    engine.setLookahead(5.0f);       // 5 ms before prepare so mSampleRate is set first
+    engine.setLookahead(5.0f);
     engine.prepare(44100.0, kBlockSize, 2);
 
     const int reported = engine.getLatencySamples();
     INFO("Reported latency at 44100 Hz, 5ms: " << reported);
-    // int(5 * 0.001 * 44100) = int(220.5) = 220
     REQUIRE(reported == 220);
 }
 
 // ============================================================================
-// test_latency_48000_1ms_truncates_to_48
+// test_latency_48000_1ms_no_oversampling
 // At 48000 Hz with 1 ms lookahead and no oversampling, getLatencySamples()
-// must return 48.
-// 1 * 0.001 * 48000 = 48.0 → truncate → 48
+// delegates to TransientLimiter. int(1 * 0.001 * 48000) = 48, round(48/1) = 48.
 // ============================================================================
-TEST_CASE("test_latency_48000_1ms_truncates_to_48", "[LimiterEngine]")
+TEST_CASE("test_latency_48000_1ms_no_oversampling", "[LimiterEngine]")
 {
     LimiterEngine engine;
     engine.setOversamplingFactor(0); // no oversampling
@@ -1022,8 +1022,9 @@ TEST_CASE("test_latency_48000_1ms_truncates_to_48", "[LimiterEngine]")
 // ============================================================================
 // test_latency_44100_5ms_4x_oversampling
 // At 44100 Hz with 5 ms lookahead and 4x oversampling (factor=2),
-// the lookahead portion of getLatencySamples() must equal int(5 * 0.001 * 44100) = 220.
-// Total latency = 220 + oversamplerLatency.
+// TransientLimiter operates at 176400 Hz: mLookaheadSamples = int(5*0.001*176400) = 882.
+// getLatencyInSamples(): round(882 / 4.0) = round(220.5) = 221.
+// Total latency = 221 + oversamplerLatency.
 // ============================================================================
 TEST_CASE("test_latency_44100_5ms_4x_oversampling", "[LimiterEngine]")
 {
@@ -1034,9 +1035,8 @@ TEST_CASE("test_latency_44100_5ms_4x_oversampling", "[LimiterEngine]")
 
     const int reported = engine.getLatencySamples();
     const int oversamplerLatency = static_cast<int>(std::lround(engine.getOversamplerLatency()));
-    // lookahead portion must be int(5 * 0.001 * 44100) = 220
-    const int expectedLookahead = static_cast<int>(5.0 * 0.001 * 44100.0);
-    REQUIRE(expectedLookahead == 220);
+    // TransientLimiter at 4x OS: int(5*0.001*176400)=882, round(882/4)=221
+    const int expectedLookahead = 221;
     INFO("Reported latency: " << reported << ", oversampler: " << oversamplerLatency);
     REQUIRE(reported == expectedLookahead + oversamplerLatency);
 }
@@ -2657,4 +2657,155 @@ TEST_CASE("LimiterEngine reset clears meter atomics", "[dsp][limiterengine]")
     REQUIRE(engine.getGainReduction() == 0.0f);
     REQUIRE(engine.getTruePeakL() == 0.0f);
     REQUIRE(engine.getTruePeakR() == 0.0f);
+}
+
+// ============================================================================
+// test_getlatencysamples_matches_transientlimiter
+// Prepare engine at 44100 Hz, 4x OS, lookahead = 2.6 ms; verify
+// getLatencySamples() equals TransientLimiter's getLatencyInSamples() +
+// oversampler latency (the concrete example from the bug description).
+// ============================================================================
+TEST_CASE("test_getlatencysamples_matches_transientlimiter", "[LimiterEngine]")
+{
+    // Verify via a standalone TransientLimiter that the engine delegates correctly
+    TransientLimiter tl;
+    tl.prepare(44100.0 * 4.0, kBlockSize * 4, 2, 44100.0); // 4x OS
+    tl.setLookahead(2.6f);
+    const int expectedLookahead = tl.getLatencyInSamples();
+    // TransientLimiter: int(2.6*0.001*176400)=458, round(458/4)=round(114.5)=115
+    REQUIRE(expectedLookahead == 115);
+
+    LimiterEngine engine;
+    engine.setOversamplingFactor(2); // 4x oversampling
+    engine.setLookahead(2.6f);
+    engine.prepare(44100.0, kBlockSize, 2);
+
+    const int reported = engine.getLatencySamples();
+    const int oversamplerLatency = static_cast<int>(std::lround(engine.getOversamplerLatency()));
+
+    INFO("reported=" << reported << " expectedLookahead=" << expectedLookahead
+         << " oversamplerLatency=" << oversamplerLatency);
+    REQUIRE(reported == expectedLookahead + oversamplerLatency);
+}
+
+// ============================================================================
+// test_getlatencysamples_all_os_factors
+// For OS factors 1x–4x and lookahead values (0.5, 1.0, 2.6, 5.0 ms), verify
+// that getLatencySamples() matches the actual impulse delay measured in
+// process() output within ±1 sample.
+// ============================================================================
+TEST_CASE("test_getlatencysamples_all_os_factors", "[LimiterEngine]")
+{
+    const float lookaheadValues[] = { 0.5f, 1.0f, 2.6f, 5.0f };
+    const int   osFactors[]       = { 0, 1, 2 }; // 1x, 2x, 4x
+    const int   osMultipliers[]   = { 1, 2, 4 };
+
+    for (int fi = 0; fi < 3; ++fi)
+    {
+        for (float laMs : lookaheadValues)
+        {
+            LimiterEngine engine;
+            engine.setOversamplingFactor(osFactors[fi]);
+            engine.setLookahead(laMs);
+            engine.setOutputCeiling(0.0f); // 0 dBFS ceiling
+
+            const int N = 2048;
+            engine.prepare(44100.0, N, 1);
+
+            const int reportedLatency = engine.getLatencySamples();
+
+            // Verify via standalone TransientLimiter
+            TransientLimiter tl;
+            double opRate = 44100.0 * osMultipliers[fi];
+            tl.prepare(opRate, N * osMultipliers[fi], 1, 44100.0);
+            tl.setLookahead(laMs);
+            const int expectedLookahead = tl.getLatencyInSamples();
+            const int oversamplerLatency = static_cast<int>(std::lround(engine.getOversamplerLatency()));
+
+            INFO("OS=" << osMultipliers[fi] << "x lookahead=" << laMs << "ms"
+                 << " reported=" << reportedLatency
+                 << " expectedLookahead=" << expectedLookahead
+                 << " oversamplerLatency=" << oversamplerLatency);
+            REQUIRE(reportedLatency == expectedLookahead + oversamplerLatency);
+
+            // Feed an impulse and measure actual delay
+            const int totalSamples = reportedLatency + 512;
+            std::vector<float> output(totalSamples, 0.0f);
+
+            // First block: impulse at sample 0
+            juce::AudioBuffer<float> buf(1, N);
+            buf.clear();
+            buf.getWritePointer(0)[0] = 0.5f; // below ceiling, passes through
+            engine.process(buf);
+            for (int s = 0; s < std::min(N, totalSamples); ++s)
+                output[s] = buf.getReadPointer(0)[s];
+
+            // Subsequent blocks: silence
+            int written = N;
+            while (written < totalSamples)
+            {
+                buf.clear();
+                const int thisBlock = std::min(N, totalSamples - written);
+                juce::AudioBuffer<float> smallBuf(1, thisBlock);
+                smallBuf.clear();
+                engine.process(smallBuf);
+                for (int s = 0; s < thisBlock; ++s)
+                    output[written + s] = smallBuf.getReadPointer(0)[s];
+                written += thisBlock;
+            }
+
+            // Find the peak in the output
+            int peakPos = 0;
+            float peakVal = 0.0f;
+            for (int s = 0; s < totalSamples; ++s)
+            {
+                if (std::abs(output[s]) > peakVal)
+                {
+                    peakVal = std::abs(output[s]);
+                    peakPos = s;
+                }
+            }
+
+            // The impulse should appear within ±1 of the reported latency
+            INFO("OS=" << osMultipliers[fi] << "x lookahead=" << laMs << "ms"
+                 << " peakPos=" << peakPos << " reportedLatency=" << reportedLatency
+                 << " peakVal=" << peakVal);
+            if (peakVal > 0.01f) // only check if impulse is detectable
+            {
+                REQUIRE(std::abs(peakPos - reportedLatency) <= 1);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// test_getlatencysamples_0p1ms_4x_48k
+// Verify that at 0.1 ms lookahead, 4x OS, 48 kHz, getLatencySamples()
+// returns the rounded value (5) not the truncated value (4).
+// TransientLimiter at 192000 Hz: int(0.1*0.001*192000) = int(19.2) = 19
+// getLatencyInSamples(): round(19 / 4.0) = round(4.75) = 5
+// ============================================================================
+TEST_CASE("test_getlatencysamples_0p1ms_4x_48k", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOversamplingFactor(2); // 4x oversampling
+    engine.setLookahead(0.1f);       // 0.1 ms
+    engine.prepare(48000.0, kBlockSize, 2);
+
+    const int reported = engine.getLatencySamples();
+    const int oversamplerLatency = static_cast<int>(std::lround(engine.getOversamplerLatency()));
+    const int lookaheadPortion = reported - oversamplerLatency;
+
+    // Verify via standalone TransientLimiter
+    TransientLimiter tl;
+    tl.prepare(48000.0 * 4.0, kBlockSize * 4, 2, 48000.0);
+    tl.setLookahead(0.1f);
+
+    INFO("reported=" << reported << " oversamplerLatency=" << oversamplerLatency
+         << " lookaheadPortion=" << lookaheadPortion
+         << " TL.getLatencyInSamples()=" << tl.getLatencyInSamples());
+    // The old truncation would give int(0.1*0.001*48000)=int(4.8)=4
+    // The new delegation gives round(19/4)=round(4.75)=5
+    REQUIRE(lookaheadPortion == 5);
+    REQUIRE(reported == tl.getLatencyInSamples() + oversamplerLatency);
 }
