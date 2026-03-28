@@ -651,3 +651,140 @@ TEST_CASE("test_invalid_to_valid_mode_switch_no_diverge", "[Dither]")
         REQUIRE(std::abs(buf2[i]) < 1.0f);
     }
 }
+
+// ============================================================
+// test_error_feedback_stable_88200hz_long_run
+// At 88200 Hz, the Weighted mode uses zero coefficients (beyond Nyquist/2),
+// so error feedback is effectively off. 100k silence samples must stay
+// within ±2 LSBs (16-bit step) and remain finite.
+// ============================================================
+
+TEST_CASE("test_error_feedback_stable_88200hz_long_run", "[Dither]")
+{
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const int numSamples = 100000;
+
+    Dither d;
+    d.prepare(88200.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);  // Weighted — coefficients zeroed at 88.2 kHz
+
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float bound = 2.0f * step + step * 0.01f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("Sample " << i << " = " << signal[i]);
+        REQUIRE(std::isfinite(signal[i]));
+        REQUIRE(std::abs(signal[i]) <= bound);
+    }
+}
+
+// ============================================================
+// test_error_feedback_stable_192000hz_long_run
+// At 192000 Hz, coefficients should also be zeroed (>= 88200 Hz branch).
+// 100k silence samples must stay within ±2 LSBs and remain finite.
+// ============================================================
+
+TEST_CASE("test_error_feedback_stable_192000hz_long_run", "[Dither]")
+{
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const int numSamples = 100000;
+
+    Dither d;
+    d.prepare(192000.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);  // Weighted — must zero coefficients at this rate
+
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float bound = 2.0f * step + step * 0.01f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("Sample " << i << " = " << signal[i]);
+        REQUIRE(std::isfinite(signal[i]));
+        REQUIRE(std::abs(signal[i]) <= bound);
+    }
+}
+
+// ============================================================
+// test_reprepare_clears_error_state
+// Prime the error state at 44100 Hz with noise shaping mode 1, then
+// re-prepare at 88200 Hz. After reprepare, output must be within ±2 LSBs
+// (not carry over divergent error from the prior prepare).
+// ============================================================
+
+TEST_CASE("test_reprepare_clears_error_state", "[Dither]")
+{
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+
+    Dither d;
+    // Prime with 44100 Hz first-order shaping and a loud signal
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(1);  // First-order feedback — accumulates error state
+
+    {
+        std::vector<float> priming(1000, 0.1f);
+        d.process(priming.data(), static_cast<int>(priming.size()));
+    }
+
+    // Re-prepare at 88200 Hz — must flush prior error state
+    d.prepare(88200.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(2);  // Weighted mode (zero coefficients at this rate)
+
+    const int numSamples = 1000;
+    std::vector<float> signal(numSamples, 0.0f);
+    d.process(signal.data(), numSamples);
+
+    const float bound = 2.0f * step + step * 0.01f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("Post-reprepare sample " << i << " = " << signal[i]);
+        REQUIRE(std::isfinite(signal[i]));
+        REQUIRE(std::abs(signal[i]) <= bound);
+    }
+}
+
+// ============================================================
+// test_half_lsb_boundary_unbiased
+// Feed 0.5 LSB (exactly half the quantization step) 10000 times.
+// The dither should cause some samples to round up and some down.
+// The up/down ratio must be between 0.4 and 0.6 (unbiased distribution).
+// ============================================================
+
+TEST_CASE("test_half_lsb_boundary_unbiased", "[Dither]")
+{
+    const float step    = std::pow(2.0f, 1.0f - 16.0f);
+    const float halfLsb = step * 0.5f;
+    const int numSamples = 10000;
+
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(0);  // Basic: TPDF only, no feedback
+
+    std::vector<float> signal(numSamples, halfLsb);
+    d.process(signal.data(), numSamples);
+
+    // Count samples that rounded up (≥ step) vs. down (= 0)
+    int roundedUp   = 0;
+    int roundedDown = 0;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        REQUIRE(std::isfinite(signal[i]));
+        if (std::abs(signal[i]) >= step * 0.5f)
+            ++roundedUp;
+        else
+            ++roundedDown;
+    }
+
+    const float ratio = static_cast<float>(roundedUp) / static_cast<float>(numSamples);
+    INFO("Up/total ratio = " << ratio << " (" << roundedUp << "/" << numSamples << ")");
+    // TPDF dither should split roughly 50/50 over 10k samples
+    REQUIRE(ratio >= 0.4f);
+    REQUIRE(ratio <= 0.6f);
+}
