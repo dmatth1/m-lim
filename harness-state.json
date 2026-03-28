@@ -971,6 +971,11 @@
       "at": "2026-03-28T00:56:13Z",
       "action": "respawned worker-1, unstuck task 487",
       "reason": "log frozen 3 cycles at same entry (running tests), 0.39% CPU \u2014 hung after build"
+    },
+    {
+      "at": "2026-03-28T01:01:26Z",
+      "action": "respawned worker-3, unstuck task 486",
+      "reason": "log frozen 3 cycles at same entry (fixing test after build success). Pattern matches previous worker-1 hangs."
     }
   ],
   "learnings": [
@@ -993,7 +998,8 @@
     "Wave 20 final: Full=19.82%, Wave=17.29%, Left=28.75% (floor), Right=23.09% (regression from task-391 warm shift), Control=21.02% (regression from task-392 over-brightening). Full broke 20%!",
     "Wave 21 final: Full=19.46%, Wave=16.72%, Left=28.71%, Right=23.09% (still regressed), Control=21.02% (still regressed). Waveform keeps improving. Right/Control need dedicated fix wave.",
     "ccache defaults to /home/swarm/.cache/ccache (container-local, lost on exit). Must set CCACHE_DIR=/build-cache/ccache to use the shared build-cache volume.",
-    "VPA-37: Full=18.44%, Wave=15.53%, Left=20.62%, Right=22.82%, Control=18.22% \u2014 wave-24 improved Full by 0.79pp. Gap to 15% target: 3.44pp. VPA puts tasks in M-LIM/tasks/needs-grooming/ for PM grooming."
+    "VPA-37: Full=18.44%, Wave=15.53%, Left=20.62%, Right=22.82%, Control=18.22% \u2014 wave-24 improved Full by 0.79pp. Gap to 15% target: 3.44pp. VPA puts tasks in M-LIM/tasks/needs-grooming/ for PM grooming.",
+    "Workers hang consistently after builds when waiting for API response during test iteration. Respawn after 3 frozen cycles."
   ],
   "extra_guidance": "PRIORITY: Always pick tasks 421-429 first (visual parity tasks) over test/code tasks \u2014 these directly improve RMSE toward the 15% target. Only pick test tasks when no visual parity tasks remain. Use CORRECT RMSE methodology: reference crop prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!; M-LIM: scrot 1920x1080, crop 908x500+509+325, resize 900x500!. Correct baseline (task-354): Full=22.08%, Wave=20.55%, Left=23.50%, Right=29.59%, Control=22.42%. Build only Standalone for dev: cmake --build build --target MLIM_Standalone_Standalone -j$(nproc). Use ccache: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime. Tasks marked BLOCKED in pending/ should be treated as available \u2014 harness will unblock them. Do NOT rename task files to BLOCKED-* unless you have personally verified a hard git conflict that cannot be resolved. Set CCACHE_DIR=/build-cache/ccache so ccache persists across container restarts."
 }
