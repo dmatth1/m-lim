@@ -61,11 +61,13 @@ void TransientLimiter::prepare(double operatingSampleRate, int /*maxBlockSize*/,
 void TransientLimiter::setLookahead(float ms)
 {
     const float clamped = std::clamp(ms, 0.0f, kMaxLookaheadMs);
-    mLookaheadSamples = static_cast<int>(clamped * 0.001f * static_cast<float>(mSampleRate));
+    int samples = static_cast<int>(clamped * 0.001f * static_cast<float>(mSampleRate));
 
     // Clamp to allocated buffer size
-    if (mLookaheadSamples > mMaxLookaheadSamples)
-        mLookaheadSamples = mMaxLookaheadSamples;
+    if (samples > mMaxLookaheadSamples)
+        samples = mMaxLookaheadSamples;
+
+    mLookaheadSamples.store(samples, std::memory_order_relaxed);
 }
 
 // ---------------------------------------------------------------------------
@@ -137,11 +139,12 @@ int TransientLimiter::getLatencyInSamples() const
     // host-domain value regardless of whether the limiter is running at an
     // upsampled rate.  The internal mLookaheadSamples is in operating-rate
     // samples; divide by the oversampling factor (mSampleRate / mOriginalSampleRate).
+    const int lookahead = mLookaheadSamples.load(std::memory_order_relaxed);
     if (mSampleRate <= 0.0 || mOriginalSampleRate <= 0.0)
-        return mLookaheadSamples;
+        return lookahead;
 
     const double osFactor = mSampleRate / mOriginalSampleRate;
-    return static_cast<int>(std::round(static_cast<double>(mLookaheadSamples) / osFactor));
+    return static_cast<int>(std::round(static_cast<double>(lookahead) / osFactor));
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +264,7 @@ void TransientLimiter::processBypassDelay(float** channelData, int numChannels, 
 
     const int chCount   = std::min(numChannels, mNumChannels);
     const int bufSize   = mMaxLookaheadSamples + 1;
-    const int lookahead = mLookaheadSamples;
+    const int lookahead = mLookaheadSamples.load(std::memory_order_relaxed);
 
     if (lookahead == 0)
         return;  // no delay to maintain; audio passes through unchanged
@@ -329,7 +332,7 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
 
     const int chCount   = std::min(numChannels, mNumChannels);
     const int bufSize   = mMaxLookaheadSamples + 1;
-    const int lookahead = mLookaheadSamples;
+    const int lookahead = mLookaheadSamples.load(std::memory_order_relaxed);
 
     // When lookahead == 0, bypass the delay path and limit in-place
     const bool bypassDelay = (lookahead == 0);

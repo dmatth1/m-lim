@@ -2,6 +2,7 @@
 
 #include "DspUtil.h"
 #include "LimiterAlgorithm.h"
+#include <atomic>
 #include <cstdint>
 #include <vector>
 
@@ -94,7 +95,7 @@ private:
     double mSampleRate         = 44100.0;   // operating rate (may be upsampled)
     double mOriginalSampleRate = 44100.0;   // host rate before oversampling
     int    mNumChannels   = 2;
-    int    mLookaheadSamples = 0;   // current lookahead size in samples
+    std::atomic<int> mLookaheadSamples{0};   // current lookahead size in samples
     int    mMaxLookaheadSamples = 0; // allocated buffer size
     float  mChannelLink   = 1.0f;   // 0–1
     float  mThreshold     = 1.0f;   // linear ceiling (default 0 dBFS)
