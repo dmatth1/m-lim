@@ -1,4 +1,4 @@
-# Task: DspUtil.h Unit Tests
+# Task 533: DspUtil.h Unit Tests
 
 ## Description
 `src/dsp/DspUtil.h` contains 5 inline utility functions (`gainToDecibels`, `decibelsToGain`, `clampThreshold`, `floatBitsEqual`, `applyChannelLinking`) used across all DSP modules. None have dedicated unit tests — they're only exercised indirectly through LimiterEngine and limiter tests. Direct tests are needed to verify edge cases (0 dB roundtrip, -120 dB floor, NaN/Inf inputs, single-channel linking, link=0 vs link=1 boundaries) that indirect tests don't cover.

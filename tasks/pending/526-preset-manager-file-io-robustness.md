@@ -1,4 +1,4 @@
-# Task: Improve PresetManager file I/O robustness
+# Task 526: Improve PresetManager File I/O Robustness
 
 ## Description
 `PresetManager::savePreset()` truncates the file before writing (lines 29-31 of `src/state/PresetManager.cpp`). If the process crashes between `truncate()` and `writeTo()`, the preset file is lost. Additionally, `createDirectory()` return values are ignored (lines 7, 13), and preset names are not validated for invalid characters.

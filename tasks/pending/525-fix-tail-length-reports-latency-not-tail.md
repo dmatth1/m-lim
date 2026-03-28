@@ -1,4 +1,4 @@
-# Task: Fix getTailLengthSeconds Reporting Latency Instead of True Tail Length
+# Task 525: Fix getTailLengthSeconds Reporting Latency Instead of True Tail Length
 
 ## Description
 `PluginProcessor::getTailLengthSeconds()` returns `getLatencySamples() / sampleRate`, which is the plugin's **latency** (lookahead + oversampler delay), not its **tail length**. These are different concepts:

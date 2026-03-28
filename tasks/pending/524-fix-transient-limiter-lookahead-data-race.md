@@ -1,4 +1,4 @@
-# Task: Fix Data Race on TransientLimiter::mLookaheadSamples
+# Task 524: Fix Data Race on TransientLimiter::mLookaheadSamples
 
 ## Description
 `TransientLimiter::mLookaheadSamples` is a plain `int` that is:

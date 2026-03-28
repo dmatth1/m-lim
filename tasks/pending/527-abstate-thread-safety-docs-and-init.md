@@ -1,4 +1,4 @@
-# Task: Document ABState thread safety and fix uninitialized state
+# Task 527: Document ABState Thread Safety and Fix Uninitialized State
 
 ## Description
 Two issues in ABState:

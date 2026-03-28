@@ -1,4 +1,4 @@
-# Task: Standardize atomic memory ordering across LimiterEngine
+# Task 528: Standardize Atomic Memory Ordering Across LimiterEngine
 
 ## Description
 LimiterEngine uses inconsistent memory ordering for atomic operations. Some use `memory_order_relaxed` (correct for independent parameters), others use the default `memory_order_seq_cst` (unnecessarily strong). Since these atomics are independent parameter values where brief staleness is acceptable, all should use relaxed ordering consistently.

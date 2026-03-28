@@ -45,6 +45,8 @@ M-LIM/
 │   │   ├── SidechainFilter.h/.cpp    # HP/LP/Tilt sidechain filter
 │   │   ├── DCFilter.h/.cpp           # DC offset removal filter
 │   │   ├── Dither.h/.cpp             # TPDF dithering + noise shaping
+│   │   ├── DspUtil.h                 # Shared inline DSP utilities (dB conversion, clamping, linking)
+│   │   ├── MeterData.h               # Lock-free FIFO data struct for audio→UI metering
 │   │   └── LoudnessMeter.h/.cpp      # LUFS metering (momentary/short/integrated)
 │   ├── ui/
 │   │   ├── LookAndFeel.h/.cpp        # Custom dark theme

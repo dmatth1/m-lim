@@ -1,4 +1,4 @@
-# Task: Realtime Safety Tests for State Operations During Audio
+# Task 532: Realtime Safety Tests for State Operations During Audio
 
 ## Description
 `test_realtime_safety.cpp` tests that processBlock makes no heap allocations during steady-state DSP. However, it doesn't test what happens when state operations (preset load, A/B toggle, undo/redo) occur while processBlock is running. These operations call `apvts.replaceState()` on the message thread, which could trigger allocations or locks visible to the audio thread. A test should verify that processBlock remains allocation-free even when state operations happen concurrently.

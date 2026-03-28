@@ -1,4 +1,4 @@
-# Task: Unify kMaxChannels across DSP classes
+# Task 529: Unify kMaxChannels Across DSP Classes
 
 ## Description
 Channel capacity limits are inconsistent:

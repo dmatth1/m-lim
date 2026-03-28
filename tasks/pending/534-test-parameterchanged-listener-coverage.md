@@ -1,4 +1,4 @@
-# Task: PluginProcessor::parameterChanged() Direct Test Coverage
+# Task 534: PluginProcessor::parameterChanged() Direct Test Coverage
 
 ## Description
 `PluginProcessor::parameterChanged()` (line ~258) handles parameter change callbacks from APVTS. It sets `mParametersDirty`, and has special handling for `oversamplingFactor` (triggers async update) and `lookahead` (calls `limiterEngine.setLookahead` + `updateLatency`). This method is only tested indirectly via higher-level tests. A direct test should verify: (1) mParametersDirty is set after any parameter change, (2) lookahead changes update latency immediately, (3) oversampling changes trigger async rebuild, (4) non-special parameters don't trigger async update or latency change.

@@ -1,4 +1,4 @@
-# Task: Fix DCFilter denormal flush threshold
+# Task 530: Fix DCFilter Denormal Flush Threshold
 
 ## Description
 `DCFilter::process()` (line 23 of `src/dsp/DCFilter.cpp`) flushes `yPrev` to zero when `std::abs(yPrev) < 1e-15f`. This threshold is problematic:
