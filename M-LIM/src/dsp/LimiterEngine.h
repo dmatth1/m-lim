@@ -118,7 +118,7 @@ private:
     // -----------------------------------------------------------------------
     // DSP components
     // -----------------------------------------------------------------------
-    static constexpr int kMaxChannels = 2;
+    // kMaxChannels defined in DspUtil.h (= 2)
 
     Oversampler      mOversampler;
     Oversampler      mSidechainOversampler;  // mirrors mOversampler for sidechain path

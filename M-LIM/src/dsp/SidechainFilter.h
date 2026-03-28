@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DspUtil.h"
 #include <juce_dsp/juce_dsp.h>
 #include <atomic>
 
@@ -68,7 +69,7 @@ private:
     std::atomic<float> mPendingTilt { 0.0f };
     std::atomic<bool>  mCoeffsDirty { false };
 
-    static constexpr int kMaxChannels = 2;
+    // kMaxChannels defined in DspUtil.h (= 2)
 
     // Per-channel IIR filters (accessed only on the audio thread)
     juce::dsp::IIR::Filter<float> mHP[kMaxChannels];

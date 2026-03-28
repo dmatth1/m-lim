@@ -4,6 +4,7 @@
 #include <cstring>
 
 static constexpr float kDspUtilMinGain = 1e-6f;  // -120 dB floor
+static constexpr int   kMaxChannels    = 2;       // stereo plugin — shared across all DSP classes
 
 // ---------------------------------------------------------------------------
 // dB / linear conversion helpers shared across DSP translation units.

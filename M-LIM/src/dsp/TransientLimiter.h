@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DspUtil.h"
 #include "LimiterAlgorithm.h"
 #include <cstdint>
 #include <vector>
@@ -22,7 +23,7 @@
 class TransientLimiter
 {
 public:
-    static constexpr int kMaxChannels = 8;
+    // kMaxChannels defined in DspUtil.h (= 2)
 
     TransientLimiter() = default;
 
