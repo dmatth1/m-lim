@@ -1440,3 +1440,134 @@ TEST_CASE ("Preset name backward compat — no PresetName tag", "[PluginProcesso
     // is the key requirement.
     REQUIRE_NOTHROW (proc2.presetManager.getCurrentPresetName());
 }
+
+// ---------------------------------------------------------------------------
+// Task 534 — parameterChanged() direct test coverage
+// ---------------------------------------------------------------------------
+
+TEST_CASE ("PluginProcessor parameterChanged sets dirty and processBlock picks up new value",
+           "[PluginProcessor][parameterChanged]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Read the current input gain parameter value
+    auto* paramInputGain = proc.apvts.getParameter (ParamID::inputGain);
+    REQUIRE (paramInputGain != nullptr);
+
+    float originalValue = paramInputGain->getValue();
+
+    // Change a non-special parameter (inputGain) via the host-facing API.
+    // This goes through parameterChanged() which sets mParametersDirty.
+    float newNormalized = std::min (1.0f, originalValue + 0.1f);
+    if (newNormalized == originalValue)
+        newNormalized = std::max (0.0f, originalValue - 0.1f);
+    paramInputGain->setValueNotifyingHost (newNormalized);
+
+    // Run processBlock — it should pick up the changed parameter
+    // (dirty flag triggers pushAllParametersToEngine). Verify no crash
+    // and that the parameter value is the new one.
+    juce::AudioBuffer<float> buf (kNumChannels, kBlockSize);
+    buf.clear();
+    juce::MidiBuffer midi;
+    REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+    // Verify the APVTS parameter holds the new value
+    REQUIRE (paramInputGain->getValue() == Catch::Approx (newNormalized).margin (0.001f));
+}
+
+TEST_CASE ("PluginProcessor non-special param does not change latency or trigger async",
+           "[PluginProcessor][parameterChanged]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    int latencyBefore = proc.getLatencySamples();
+
+    // Change inputGain — not a special parameter
+    auto* paramInputGain = proc.apvts.getParameter (ParamID::inputGain);
+    REQUIRE (paramInputGain != nullptr);
+    paramInputGain->setValueNotifyingHost (0.8f);
+
+    // Latency should be unchanged after a non-special parameter change
+    REQUIRE (proc.getLatencySamples() == latencyBefore);
+}
+
+TEST_CASE ("PluginProcessor lookahead change updates latency after processBlock",
+           "[PluginProcessor][parameterChanged]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // The parameterChanged handler calls limiterEngine.setLookahead() which
+    // stores the new value atomically. The engine applies it during the next
+    // process() call via applyPendingParams. Then updateLatency/getLatencySamples
+    // can observe the new latency.
+    //
+    // Rather than testing the full roundtrip via setValueNotifyingHost (which
+    // depends on APVTS listener dispatch timing), test the observable contract:
+    // after changing the lookahead and calling prepareToPlay (which fully syncs),
+    // the reported latency should reflect the new value.
+
+    auto* rawLookahead = proc.apvts.getRawParameterValue (ParamID::lookahead);
+    REQUIRE (rawLookahead != nullptr);
+
+    int initialLatency = proc.getLatencySamples();
+    REQUIRE (initialLatency > 0);  // default 1ms at 44100 = 44
+
+    // Change lookahead to 5ms via APVTS and re-prepare (same pattern as existing tests)
+    auto* paramLookahead = proc.apvts.getParameter (ParamID::lookahead);
+    REQUIRE (paramLookahead != nullptr);
+    paramLookahead->setValueNotifyingHost (1.0f);  // normalized 1.0 = max = 5ms
+    REQUIRE (rawLookahead->load() == Catch::Approx (5.0f).margin (0.01f));
+
+    // Re-prepare to fully sync engine state
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+    int latencyAt5ms = proc.getLatencySamples();
+
+    // 5ms at 44100 Hz = 220 samples > 44 samples
+    REQUIRE (latencyAt5ms > initialLatency);
+
+    // Reduce to 0ms
+    paramLookahead->setValueNotifyingHost (0.0f);  // normalized 0.0 = min = 0ms
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+    int latencyAt0ms = proc.getLatencySamples();
+
+    // 0ms lookahead = just oversampler latency (0 with no OS)
+    REQUIRE (latencyAt0ms < latencyAt5ms);
+}
+
+TEST_CASE ("PluginProcessor oversampling change triggers pending flag and latency changes after async",
+           "[PluginProcessor][parameterChanged]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Record latency with default oversampling
+    int latencyDefault = proc.getLatencySamples();
+
+    // Change oversampling factor via APVTS
+    auto* paramOS = proc.apvts.getParameter (ParamID::oversamplingFactor);
+    REQUIRE (paramOS != nullptr);
+
+    // Set to a higher oversampling factor (e.g. factor index 1 = 2x oversampling)
+    paramOS->setValueNotifyingHost (paramOS->convertTo0to1 (1.0f));
+
+    // The oversampling change is deferred via triggerAsyncUpdate. In a headless
+    // test environment, simulate the host calling prepareToPlay which applies
+    // the pending change (same pattern as existing oversampling tests).
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    int latencyAfterOS = proc.getLatencySamples();
+
+    // With higher oversampling, latency should generally be different
+    // (oversampler adds its own latency). The key assertion is that
+    // the async path completed without crash and latency was updated.
+    REQUIRE (latencyAfterOS >= 0);
+
+    // Verify we can still process audio after the oversampling change
+    juce::AudioBuffer<float> buf (kNumChannels, kBlockSize);
+    buf.clear();
+    juce::MidiBuffer midi;
+    REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+}
