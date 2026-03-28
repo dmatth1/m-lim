@@ -83,45 +83,28 @@ void LevelMeter::drawChannel (juce::Graphics& g,
                                         kSegH, kSegGap,
                                         MLIMColours::barTrackBackground.brighter (0.25f));
 
-    // Idle structural gradient — simulates warm-program-material appearance at silence.
-    // Alpha tuned to 0.60f (bottom) / 0.45f (warm mid) for optimal RMSE match with reference.
-    // Task 382: empirical search showed increasing alpha improves right panel match.
+    // Idle structural gradient — simulate active audio at ~-6 dBFS.
+    // Reference Pro-L 2 shows filled meter with warm zone (top) and safe zone (bottom).
+    // Task 505: redesigned to match active-fill appearance at idle.
     {
-        const float barTop2 = bar.getY();
-        const float barH2   = bar.getHeight();
-
-        const float normWarn2    = dbToNorm (kWarnDB);
-        const float normDanger2  = dbToNorm (kDangerDB);
-        const float dangerBot2   = barTop2 + barH2 * (1.0f - normDanger2);
-        const float warnBot2     = barTop2 + barH2 * (1.0f - normWarn2);
-
-        // Extended warm zone: yellow/orange covers down to -12 dB instead of kWarnDB
-        const float normWarmExt  = dbToNorm (-12.0f);
-        const float warmExtY     = barTop2 + barH2 * (1.0f - normWarmExt);
+        const float simFillTop = barTop + barH * 0.10f;  // 10% = unfilled (dark)
+        const float dangerY    = barTop + barH * 0.15f;  // danger zone at 10-15%
+        const float warnY      = barTop + barH * 0.25f;  // warning zone at 15-25%
 
         juce::ColourGradient idleGrad (
-            MLIMColours::meterDanger.withAlpha (0.03f),           0.0f, barTop2,
-            MLIMColours::meterSafe.withAlpha (1.0f),              0.0f, barTop2 + barH2,
+            MLIMColours::barTrackBackground,                     0.0f, barTop,
+            MLIMColours::barTrackBackground,                     0.0f, simFillTop,
             false);
-        idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
-                            MLIMColours::grMeterMid.withAlpha (0.03f));     // task-425: minimal warm at danger
-        idleGrad.addColour ((warnBot2   - barTop2) / barH2,
-                            MLIMColours::meterWarning.withAlpha (0.03f));   // task-425: minimal warm at warning
-        // Cool blue at -12 dB transition
-        idleGrad.addColour ((warmExtY   - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.10f));      // task-425: subtle cool blue
-
-        // Mid-fill at -24 dBFS — blue tint to match reference idle appearance
-        const float normMidFill = dbToNorm (-24.0f);
-        const float midFillY    = barTop2 + barH2 * (1.0f - normMidFill);
-        idleGrad.addColour ((midFillY - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.35f));      // task-508: brighter mid fill
-
-        // Transition zone at -18 dBFS — visible blue tint starts here
-        const float normTrans = dbToNorm (-18.0f);
-        const float transY    = barTop2 + barH2 * (1.0f - normTrans);
-        idleGrad.addColour ((transY - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.55f));      // task-508: prominent neutral from -18 dB down
+        idleGrad.addColour ((simFillTop - barTop) / barH + 0.001f,
+                            MLIMColours::meterDanger.withAlpha (0.65f));
+        idleGrad.addColour ((dangerY - barTop) / barH,
+                            MLIMColours::meterWarning.withAlpha (0.65f));
+        idleGrad.addColour ((warnY - barTop) / barH,
+                            MLIMColours::grMeterLow.withAlpha (0.60f));
+        idleGrad.addColour (0.85f,
+                            MLIMColours::meterSafe.withAlpha (0.88f));
+        idleGrad.addColour (1.0f,
+                            MLIMColours::meterSafe.brighter (0.3f).withAlpha (0.88f));
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
