@@ -2194,3 +2194,117 @@ TEST_CASE("test_input_gain_zero_linear_no_crash", "[LimiterEngine]")
         }
     }
 }
+
+// ============================================================================
+// test_reprepare_44100_to_96000_valid_output
+// Prepare at 44100/512/2, process several blocks, re-prepare at 96000/256/2,
+// then process 10 blocks — output must be finite and not exceed ceiling.
+// ============================================================================
+TEST_CASE("test_reprepare_44100_to_96000_valid_output", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOutputCeiling(0.0f);
+
+    // Initial prepare and process
+    engine.prepare(44100.0, 512, 2);
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 512, 2, 44100.0);
+        engine.process(buf);
+    }
+
+    // Re-prepare at a different sample rate and block size
+    engine.prepare(96000.0, 256, 2);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 256, 2, 96000.0);
+        engine.process(buf);
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int s = 0; s < buf.getNumSamples(); ++s)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << s << ": " << data[s]);
+                REQUIRE(std::isfinite(data[s]));
+                REQUIRE(std::abs(data[s]) <= 1.01f);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// test_reprepare_stereo_to_mono_valid_output
+// Prepare at 44100/512/2 (stereo), process, re-prepare at 44100/512/1 (mono),
+// process 10 mono blocks — no crash, output finite.
+// ============================================================================
+TEST_CASE("test_reprepare_stereo_to_mono_valid_output", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOutputCeiling(0.0f);
+
+    // Initial stereo prepare and process
+    engine.prepare(44100.0, 512, 2);
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 512, 2);
+        engine.process(buf);
+    }
+
+    // Re-prepare as mono
+    engine.prepare(44100.0, 512, 1);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 512, 1);
+        engine.process(buf);
+
+        const float* data = buf.getReadPointer(0);
+        for (int s = 0; s < buf.getNumSamples(); ++s)
+        {
+            INFO("Block " << block << " sample " << s << ": " << data[s]);
+            REQUIRE(std::isfinite(data[s]));
+            REQUIRE(std::abs(data[s]) <= 1.01f);
+        }
+    }
+}
+
+// ============================================================================
+// test_reprepare_large_to_small_block_no_overflow
+// Prepare at 44100/2048/2, process, re-prepare at 44100/64/2, process 10 blocks.
+// Verifies that internal buffer sizing handles the large→small block transition.
+// ============================================================================
+TEST_CASE("test_reprepare_large_to_small_block_no_overflow", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.setOutputCeiling(0.0f);
+
+    // Initial prepare with large block size and process
+    engine.prepare(44100.0, 2048, 2);
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 2048);
+        engine.process(buf);
+    }
+
+    // Re-prepare with small block size
+    engine.prepare(44100.0, 64, 2);
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(0.9f, 64);
+        engine.process(buf);
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int s = 0; s < buf.getNumSamples(); ++s)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << s << ": " << data[s]);
+                REQUIRE(std::isfinite(data[s]));
+                REQUIRE(std::abs(data[s]) <= 1.01f);
+            }
+        }
+    }
+}
