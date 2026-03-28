@@ -105,6 +105,11 @@ juce::String PresetManager::getCurrentPresetName() const
     return currentPresetName;
 }
 
+void PresetManager::setCurrentPresetName(const juce::String& name)
+{
+    currentPresetName = name;
+}
+
 juce::File PresetManager::presetFileForName(const juce::String& name) const
 {
     auto candidate = presetDirectory.getChildFile(name + ".xml");

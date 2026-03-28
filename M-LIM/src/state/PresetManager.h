@@ -46,6 +46,9 @@ public:
     /** Returns the name of the currently active preset, or an empty string. */
     juce::String getCurrentPresetName() const;
 
+    /** Sets the current preset name (used when restoring session state). */
+    void setCurrentPresetName(const juce::String& name);
+
     /** Override the preset search/save directory (useful for unit tests). */
     void setPresetDirectory(const juce::File& dir);
 

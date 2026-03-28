@@ -184,6 +184,11 @@ void MLIMAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     // A/B state
     root->addChildElement (new juce::XmlElement (abState.toXml()));
 
+    // Preset name
+    auto presetNameXml = std::make_unique<juce::XmlElement> ("PresetName");
+    presetNameXml->setAttribute ("value", presetManager.getCurrentPresetName());
+    root->addChildElement (presetNameXml.release());
+
     copyXmlToBinary (*root, destData);
 }
 
@@ -201,6 +206,9 @@ void MLIMAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 
         if (auto* abXml = xmlState->getChildByName ("ABState"))
             abState.fromXml (*abXml);
+
+        if (auto* presetXml = xmlState->getChildByName ("PresetName"))
+            presetManager.setCurrentPresetName (presetXml->getStringAttribute ("value"));
 
         updateLatency();
     }
