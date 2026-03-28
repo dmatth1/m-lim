@@ -101,12 +101,12 @@ public:
     /** Returns true if an oversampling factor change was detected on the audio thread
      *  but the actual reallocation is pending (must be done off the audio thread).
      *  Call applyDeferredOversamplingChange() from a non-RT thread to complete it. */
-    bool hasDeferredOversamplingChange() const { return mDeferredOversamplingChange.load(); }
+    bool hasDeferredOversamplingChange() const { return mDeferredOversamplingChange.load(std::memory_order_relaxed); }
 
     /** Returns true if any parameter setter has marked parameters dirty since the
      *  last call to applyPendingParams() (i.e., since the last process() call).
      *  Intended for unit tests that verify change-guard behaviour. */
-    bool isParamsDirty() const { return mParamsDirty.load(); }
+    bool isParamsDirty() const { return mParamsDirty.load(std::memory_order_relaxed); }
 
     // -----------------------------------------------------------------------
     // Metering FIFO — push from audio thread, pop from UI thread
@@ -189,22 +189,22 @@ private:
     // Store value and mark dirty if changed (float version)
     void setIfChanged(std::atomic<float>& param, float newValue) {
         if (!floatBitsEqual(param.load(std::memory_order_relaxed), newValue)) {
-            param.store(newValue);
-            mParamsDirty.store(true);
+            param.store(newValue, std::memory_order_relaxed);
+            mParamsDirty.store(true, std::memory_order_relaxed);
         }
     }
     // Store value and mark dirty if changed (int version)
     void setIfChanged(std::atomic<int>& param, int newValue) {
         if (param.load(std::memory_order_relaxed) != newValue) {
-            param.store(newValue);
-            mParamsDirty.store(true);
+            param.store(newValue, std::memory_order_relaxed);
+            mParamsDirty.store(true, std::memory_order_relaxed);
         }
     }
     // Store value and mark dirty if changed (bool version)
     void setIfChanged(std::atomic<bool>& param, bool newValue) {
         if (param.load(std::memory_order_relaxed) != newValue) {
-            param.store(newValue);
-            mParamsDirty.store(true);
+            param.store(newValue, std::memory_order_relaxed);
+            mParamsDirty.store(true, std::memory_order_relaxed);
         }
     }
 

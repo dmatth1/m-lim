@@ -22,7 +22,7 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mSampleRate          = sampleRate;
     mMaxBlockSize        = maxBlockSize;
     mNumChannels         = numChannels;
-    mCurrentOversamplingFactor = mOversamplingFactor.load();
+    mCurrentOversamplingFactor = mOversamplingFactor.load(std::memory_order_relaxed);
 
     // Prepare oversampler first (determines upsampled rate)
     mOversampler.setFactor(mCurrentOversamplingFactor);
@@ -40,25 +40,25 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
 
     // Prepare limiters at the upsampled rate
     mTransientLimiter.prepare(usSampleRate, usBlockSize, numChannels, sampleRate);
-    mTransientLimiter.setLookahead(mLookaheadMs.load());
-    mTransientLimiter.setChannelLink(mChannelLinkTransients.load() * 0.01f);
+    mTransientLimiter.setLookahead(mLookaheadMs.load(std::memory_order_relaxed));
+    mTransientLimiter.setChannelLink(mChannelLinkTransients.load(std::memory_order_relaxed) * 0.01f);
     mTransientLimiter.setAlgorithmParams(
-        getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load())));
+        getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load(std::memory_order_relaxed))));
 
     mLevelingLimiter.prepare(usSampleRate, usBlockSize, numChannels);
-    mLevelingLimiter.setAttack(mAttackMs.load());
-    mLevelingLimiter.setRelease(mReleaseMs.load());
-    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load() * 0.01f);
+    mLevelingLimiter.setAttack(mAttackMs.load(std::memory_order_relaxed));
+    mLevelingLimiter.setRelease(mReleaseMs.load(std::memory_order_relaxed));
+    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load(std::memory_order_relaxed) * 0.01f);
     mLevelingLimiter.setAlgorithmParams(
-        getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load())));
+        getAlgorithmParams(static_cast<LimiterAlgorithm>(mAlgorithm.load(std::memory_order_relaxed))));
 
     // Pass the output ceiling to both limiters so they limit smoothly to
     // the correct level rather than relying on the hard-clip at step 7.
     {
-        const float inputGain = mInputGainLinear.load();
-        const float ceiling = mUnityGain.load()
+        const float inputGain = mInputGainLinear.load(std::memory_order_relaxed);
+        const float ceiling = mUnityGain.load(std::memory_order_relaxed)
             ? (1.0f / std::max(inputGain, kDspUtilMinGain))
-            : mOutputCeilingLinear.load();
+            : mOutputCeilingLinear.load(std::memory_order_relaxed);
         mTransientLimiter.setThreshold(ceiling);
         mLevelingLimiter.setThreshold(ceiling);
     }
@@ -78,8 +78,8 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
 
     // Dithers at original rate
     {
-        const int bitDepth    = mDitherBitDepth.load();
-        const int noiseShaping = mDitherNoiseShaping.load();
+        const int bitDepth    = mDitherBitDepth.load(std::memory_order_relaxed);
+        const int noiseShaping = mDitherNoiseShaping.load(std::memory_order_relaxed);
         for (auto& d : mDithers)
         {
             d.prepare(sampleRate);
@@ -94,8 +94,8 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     mUpPtrs.resize(numChannels);
     mSidePtrs.resize(numChannels);
 
-    mParamsDirty.store(false);
-    mDeferredOversamplingChange.store(false);
+    mParamsDirty.store(false, std::memory_order_relaxed);
+    mDeferredOversamplingChange.store(false, std::memory_order_relaxed);
 }
 
 // ============================================================================
@@ -149,47 +149,47 @@ void LimiterEngine::reset()
 // ============================================================================
 void LimiterEngine::applyPendingParams()
 {
-    if (!mParamsDirty.exchange(false))
+    if (!mParamsDirty.exchange(false, std::memory_order_relaxed))
         return;
 
-    const int newFactor = mOversamplingFactor.load();
+    const int newFactor = mOversamplingFactor.load(std::memory_order_relaxed);
     if (newFactor != mCurrentOversamplingFactor)
     {
         // Oversampling factor changed — cannot allocate on the audio thread.
         // Set the deferred flag; the PluginProcessor's AsyncUpdater will schedule
         // a full prepare() on the message thread.  Until then, keep processing
         // with the current (old) oversampling factor.
-        mDeferredOversamplingChange.store(true);
+        mDeferredOversamplingChange.store(true, std::memory_order_relaxed);
         // mParamsDirty was already cleared by the exchange(false) above.
         return;
     }
 
     // Update parameters that don't require full reprepare
-    const LimiterAlgorithm algo = static_cast<LimiterAlgorithm>(mAlgorithm.load());
+    const LimiterAlgorithm algo = static_cast<LimiterAlgorithm>(mAlgorithm.load(std::memory_order_relaxed));
     AlgorithmParams params = getAlgorithmParams(algo);
 
-    mTransientLimiter.setLookahead(mLookaheadMs.load());
-    mTransientLimiter.setChannelLink(mChannelLinkTransients.load() * 0.01f);
+    mTransientLimiter.setLookahead(mLookaheadMs.load(std::memory_order_relaxed));
+    mTransientLimiter.setChannelLink(mChannelLinkTransients.load(std::memory_order_relaxed) * 0.01f);
     mTransientLimiter.setAlgorithmParams(params);
 
-    mLevelingLimiter.setAttack(mAttackMs.load());
-    mLevelingLimiter.setRelease(mReleaseMs.load());
-    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load() * 0.01f);
+    mLevelingLimiter.setAttack(mAttackMs.load(std::memory_order_relaxed));
+    mLevelingLimiter.setRelease(mReleaseMs.load(std::memory_order_relaxed));
+    mLevelingLimiter.setChannelLink(mChannelLinkRelease.load(std::memory_order_relaxed) * 0.01f);
     mLevelingLimiter.setAlgorithmParams(params);
 
     // Keep limiter thresholds in sync with the current output ceiling
     {
-        const float inputGain = mInputGainLinear.load();
-        const float ceiling = mUnityGain.load()
+        const float inputGain = mInputGainLinear.load(std::memory_order_relaxed);
+        const float ceiling = mUnityGain.load(std::memory_order_relaxed)
             ? (1.0f / std::max(inputGain, kDspUtilMinGain))
-            : mOutputCeilingLinear.load();
+            : mOutputCeilingLinear.load(std::memory_order_relaxed);
         mTransientLimiter.setThreshold(ceiling);
         mLevelingLimiter.setThreshold(ceiling);
     }
 
     {
-        const int bitDepth     = mDitherBitDepth.load();
-        const int noiseShaping = mDitherNoiseShaping.load();
+        const int bitDepth     = mDitherBitDepth.load(std::memory_order_relaxed);
+        const int noiseShaping = mDitherNoiseShaping.load(std::memory_order_relaxed);
         for (auto& d : mDithers)
         {
             d.setBitDepth(bitDepth);
@@ -235,7 +235,7 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
         return;
     const float inLevelL = peakLevel(buffer, 0, numSamples);
     const float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
-    if (mBypass.load())
+    if (mBypass.load(std::memory_order_relaxed))
     {
         // Transparent bypass: pass audio through the full delay path (upsample →
         // TransientLimiter delay buffer at unity gain → downsample) so the output
@@ -273,11 +273,11 @@ void LimiterEngine::pushBypassMeterData(const juce::AudioBuffer<float>& buffer,
                                          float inLevelL, float inLevelR,
                                          int numChannels, int numSamples)
 {
-    mGRdB.store(0.0f);
+    mGRdB.store(0.0f, std::memory_order_relaxed);
     const float outL = peakLevel(buffer, 0, numSamples);
     const float outR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outL;
-    mTruePkL.store(outL);
-    mTruePkR.store(outR);
+    mTruePkL.store(outL, std::memory_order_relaxed);
+    mTruePkR.store(outR, std::memory_order_relaxed);
     MeterData md;
     md.inputLevelL    = inLevelL;
     md.inputLevelR    = inLevelR;
@@ -293,10 +293,10 @@ void LimiterEngine::pushBypassMeterData(const juce::AudioBuffer<float>& buffer,
 float LimiterEngine::stepApplyInputGain(juce::AudioBuffer<float>& buffer,
                                          int numChannels, int numSamples)
 {
-    const float inputGain = mInputGainLinear.load();
+    const float inputGain = mInputGainLinear.load(std::memory_order_relaxed);
     buffer.applyGain(inputGain);
     // Snapshot pre-limit audio for delta mode (pre-allocated — no heap alloc)
-    if (mDeltaMode.load())
+    if (mDeltaMode.load(std::memory_order_relaxed))
     {
         for (int ch = 0; ch < numChannels; ++ch)
             mPreLimitBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
@@ -341,9 +341,9 @@ void LimiterEngine::stepRunLimiters(const juce::dsp::AudioBlock<float>& upBlock)
 float LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
                                        int numChannels, int numSamples, float inputGain)
 {
-    const float ceiling = mUnityGain.load()
+    const float ceiling = mUnityGain.load(std::memory_order_relaxed)
         ? (1.0f / std::max(inputGain, kDspUtilMinGain))
-        : mOutputCeilingLinear.load();
+        : mOutputCeilingLinear.load(std::memory_order_relaxed);
     for (int ch = 0; ch < numChannels; ++ch)
     {
         float* data = buffer.getWritePointer(ch);
@@ -356,7 +356,7 @@ float LimiterEngine::stepApplyCeiling(juce::AudioBuffer<float>& buffer,
 void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
                                          int numChannels, int numSamples, float ceiling)
 {
-    if (!mTruePeakEnabled.load())
+    if (!mTruePeakEnabled.load(std::memory_order_relaxed))
         return;
 
     float worstPeak = 0.0f;
@@ -386,7 +386,7 @@ void LimiterEngine::stepEnforceTruePeak(juce::AudioBuffer<float>& buffer,
 void LimiterEngine::stepDCFilter(juce::AudioBuffer<float>& buffer,
                                   int numChannels, int numSamples)
 {
-    if (!mDCFilterEnabled.load())
+    if (!mDCFilterEnabled.load(std::memory_order_relaxed))
         return;
     for (int ch = 0; ch < numChannels; ++ch)
         mDCFilters[ch].process(buffer.getWritePointer(ch), numSamples);
@@ -395,7 +395,7 @@ void LimiterEngine::stepDCFilter(juce::AudioBuffer<float>& buffer,
 void LimiterEngine::stepDither(juce::AudioBuffer<float>& buffer,
                                 int numChannels, int numSamples)
 {
-    if (!mDitherEnabled.load())
+    if (!mDitherEnabled.load(std::memory_order_relaxed))
         return;
     for (int ch = 0; ch < numChannels; ++ch)
         mDithers[ch].process(buffer.getWritePointer(ch), numSamples);
@@ -404,7 +404,7 @@ void LimiterEngine::stepDither(juce::AudioBuffer<float>& buffer,
 void LimiterEngine::stepDeltaMode(juce::AudioBuffer<float>& buffer,
                                    int numChannels, int numSamples)
 {
-    if (!mDeltaMode.load())
+    if (!mDeltaMode.load(std::memory_order_relaxed))
         return;
     for (int ch = 0; ch < numChannels; ++ch)
     {
@@ -423,7 +423,7 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
     float outLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : outLevelL;
 
     // True peak detection
-    if (mTruePeakEnabled.load())
+    if (mTruePeakEnabled.load(std::memory_order_relaxed))
     {
         for (int ch = 0; ch < kMaxChannels; ++ch)
         {
@@ -432,9 +432,9 @@ void LimiterEngine::snapAndPushMeterData(const juce::AudioBuffer<float>& buffer,
         }
     }
 
-    mGRdB.store(totalGR);
-    mTruePkL.store(mTruePeakDetectors[0].getPeak());
-    mTruePkR.store(mTruePeakDetectors[1].getPeak());
+    mGRdB.store(totalGR, std::memory_order_relaxed);
+    mTruePkL.store(mTruePeakDetectors[0].getPeak(), std::memory_order_relaxed);
+    mTruePkR.store(mTruePeakDetectors[1].getPeak(), std::memory_order_relaxed);
 
     // Push meter data to FIFO (non-blocking — drop if full)
     MeterData md;
@@ -461,8 +461,8 @@ void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
     const int v = static_cast<int>(algo);
     if (mAlgorithm.load(std::memory_order_relaxed) == v)
         return;
-    mAlgorithm.store(v);
-    mParamsDirty.store(true);
+    mAlgorithm.store(v, std::memory_order_relaxed);
+    mParamsDirty.store(true, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setInputGain(float dB)
@@ -486,23 +486,24 @@ void LimiterEngine::setOversamplingFactor(int factor)
     // No change guard here — setOversamplingFactor has its own deferred change
     // detection path via mCurrentOversamplingFactor in applyPendingParams().
     mOversamplingFactor.store(std::max(Oversampler::kMinOversamplingFactor,
-                                       std::min(Oversampler::kMaxOversamplingFactor, factor)));
-    mParamsDirty.store(true);
+                                       std::min(Oversampler::kMaxOversamplingFactor, factor)),
+                              std::memory_order_relaxed);
+    mParamsDirty.store(true, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setTruePeakEnabled(bool enabled)
 {
-    mTruePeakEnabled.store(enabled);
+    mTruePeakEnabled.store(enabled, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setDCFilterEnabled(bool enabled)
 {
-    mDCFilterEnabled.store(enabled);
+    mDCFilterEnabled.store(enabled, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setDitherEnabled(bool enabled)
 {
-    mDitherEnabled.store(enabled);
+    mDitherEnabled.store(enabled, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setDitherBitDepth(int bits)     { setIfChanged(mDitherBitDepth, bits); }
@@ -510,12 +511,12 @@ void LimiterEngine::setDitherNoiseShaping(int mode) { setIfChanged(mDitherNoiseS
 
 void LimiterEngine::setBypass(bool bypass)
 {
-    mBypass.store(bypass);
+    mBypass.store(bypass, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setDeltaMode(bool delta)
 {
-    mDeltaMode.store(delta);
+    mDeltaMode.store(delta, std::memory_order_relaxed);
 }
 
 void LimiterEngine::setUnityGain(bool unity)  { setIfChanged(mUnityGain, unity); }
@@ -540,17 +541,17 @@ void LimiterEngine::setSidechainTilt(float dB)
 // ============================================================================
 float LimiterEngine::getGainReduction() const
 {
-    return mGRdB.load();
+    return mGRdB.load(std::memory_order_relaxed);
 }
 
 float LimiterEngine::getTruePeakL() const
 {
-    return mTruePkL.load();
+    return mTruePkL.load(std::memory_order_relaxed);
 }
 
 float LimiterEngine::getTruePeakR() const
 {
-    return mTruePkR.load();
+    return mTruePkR.load(std::memory_order_relaxed);
 }
 
 int LimiterEngine::getLatencySamples() const
@@ -567,5 +568,5 @@ float LimiterEngine::getOversamplerLatency() const
 
 float LimiterEngine::getLookaheadMs() const
 {
-    return mLookaheadMs.load();
+    return mLookaheadMs.load(std::memory_order_relaxed);
 }
