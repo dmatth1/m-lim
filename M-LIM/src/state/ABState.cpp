@@ -44,3 +44,56 @@ void ABState::copyBtoA()
     if (stateB.isValid())
         stateA = stateB.createCopy();
 }
+
+juce::XmlElement ABState::toXml() const
+{
+    juce::XmlElement xml ("ABState");
+    xml.setAttribute ("activeIsA", activeIsA ? 1 : 0);
+
+    if (stateA.isValid())
+    {
+        auto stateAXml = stateA.createXml();
+        if (stateAXml != nullptr)
+        {
+            auto* wrapper = xml.createNewChildElement ("StateA");
+            wrapper->addChildElement (stateAXml.release());
+        }
+    }
+
+    if (stateB.isValid())
+    {
+        auto stateBXml = stateB.createXml();
+        if (stateBXml != nullptr)
+        {
+            auto* wrapper = xml.createNewChildElement ("StateB");
+            wrapper->addChildElement (stateBXml.release());
+        }
+    }
+
+    return xml;
+}
+
+void ABState::fromXml (const juce::XmlElement& xml)
+{
+    activeIsA = xml.getIntAttribute ("activeIsA", 1) != 0;
+
+    if (auto* stateAXml = xml.getChildByName ("StateA"))
+    {
+        if (auto* inner = stateAXml->getFirstChildElement())
+            stateA = juce::ValueTree::fromXml (*inner);
+    }
+    else
+    {
+        stateA = juce::ValueTree();
+    }
+
+    if (auto* stateBXml = xml.getChildByName ("StateB"))
+    {
+        if (auto* inner = stateBXml->getFirstChildElement())
+            stateB = juce::ValueTree::fromXml (*inner);
+    }
+    else
+    {
+        stateB = juce::ValueTree();
+    }
+}

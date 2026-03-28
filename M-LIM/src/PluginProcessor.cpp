@@ -173,21 +173,43 @@ juce::AudioProcessorEditor* MLIMAudioProcessor::createEditor()
 
 void MLIMAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    auto state = apvts.copyState();
-    std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    if (xml != nullptr)
-        copyXmlToBinary (*xml, destData);
+    auto root = std::make_unique<juce::XmlElement> ("MLIMState");
+
+    // APVTS parameters
+    auto apvtsState = apvts.copyState();
+    auto apvtsXml = apvtsState.createXml();
+    if (apvtsXml != nullptr)
+        root->addChildElement (apvtsXml.release());
+
+    // A/B state
+    root->addChildElement (new juce::XmlElement (abState.toXml()));
+
+    copyXmlToBinary (*root, destData);
 }
 
 void MLIMAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
-    if (xmlState != nullptr)
-        if (xmlState->hasTagName (apvts.state.getType()))
-        {
-            apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
-            updateLatency();
-        }
+    if (xmlState == nullptr)
+        return;
+
+    if (xmlState->hasTagName ("MLIMState"))
+    {
+        // New format with MLIMState wrapper
+        if (auto* apvtsXml = xmlState->getChildByName (apvts.state.getType()))
+            apvts.replaceState (juce::ValueTree::fromXml (*apvtsXml));
+
+        if (auto* abXml = xmlState->getChildByName ("ABState"))
+            abState.fromXml (*abXml);
+
+        updateLatency();
+    }
+    else if (xmlState->hasTagName (apvts.state.getType()))
+    {
+        // Old format — APVTS root tag only, no A/B state
+        apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+        updateLatency();
+    }
 }
 
 // ---------------------------------------------------------------------------

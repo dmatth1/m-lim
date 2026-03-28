@@ -1246,3 +1246,127 @@ TEST_CASE("test_concurrent_prepare_and_processblock_no_crash", "[PluginProcessor
 
     REQUIRE_FALSE (crashed.load());
 }
+
+// ============================================================================
+// test_ab_state_round_trips_through_xml
+// Populate A and B slots, serialize, load into fresh processor, verify both
+// snapshots and activeIsA are restored correctly.
+// ============================================================================
+TEST_CASE("test_ab_state_round_trips_through_xml", "[PluginProcessor][ABState]")
+{
+    MLIMAudioProcessor procA;
+    procA.prepareToPlay (kSampleRate, kBlockSize);
+
+    // Set up state A: inputGain = 6
+    if (auto* param = procA.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (6.0f));
+    procA.abState.captureState (procA.apvts);
+    REQUIRE (procA.abState.isA());
+
+    // Toggle to B and set different values: inputGain = -12
+    procA.abState.toggle (procA.apvts);
+    REQUIRE_FALSE (procA.abState.isA());
+    if (auto* param = procA.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (-12.0f));
+    procA.abState.captureState (procA.apvts);
+
+    // Serialize
+    juce::MemoryBlock stateData;
+    procA.getStateInformation (stateData);
+    REQUIRE (stateData.getSize() > 0);
+
+    // Load into fresh processor
+    MLIMAudioProcessor procB;
+    procB.prepareToPlay (kSampleRate, kBlockSize);
+    procB.setStateInformation (stateData.getData(),
+                               static_cast<int> (stateData.getSize()));
+
+    // activeIsA should be false (was on B when saved)
+    REQUIRE_FALSE (procB.abState.isA());
+
+    // Restore B snapshot — inputGain should be -12
+    procB.abState.restoreState (procB.apvts);
+    auto* gainB = procB.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (gainB != nullptr);
+    REQUIRE (gainB->load() == Catch::Approx (-12.0f).margin (0.5f));
+
+    // Toggle to A — inputGain should be 6
+    procB.abState.toggle (procB.apvts);
+    REQUIRE (procB.abState.isA());
+    REQUIRE (gainB->load() == Catch::Approx (6.0f).margin (0.5f));
+}
+
+// ============================================================================
+// test_state_backward_compatible_no_ab
+// Load old-format XML (APVTS root tag only) into processor. Must not crash,
+// APVTS parameters must be restored, ABState defaults to empty.
+// ============================================================================
+TEST_CASE("test_state_backward_compatible_no_ab", "[PluginProcessor][ABState]")
+{
+    // Create old-format state data (APVTS root tag only)
+    MLIMAudioProcessor procOld;
+    procOld.prepareToPlay (kSampleRate, kBlockSize);
+
+    if (auto* param = procOld.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (3.0f));
+
+    // Manually create old-format binary (just APVTS state)
+    auto state = procOld.apvts.copyState();
+    std::unique_ptr<juce::XmlElement> oldXml (state.createXml());
+    REQUIRE (oldXml != nullptr);
+
+    juce::MemoryBlock oldData;
+    juce::AudioProcessor::copyXmlToBinary (*oldXml, oldData);
+
+    // Load into fresh processor
+    MLIMAudioProcessor procNew;
+    procNew.prepareToPlay (kSampleRate, kBlockSize);
+    REQUIRE_NOTHROW (procNew.setStateInformation (oldData.getData(),
+                                                   static_cast<int> (oldData.getSize())));
+
+    // APVTS parameters must be restored
+    auto* gain = procNew.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (gain != nullptr);
+    REQUIRE (gain->load() == Catch::Approx (3.0f).margin (0.5f));
+
+    // ABState should be at defaults (activeIsA = true)
+    REQUIRE (procNew.abState.isA());
+}
+
+// ============================================================================
+// test_active_slot_persisted
+// Verify that the activeIsA flag survives a round-trip through state.
+// ============================================================================
+TEST_CASE("test_active_slot_persisted", "[PluginProcessor][ABState]")
+{
+    // Test with activeIsA = true
+    {
+        MLIMAudioProcessor proc;
+        proc.prepareToPlay (kSampleRate, kBlockSize);
+        REQUIRE (proc.abState.isA());  // default
+
+        juce::MemoryBlock stateData;
+        proc.getStateInformation (stateData);
+
+        MLIMAudioProcessor proc2;
+        proc2.setStateInformation (stateData.getData(),
+                                   static_cast<int> (stateData.getSize()));
+        REQUIRE (proc2.abState.isA());
+    }
+
+    // Test with activeIsA = false
+    {
+        MLIMAudioProcessor proc;
+        proc.prepareToPlay (kSampleRate, kBlockSize);
+        proc.abState.toggle (proc.apvts);  // switch to B
+        REQUIRE_FALSE (proc.abState.isA());
+
+        juce::MemoryBlock stateData;
+        proc.getStateInformation (stateData);
+
+        MLIMAudioProcessor proc2;
+        proc2.setStateInformation (stateData.getData(),
+                                   static_cast<int> (stateData.getSize()));
+        REQUIRE_FALSE (proc2.abState.isA());
+    }
+}

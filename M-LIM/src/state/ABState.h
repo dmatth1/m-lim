@@ -35,6 +35,12 @@ public:
     /** Returns true when state A is the currently active slot. */
     bool isA() const noexcept { return activeIsA; }
 
+    /** Serialize the A/B snapshots and activeIsA flag to an XML element. */
+    juce::XmlElement toXml() const;
+
+    /** Restore A/B snapshots and activeIsA flag from an XML element. */
+    void fromXml(const juce::XmlElement& xml);
+
 private:
     juce::ValueTree stateA;
     juce::ValueTree stateB;

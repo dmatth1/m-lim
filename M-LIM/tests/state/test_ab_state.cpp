@@ -1,5 +1,6 @@
 #include "state_test_helpers.h"
 #include "state/ABState.h"
+#include <juce_core/juce_core.h>
 
 using ABTestProcessor = StateTestProcessor;
 
