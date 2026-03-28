@@ -531,3 +531,123 @@ TEST_CASE("test_high_sample_rate_fallback", "[Dither]")
     for (int i = 0; i < numSamples; ++i)
         REQUIRE(std::abs(signal[i]) <= step + epsilon);
 }
+
+// ============================================================
+// Invalid noise shaping modes produce finite output (no NaN/Inf/divergence)
+// ============================================================
+
+TEST_CASE("test_invalid_noise_shaping_mode_finite_output", "[Dither]")
+{
+    // Modes outside [0,2] fall through the if/else chain as "no shaping" (mode 0).
+    // Verify no NaN, Inf, or runaway values for modes 3, -1, and 100.
+    const int invalidModes[] = { 3, -1, 100 };
+    const int numSamples     = 1000;
+    const float amplitude    = 0.001f;  // -60 dBFS — safe for iterative dither
+    const float step         = std::pow(2.0f, 1.0f - 16.0f);
+
+    for (int mode : invalidModes)
+    {
+        Dither d;
+        d.prepare(44100.0);
+        d.setBitDepth(16);
+        d.setNoiseShaping(mode);
+
+        std::vector<float> signal(numSamples);
+        for (int i = 0; i < numSamples; ++i)
+            signal[i] = amplitude * std::sin(6.283185307f * 1000.0f * i / 44100.0f);
+
+        d.process(signal.data(), numSamples);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            INFO("Mode " << mode << " sample " << i << " = " << signal[i]);
+            REQUIRE(std::isfinite(signal[i]));
+            // Amplitude should remain bounded (no divergence)
+            REQUIRE(std::abs(signal[i]) < 1.0f);
+        }
+    }
+}
+
+// ============================================================
+// Invalid mode behaves identically to mode 0 (no error feedback)
+// ============================================================
+
+TEST_CASE("test_invalid_mode_no_feedback_applied", "[Dither]")
+{
+    // With invalid mode, the if/else chain produces mode-0 behaviour: no error
+    // feedback is applied. We verify that TPDF-only quantisation is occurring
+    // (not some error-accumulation path) by checking that errors stay bounded.
+    //
+    // With 16-bit depth (step ≈ 3.05e-5) and zero-valued input, each output
+    // sample is exactly ±1 or 0 LSB (= step). If error feedback were accidentally
+    // active, outputs could exceed ±2 LSB over many samples.
+
+    const float step     = std::pow(2.0f, 1.0f - 16.0f);
+    const int numSamples = 1000;
+
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(3);  // invalid — should act as mode 0
+
+    std::vector<float> silence(numSamples, 0.0f);
+    d.process(silence.data(), numSamples);
+
+    // With mode 0 (no feedback), error per sample is bounded to ±step.
+    // Allow a tiny floating-point margin.
+    const float bound = step + step * 0.01f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("Sample " << i << " = " << silence[i] << ", bound = " << bound);
+        REQUIRE(std::abs(silence[i]) <= bound);
+    }
+}
+
+// ============================================================
+// Switching from invalid mode to valid mode produces no divergence
+// ============================================================
+
+TEST_CASE("test_invalid_to_valid_mode_switch_no_diverge", "[Dither]")
+{
+    // Start with invalid mode (5), process some samples, then switch to
+    // mode 2 (Weighted second-order) and process more. All output must
+    // be finite and not diverge.
+
+    const float step     = std::pow(2.0f, 1.0f - 16.0f);
+    const float amplitude = 0.001f;  // -60 dBFS
+    const int warmup     = 100;
+    const int main_run   = 1000;
+
+    Dither d;
+    d.prepare(44100.0);
+    d.setBitDepth(16);
+    d.setNoiseShaping(5);  // invalid mode
+
+    std::vector<float> buf1(warmup);
+    for (int i = 0; i < warmup; ++i)
+        buf1[i] = amplitude * std::sin(6.283185307f * 1000.0f * i / 44100.0f);
+    d.process(buf1.data(), warmup);
+
+    // Verify warmup output is finite
+    for (int i = 0; i < warmup; ++i)
+    {
+        REQUIRE(std::isfinite(buf1[i]));
+        REQUIRE(std::abs(buf1[i]) < 1.0f);
+    }
+
+    // Switch to valid mode 2
+    d.setNoiseShaping(2);
+
+    std::vector<float> buf2(main_run);
+    for (int i = 0; i < main_run; ++i)
+        buf2[i] = amplitude * std::sin(6.283185307f * 1000.0f * (warmup + i) / 44100.0f);
+    d.process(buf2.data(), main_run);
+
+    // All output must be finite after the mode switch
+    for (int i = 0; i < main_run; ++i)
+    {
+        INFO("Post-switch sample " << i << " = " << buf2[i]);
+        REQUIRE(std::isfinite(buf2[i]));
+        REQUIRE(std::abs(buf2[i]) < 1.0f);
+    }
+}
