@@ -352,6 +352,34 @@ void LoudnessPanel::drawHistogram (juce::Graphics& g,
         }
     }
 
+    // ── Idle warm fill: simulate program content distribution ─────────────────
+    // Draw a bell-curve of warm amber bars centered at targetLUFS_
+    // Only visible when histogramMax_ is near 1.0 (no actual data)
+    if (histogramMax_ < 2.0f)
+    {
+        const float centerLUFS = targetLUFS_;
+        const float sigmaLUFS  = 4.0f;
+        const juce::Colour warmFill = MLIMColours::loudnessHistogramIdleFill;
+
+        for (int i = 0; i < kHistBins; ++i)
+        {
+            const float binLUFS  = kHistMin + static_cast<float> (i) * kHistStep;
+            const float diff     = binLUFS - centerLUFS;
+            const float gaussian = std::exp (-(diff * diff) / (2.0f * sigmaLUFS * sigmaLUFS));
+            const float alpha    = gaussian * 0.28f;
+
+            if (alpha < 0.02f) continue;
+
+            const float normPos = static_cast<float> (i) / static_cast<float> (kHistBins);
+            const float barY    = originY + totalH - (normPos + 1.0f / kHistBins) * totalH;
+            const float barWidth = barAreaW * 0.85f;
+
+            g.setColour (warmFill.withAlpha (alpha));
+            g.fillRect (juce::Rectangle<float> (originX, barY + 0.5f,
+                                                barWidth, std::max (barH - 1.0f, 0.5f)));
+        }
+    }
+
     // ── Draw histogram bars (bin 0 = -35 LUFS at bottom, bin 69 = 0 LUFS at top) ──
     for (int i = 0; i < kHistBins; ++i)
     {

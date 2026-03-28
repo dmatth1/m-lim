@@ -57,6 +57,7 @@ namespace MLIMColours
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
     const juce::Colour meterAtTarget    { 0xffFF8C00 };  // orange — at target ±2 LU
     const juce::Colour histogramHighlight{ 0xff2A2A3A }; // target level row highlight in histogram
+    const juce::Colour loudnessHistogramIdleFill { 0xffC4A04A };  // warm amber for idle histogram simulation
     const juce::Colour lufsReadoutGood  { 0xffE87828 };  // warm orange for LUFS readout — matches Pro-L 2 reference orange (was golden-yellow)
 
     // Loudness panel background (dark purple-gray, matches Pro-L 2 right panel ~#2B2729)
