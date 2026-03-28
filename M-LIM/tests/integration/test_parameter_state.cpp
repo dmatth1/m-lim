@@ -591,3 +591,115 @@ TEST_CASE("test_all_param_id_constants_match_layout", "[ParameterState]")
         REQUIRE (layoutIds.count (id) == 1);
     }
 }
+
+// ============================================================================
+// Task 517: Parameter Normalization Boundary Precision Tests
+// ============================================================================
+
+// ============================================================================
+// test_float_param_min_normalizes_to_zero
+// For every AudioParameterFloat, setting to minimum value and converting to
+// normalized should yield approximately 0.0.
+// ============================================================================
+TEST_CASE("test_float_param_min_normalizes_to_zero", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* fp = dynamic_cast<juce::AudioParameterFloat*> (param);
+        if (fp == nullptr) continue;
+
+        CAPTURE (fp->getParameterID());
+        fp->setValueNotifyingHost (0.0f);
+        float normalized = fp->convertTo0to1 (fp->get());
+        REQUIRE (normalized <= 1e-5f);
+    }
+}
+
+// ============================================================================
+// test_float_param_max_normalizes_to_one
+// For every AudioParameterFloat, setting to maximum value and converting to
+// normalized should yield approximately 1.0.
+// ============================================================================
+TEST_CASE("test_float_param_max_normalizes_to_one", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* fp = dynamic_cast<juce::AudioParameterFloat*> (param);
+        if (fp == nullptr) continue;
+
+        CAPTURE (fp->getParameterID());
+        fp->setValueNotifyingHost (1.0f);
+        float normalized = fp->convertTo0to1 (fp->get());
+        REQUIRE (normalized >= 1.0f - 1e-5f);
+    }
+}
+
+// ============================================================================
+// test_all_defaults_in_normalized_range
+// For every parameter, getDefaultValue() must be in [0.0, 1.0].
+// A value outside this range silently clamps on state restore.
+// ============================================================================
+TEST_CASE("test_all_defaults_in_normalized_range", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* rap = dynamic_cast<juce::RangedAudioParameter*> (param);
+        REQUIRE (rap != nullptr);
+
+        CAPTURE (rap->getParameterID());
+        float defaultNorm = rap->getDefaultValue();
+        REQUIRE (defaultNorm >= 0.0f);
+        REQUIRE (defaultNorm <= 1.0f);
+    }
+}
+
+// ============================================================================
+// test_choice_param_max_index_correct
+// For every AudioParameterChoice, setting normalized to 1.0 should yield the
+// last choice index (choices.size() - 1).
+// ============================================================================
+TEST_CASE("test_choice_param_max_index_correct", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* cp = dynamic_cast<juce::AudioParameterChoice*> (param);
+        if (cp == nullptr) continue;
+
+        CAPTURE (cp->getParameterID());
+        cp->setValueNotifyingHost (1.0f);
+        int expectedMax = static_cast<int> (cp->choices.size()) - 1;
+        REQUIRE (cp->getIndex() == expectedMax);
+    }
+}
+
+// ============================================================================
+// test_all_params_value_text_nonempty
+// For every parameter, getCurrentValueAsText() must return a non-empty string.
+// Empty strings appear as blank in DAW automation lanes.
+// ============================================================================
+TEST_CASE("test_all_params_value_text_nonempty", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* rap = dynamic_cast<juce::RangedAudioParameter*> (param);
+        REQUIRE (rap != nullptr);
+
+        CAPTURE (rap->getParameterID());
+        REQUIRE (rap->getCurrentValueAsText().isNotEmpty());
+    }
+}
