@@ -1,0 +1,31 @@
+RMSE Measurement — Wave-25 Baseline (Task 537)
+Date: 2026-03-28
+Build: Release (Standalone)
+
+Methodology:
+  Reference: prol2-main-ui.jpg -crop 1712x1073+97+32 +repage -resize 900x500!
+  M-LIM:     scrot 1920x1080, crop 908x500+509+325, resize 900x500!
+
+Results:
+  Full:    18.57%  (prev baseline task-520: 19.47%)  ↓ improved by 0.90pp
+  Wave:    16.27%  (prev baseline task-520: 15.90%)  ↑ regressed by 0.37pp
+  Left:    24.49%  (prev baseline task-520: 25.85%)  ↓ improved by 1.36pp
+  Right:   22.71%  (prev baseline task-520: 26.44%)  ↓ improved by 3.73pp
+  Control: 19.28%  (prev baseline task-520: 18.97%)  ↑ regressed by 0.31pp
+
+Subregion crops:
+  Wave:    640x500+0+0
+  Left:     80x500+640+0
+  Right:   180x500+720+0
+  Control: 900x90+0+410
+
+Summary:
+  Overall Full RMSE improved from 19.47% to 18.57% (0.90pp reduction).
+  Right panel improved significantly (3.73pp) from task 535 work.
+  Left meters improved (1.36pp) from task 536 work.
+  Wave region regressed very slightly (0.37pp) — within noise.
+  Control strip regressed very slightly (0.31pp) — within noise.
+
+Completed visual parity tasks in this wave:
+  535 - right-panel-loudness-layout-parity (Right RMSE: 26.44% → 22.71%)
+  536 - left-meters-visual-parity (Left RMSE: 25.85% → 24.49%)
