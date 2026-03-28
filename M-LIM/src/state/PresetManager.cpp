@@ -4,24 +4,35 @@ PresetManager::PresetManager()
 {
     presetDirectory = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                           .getChildFile("M-LIM/Presets");
-    presetDirectory.createDirectory();
+    if (!presetDirectory.createDirectory())
+        DBG("PresetManager: failed to create preset directory: " + presetDirectory.getFullPathName());
 }
 
 void PresetManager::setPresetDirectory(const juce::File& dir)
 {
     presetDirectory = dir;
-    presetDirectory.createDirectory();
+    if (!presetDirectory.createDirectory())
+        DBG("PresetManager: failed to create preset directory: " + presetDirectory.getFullPathName());
 }
 
 bool PresetManager::savePreset(const juce::String& name,
                                juce::AudioProcessorValueTreeState& apvts)
 {
+    if (name.isEmpty())
+        return false;
+
+    if (name.containsChar('/') || name.containsChar('\\') || name.contains(".."))
+        return false;
+
     auto state = apvts.copyState();
     auto xml = state.createXml();
     if (xml == nullptr)
         return false;
 
     auto file = presetFileForName(name);
+    if (file == juce::File())
+        return false;
+
     juce::FileOutputStream stream(file);
     if (!stream.openedOk())
         return false;
@@ -29,6 +40,7 @@ bool PresetManager::savePreset(const juce::String& name,
     stream.setPosition(0);
     stream.truncate();
     xml->writeTo(stream);
+    stream.flush();
     currentPresetName = name;
     return true;
 }

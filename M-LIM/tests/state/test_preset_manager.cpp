@@ -416,6 +416,42 @@ TEST_CASE("test_factory_presets_exist", "[PresetManager]")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_savePreset_rejects_empty_name", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    bool result = pm.savePreset("", proc.apvts);
+    REQUIRE(result == false);
+
+    // No files should have been created
+    auto files = tmp.dir.findChildFiles(juce::File::findFiles, false, "*.xml");
+    REQUIRE(files.size() == 0);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+TEST_CASE("test_savePreset_rejects_path_separators", "[PresetManager]")
+{
+    TempPresetDir tmp;
+    TestProcessor proc;
+    PresetManager pm;
+    pm.setPresetDirectory(tmp.dir);
+
+    // Forward slash
+    REQUIRE(pm.savePreset("Test/Preset", proc.apvts) == false);
+    // Backslash
+    REQUIRE(pm.savePreset("Bad\\Name", proc.apvts) == false);
+    // Double-dot traversal
+    REQUIRE(pm.savePreset("../evil", proc.apvts) == false);
+
+    // No files should have been created
+    auto files = tmp.dir.findChildFiles(juce::File::findFiles, true, "*.xml");
+    REQUIRE(files.size() == 0);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // test_dotdot_traversal_save_no_escape
 //
 // savePreset("../evil", ...) must not write a file outside the preset dir.
