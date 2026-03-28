@@ -35,7 +35,6 @@ TEST_CASE ("test_all_algorithms_have_params", "[LimiterAlgorithm]")
         REQUIRE (p.transientAttackCoeff >= 0.0f);
         REQUIRE (p.transientAttackCoeff <= 1.0f);
         REQUIRE (std::isfinite (p.releaseShape));
-        REQUIRE (std::isfinite (p.dynamicEnhance));
     }
 }
 
@@ -53,9 +52,6 @@ TEST_CASE ("test_algorithm_params_ranges", "[LimiterAlgorithm]")
 
         REQUIRE (p.saturationAmount >= 0.0f);
         REQUIRE (p.saturationAmount <= 1.0f);
-
-        REQUIRE (p.dynamicEnhance >= 0.0f);
-        REQUIRE (p.dynamicEnhance <= 1.0f);
 
         REQUIRE (p.kneeWidth >= 0.0f);
         REQUIRE (p.kneeWidth <= 12.0f);
@@ -394,7 +390,6 @@ TEST_CASE ("test_transient_attack_coeff_affects_gr_onset", "[LimiterAlgorithm][T
     slowParams.transientAttackCoeff = 0.2f;
     slowParams.releaseShape         = 0.5f;
     slowParams.saturationAmount     = 0.0f;
-    slowParams.dynamicEnhance       = 0.0f;
     slowParams.kneeWidth            = 0.0f;
     slowParams.adaptiveRelease      = false;
 

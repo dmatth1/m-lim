@@ -2500,8 +2500,8 @@ TEST_CASE("test_gr_meter_does_not_overestimate_combined_stages", "[LimiterEngine
     // --- Stage 1: TransientLimiter with instant attack, slow release.
     //     A single loud impulse at sample 0 drives hard GR for the whole block.
     // transientAttackCoeff=1 (instant), releaseShape=0.9 (slow), saturation=0,
-    // dynamicEnhance=0, kneeWidth=0 (hard knee), adaptiveRelease=false.
-    AlgorithmParams tParams { 1.0f, 0.9f, 0.0f, 0.0f, 0.0f, false };
+    // kneeWidth=0 (hard knee), adaptiveRelease=false.
+    AlgorithmParams tParams { 1.0f, 0.9f, 0.0f, 0.0f, false };
 
     TransientLimiter stage1;
     stage1.prepare(kSR, kN, /*channels=*/1);
@@ -2526,7 +2526,7 @@ TEST_CASE("test_gr_meter_does_not_overestimate_combined_stages", "[LimiterEngine
     // --- Stage 2: LevelingLimiter with slow attack, sustained signal.
     //     Its minimum is reached gradually and is well away from sample 0.
     // Use default AlgorithmParams (releaseShape=0.5, adaptiveRelease=true).
-    AlgorithmParams lParams { 0.3f, 0.5f, 0.0f, 0.0f, 0.0f, false };
+    AlgorithmParams lParams { 0.3f, 0.5f, 0.0f, 0.0f, false };
 
     LevelingLimiter stage2;
     stage2.prepare(kSR, kN, /*channels=*/1);
