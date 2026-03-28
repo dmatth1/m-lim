@@ -60,8 +60,8 @@ void GainReductionMeter::paint (juce::Graphics& g)
 {
     auto barArea = getLocalBounds().toFloat();
 
-    // Background — dark fill matching reference Pro-L 2 (~#241B20 ≈ barTrackBackground)
-    g.setColour (MLIMColours::barTrackBackground);
+    // Background — very dark fill for subtle separator between waveform and right panel
+    g.setColour (MLIMColours::grMeterBackground);
     g.fillRect (barArea);
 
     drawBar      (g, barArea);
@@ -75,16 +75,16 @@ void GainReductionMeter::drawBar (juce::Graphics& g,
     static constexpr float kSegH   = 3.0f;
     static constexpr float kSegGap = 1.0f;
 
-    // 1. Background track — dark fill matching reference Pro-L 2 (~#241B20 ≈ barTrackBackground)
-    g.setColour (MLIMColours::barTrackBackground);
+    // 1. Background track — very dark for subtle separator look
+    g.setColour (MLIMColours::grMeterBackground);
     g.fillRect (barArea);
 
-    // 2. Segment-separator texture across full bar height (LED strip look even at idle)
+    // 2. Subtle segment-separator texture (reduced visibility for narrow GR meter)
     const float barTop = barArea.getY();
     const float barH   = barArea.getHeight();
     MLIMColours::drawSegmentSeparators (g, barArea.getX(), barTop, barH, barArea.getWidth(),
                                         kSegH, kSegGap,
-                                        MLIMColours::barTrackBackground.brighter (0.35f));
+                                        MLIMColours::grMeterBackground.brighter (0.15f));
 
     if (currentGR_ <= 0.0f) return;
 

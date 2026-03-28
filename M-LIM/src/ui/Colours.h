@@ -13,6 +13,7 @@ namespace MLIMColours
     const juce::Colour topBarPresetBackground   { 0xff2D2D2D };  // noticeably lighter than bar bg (0xff252525)
     const juce::Colour accentDarkBackground     { 0xff1E1E2A };  // dark navy tint for accent buttons
     const juce::Colour barTrackBackground       { 0xff2A2838 };  // dark blue-grey (task-426: brighten for reference match)
+    const juce::Colour grMeterBackground        { 0xff2E2C3A };  // subtle separator between waveform and right panel
 
     // Waveform display gradient colours
     // These approximate the composite appearance of Pro-L 2 waveform with active audio.
@@ -61,11 +62,11 @@ namespace MLIMColours
     const juce::Colour lufsReadoutGood  { 0xffE87828 };  // warm orange for LUFS readout — matches Pro-L 2 reference orange (was golden-yellow)
 
     // Loudness panel background (dark purple-gray, matches Pro-L 2 right panel ~#2B2729)
-    const juce::Colour loudnessPanelBackground { 0xff363244 };  // task-429: darkened −16 to match reference ~(58,53,63)
+    const juce::Colour loudnessPanelBackground { 0xff3A384A };  // task-536: brightened to reduce left-panel RMSE
 
     // Loudness panel histogram area gradient (decoupled from waveform gradient so each can be tuned independently)
-    const juce::Colour loudnessHistogramTop    { 0xff383848 };  // task-429: darkened −16 to match reference
-    const juce::Colour loudnessHistogramBottom { 0xff303040 };  // task-429: darkened −16 to match reference
+    const juce::Colour loudnessHistogramTop    { 0xff424050 };  // task-536: brightened to reduce left-panel RMSE
+    const juce::Colour loudnessHistogramBottom { 0xff3A384A };  // task-536: brightened to reduce left-panel RMSE
 
     // Control strip gradient background (dark purple-gray, matching Pro-L 2's knob area)
     const juce::Colour controlStripTop    { 0xff4D4D56 };  // sweep-41: darkened to match reference ~(66,64,68)
