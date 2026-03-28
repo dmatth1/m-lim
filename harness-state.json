@@ -5,7 +5,7 @@
     "Fix juce::FontOptions JUCE 7 API compatibility (blocks macOS build), productionize plugin for DAW usage (metadata, validation, lifecycle), add documentation (README, build instructions, DSP inline docs)",
     "FULL UI AND VISUAL PARITY with FabFilter Pro-L 2. Reference screenshots are in /reference-docs/reference-screenshots/ and /reference-docs/video-frames/. Workers MUST build the plugin, launch it with Xvfb, take screenshots, and compare against the reference images to confirm visual parity. Spawn UI specialists to audit visual accuracy. Every visual element must match: color scheme (dark background, blue/cyan accents), knob styling and layout, algorithm selector button row, real-time waveform/metering display, level meters, gain reduction display, loudness panel, top bar, control strip, typography, spacing, and sizing. Workers should iterate until screenshots match the reference."
   ],
-  "phase": "specialist_sweep",
+  "phase": "workers_running",
   "agents": 3,
   "model": "opus[1m]",
   "repo": "git@github.com:dmatth1/m-lim.git",
@@ -991,6 +991,11 @@
       "at": "2026-03-28T01:31:24Z",
       "action": "respawned worker-3",
       "reason": "1026s backoff (~17 min); a=0, p=12"
+    },
+    {
+      "at": "2026-03-28T01:40:48Z",
+      "action": "ran PM sweep 39 early (22 tasks in needs-grooming, p=7 dropping fast)",
+      "reason": "UIParityAuditor still running at 14 min but 22 grooming tasks urgent"
     }
   ],
   "learnings": [
