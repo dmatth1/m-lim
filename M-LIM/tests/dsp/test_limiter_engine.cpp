@@ -2069,3 +2069,128 @@ TEST_CASE("test_bypass_applies_no_gain_reduction", "[LimiterEngine]")
     // Gain reduction must be 0 in bypass
     REQUIRE(engine.getGainReduction() == Catch::Approx(0.0f).margin(0.1f));
 }
+
+// ============================================================================
+// test_extreme_positive_gain_output_bounded
+// +60 dB input gain drives the limiters with 1000x amplified signal.
+// Output must remain finite and within the ceiling.
+// ============================================================================
+TEST_CASE("test_extreme_positive_gain_output_bounded", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);   // 0 dBFS = 1.0 linear
+    engine.setInputGain(60.0f);      // +60 dB = 1000x amplification
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        engine.process(buf);
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int i = 0; i < buf.getNumSamples(); ++i)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << i << " = " << data[i]);
+                REQUIRE(std::isfinite(data[i]));
+                REQUIRE(std::abs(data[i]) <= 1.1f);  // ceiling + small tolerance
+            }
+        }
+    }
+}
+
+// ============================================================================
+// test_extreme_positive_gain_120db_no_nan
+// +120 dB input gain (linear = 1e6) on a -60 dBFS signal.
+// Intermediate values reach ~1.0 before the limiters; output must be finite.
+// ============================================================================
+TEST_CASE("test_extreme_positive_gain_120db_no_nan", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+    engine.setInputGain(120.0f);   // +120 dB = 1e6 linear
+
+    const float amplitude = 0.001f;  // -60 dBFS
+
+    for (int block = 0; block < 10; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(amplitude, kBlockSize);
+        engine.process(buf);
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int i = 0; i < buf.getNumSamples(); ++i)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << i << " = " << data[i]);
+                REQUIRE(std::isfinite(data[i]));
+                REQUIRE(std::abs(data[i]) <= 1.1f);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// test_extreme_negative_gain_near_silence
+// -120 dB input gain attenuates signal to near-zero (kDspUtilMinGain clamps
+// prevent exact zero). Output must be finite and max abs < 0.001.
+// ============================================================================
+TEST_CASE("test_extreme_negative_gain_near_silence", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+    engine.setInputGain(-120.0f);  // -120 dB ≈ kDspUtilMinGain (1e-6)
+
+    float maxOutput = 0.0f;
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        engine.process(buf);
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int i = 0; i < buf.getNumSamples(); ++i)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << i << " = " << data[i]);
+                REQUIRE(std::isfinite(data[i]));
+                maxOutput = std::max(maxOutput, std::abs(data[i]));
+            }
+        }
+    }
+
+    // Output should be very small (heavily attenuated)
+    INFO("Max output with -120dB gain: " << maxOutput);
+    REQUIRE(maxOutput < 0.001f);
+}
+
+// ============================================================================
+// test_input_gain_zero_linear_no_crash
+// -200 dB (below kDspUtilMinGain floor) should not crash or produce NaN.
+// ============================================================================
+TEST_CASE("test_input_gain_zero_linear_no_crash", "[LimiterEngine]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+    engine.setInputGain(-200.0f);  // extreme attenuation — effectively silence
+
+    for (int block = 0; block < 5; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(1.0f, kBlockSize);
+        REQUIRE_NOTHROW(engine.process(buf));
+
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+        {
+            const float* data = buf.getReadPointer(ch);
+            for (int i = 0; i < buf.getNumSamples(); ++i)
+            {
+                INFO("Block " << block << " ch " << ch << " sample " << i << " = " << data[i]);
+                REQUIRE(std::isfinite(data[i]));
+            }
+        }
+    }
+}
