@@ -224,8 +224,8 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     mOversampler.downsample(buffer);
     const float ceiling = stepApplyCeiling(buffer, numChannels, numSamples, inputGain);
     stepDCFilter(buffer, numChannels, numSamples);
-    stepEnforceTruePeak(buffer, numChannels, numSamples, ceiling);
     stepDither(buffer, numChannels, numSamples);
+    stepEnforceTruePeak(buffer, numChannels, numSamples, ceiling);
     stepDeltaMode(buffer, numChannels, numSamples);
     const float totalGR = juce::jmax(mTransientLimiter.getGainReduction() + mLevelingLimiter.getGainReduction(), -60.0f);
     snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);

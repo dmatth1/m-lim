@@ -1762,3 +1762,48 @@ TEST_CASE("test_reset_clears_true_peak_state", "[LimiterEngine][reset]")
     // After reset and processing silence, true peak should be near zero (no state leakage)
     REQUIRE(truePkAfter < 1e-6f);
 }
+
+// ============================================================================
+// test_dither_before_true_peak_enforcement
+// With dither enabled (16-bit, noise shaping mode 2) and true peak enforcement
+// enabled, the reported true peak must stay within ceiling + 0.01 dB.
+// This verifies that dither runs BEFORE true peak enforcement in the chain,
+// so noise-shaped dither noise cannot push inter-sample peaks above the ceiling.
+// ============================================================================
+TEST_CASE("test_dither_before_true_peak_enforcement", "[LimiterEngine]")
+{
+    const float ceilingDb  = -1.0f;
+    const float ceilingLin = static_cast<float>(std::pow(10.0, ceilingDb / 20.0));
+    // 0.01 dB tolerance in linear
+    const float toleranceLin = ceilingLin * (static_cast<float>(std::pow(10.0, 0.01 / 20.0)) - 1.0f)
+                                + ceilingLin;
+
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(ceilingDb);
+    engine.setTruePeakEnabled(true);
+    engine.setDitherEnabled(true);
+    engine.setDitherBitDepth(16);
+    engine.setDitherNoiseShaping(2);
+
+    // Warm up the engine so limiters and FIR filters settle
+    for (int i = 0; i < 5; ++i)
+    {
+        juce::AudioBuffer<float> warmup = makeSine(2.0f, kBlockSize);
+        engine.process(warmup);
+    }
+
+    // Process several blocks of a near-ceiling signal and check true peak
+    for (int block = 0; block < 20; ++block)
+    {
+        juce::AudioBuffer<float> buf = makeSine(2.0f, kBlockSize);
+        engine.process(buf);
+
+        const float tpL = engine.getTruePeakL();
+        const float tpR = engine.getTruePeakR();
+        INFO("Block " << block << " truePeakL=" << tpL << " truePeakR=" << tpR
+             << " ceiling=" << ceilingLin << " tolerance=" << toleranceLin);
+        REQUIRE(tpL <= toleranceLin);
+        REQUIRE(tpR <= toleranceLin);
+    }
+}
