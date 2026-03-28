@@ -11,6 +11,24 @@
 #include "ui/ControlStrip.h"
 #include "ui/Colours.h"
 
+struct PeakHoldState
+{
+    float peakL = -96.0f, peakR = -96.0f;
+    int   framesL = 0,    framesR = 0;
+
+    void update (float newL, float newR, int holdFrames) noexcept
+    {
+        if (newL >= peakL) { peakL = newL; framesL = holdFrames; }
+        if (newR >= peakR) { peakR = newR; framesR = holdFrames; }
+    }
+
+    void age() noexcept
+    {
+        if (framesL > 0 && --framesL == 0) peakL = -96.0f;
+        if (framesR > 0 && --framesR == 0) peakR = -96.0f;
+    }
+};
+
 class MLIMAudioProcessorEditor : public juce::AudioProcessorEditor,
                                   public juce::Timer,
                                   public juce::AudioProcessorValueTreeState::Listener
@@ -50,14 +68,8 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputGainAttach_;
 
     // Peak hold state (2-second hold, then fall)
-    float inputPeakL_  = -96.0f;
-    float inputPeakR_  = -96.0f;
-    float outputPeakL_ = -96.0f;
-    float outputPeakR_ = -96.0f;
-    int   inputPeakHoldFramesL_  = 0;
-    int   inputPeakHoldFramesR_  = 0;
-    int   outputPeakHoldFramesL_ = 0;
-    int   outputPeakHoldFramesR_ = 0;
+    PeakHoldState inputPeak_;
+    PeakHoldState outputPeak_;
 
     static constexpr int kDefaultWidth   = 900;
     static constexpr int kDefaultHeight  = 500;
@@ -72,11 +84,7 @@ private:
     static constexpr int kGainBadgeH     = 30;  // input gain badge height (label + value)
 
     void wireCallbacks();
-    void updatePeakHold (float newL, float newR,
-                         float& peakL, float& peakR,
-                         int& framesL, int& framesR) noexcept;
     void applyMeterData (const MeterData& data);
-    void agePeakHoldCounters() noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MLIMAudioProcessorEditor)
 };

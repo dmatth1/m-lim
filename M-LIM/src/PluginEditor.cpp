@@ -205,7 +205,8 @@ void MLIMAudioProcessorEditor::timerCallback()
     MeterData data;
     while (audioProcessor.getMeterFIFO().pop (data))
         applyMeterData (data);
-    agePeakHoldCounters();
+    inputPeak_.age();
+    outputPeak_.age();
 }
 
 void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
@@ -220,14 +221,12 @@ void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
     inputMeter_.setLevel  (inL, inR);
     outputMeter_.setLevel (outL, outR);
 
-    updatePeakHold (inL, inR, inputPeakL_, inputPeakR_,
-                    inputPeakHoldFramesL_, inputPeakHoldFramesR_);
-    updatePeakHold (outL, outR, outputPeakL_, outputPeakR_,
-                    outputPeakHoldFramesL_, outputPeakHoldFramesR_);
+    inputPeak_.update  (inL, inR, kPeakHoldFrames);
+    outputPeak_.update (outL, outR, kPeakHoldFrames);
 
-    inputMeter_.setPeakHold  (inputPeakL_, inputPeakR_);
-    outputMeter_.setPeakHold (outputPeakL_, outputPeakR_);
-    waveformDisplay_.setPeakReadouts (inputPeakL_, inputPeakR_);
+    inputMeter_.setPeakHold  (inputPeak_.peakL, inputPeak_.peakR);
+    outputMeter_.setPeakHold (outputPeak_.peakL, outputPeak_.peakR);
+    waveformDisplay_.setPeakReadouts (inputPeak_.peakL, inputPeak_.peakR);
 
     // gainReduction in MeterData is negative dB (0 = no GR, -3 = 3 dB reduction)
     const float grPositive = -data.gainReduction;
@@ -243,31 +242,3 @@ void MLIMAudioProcessorEditor::applyMeterData (const MeterData& data)
     loudnessPanel_.setTruePeak      (linToDB (juce::jmax (data.truePeakL, data.truePeakR)));
 }
 
-void MLIMAudioProcessorEditor::agePeakHoldCounters() noexcept
-{
-    auto advancePeakHold = [](float& peak, int& frames) noexcept
-    {
-        if (frames > 0 && --frames == 0)
-            peak = -96.0f;
-    };
-    advancePeakHold (inputPeakL_,  inputPeakHoldFramesL_);
-    advancePeakHold (inputPeakR_,  inputPeakHoldFramesR_);
-    advancePeakHold (outputPeakL_, outputPeakHoldFramesL_);
-    advancePeakHold (outputPeakR_, outputPeakHoldFramesR_);
-}
-
-void MLIMAudioProcessorEditor::updatePeakHold (float newL, float newR,
-                                                float& peakL, float& peakR,
-                                                int& framesL, int& framesR) noexcept
-{
-    if (newL >= peakL)
-    {
-        peakL   = newL;
-        framesL = kPeakHoldFrames;
-    }
-    if (newR >= peakR)
-    {
-        peakR   = newR;
-        framesR = kPeakHoldFrames;
-    }
-}
