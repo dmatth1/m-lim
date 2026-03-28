@@ -1,5 +1,5 @@
 /**
- * test_parameter_state.cpp — APVTS parameter layout integration tests (Tasks 041, 029)
+ * test_parameter_state.cpp — APVTS parameter layout integration tests (Tasks 041, 029, 496)
  *
  * Verifies that all parameters are present in the APVTS layout, that their
  * ranges/defaults match the SPEC, that state serialization round-trips
@@ -10,6 +10,8 @@
 #include "Parameters.h"
 #include "state/ABState.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <unordered_set>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Minimal stub processor — satisfies APVTS ownership requirements
@@ -491,4 +493,101 @@ TEST_CASE("test_undo_redo_with_apvts", "[ParameterState]")
     REQUIRE (undoMgr.canRedo());
     undoMgr.redo();
     REQUIRE (inputGain->get() == Catch::Approx (-6.0f).margin (0.01f));
+}
+
+// ============================================================================
+// test_all_parameter_ids_are_unique  (Task 496)
+// No two parameters in the layout may share the same ID string.  JUCE's APVTS
+// does NOT assert on duplicates — it silently uses the last one, producing
+// hard-to-diagnose automation/preset bugs.
+// ============================================================================
+TEST_CASE("test_all_parameter_ids_are_unique", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    std::unordered_set<std::string> seen;
+    int total = 0;
+    for (auto* param : proc.getParameters())
+    {
+        auto* rap = dynamic_cast<juce::RangedAudioParameter*> (param);
+        REQUIRE (rap != nullptr);
+        auto id = rap->getParameterID().toStdString();
+        INFO ("Duplicate param ID: " << id);
+        REQUIRE (seen.insert (id).second);  // insert returns false for duplicates
+        ++total;
+    }
+    REQUIRE (total > 0);
+}
+
+// ============================================================================
+// test_all_parameter_ids_are_non_empty  (Task 496)
+// No parameter may carry an empty string ID — JUCE lookups by empty string
+// return nullptr, making the parameter invisible to automation and presets.
+// ============================================================================
+TEST_CASE("test_all_parameter_ids_are_non_empty", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    for (auto* param : proc.getParameters())
+    {
+        auto* rap = dynamic_cast<juce::RangedAudioParameter*> (param);
+        REQUIRE (rap != nullptr);
+        REQUIRE_FALSE (rap->getParameterID().isEmpty());
+    }
+}
+
+// ============================================================================
+// test_all_param_id_constants_match_layout  (Task 496)
+// Every ParamID::* constant in Parameters.h must resolve to an actual
+// parameter in the layout.  A stale constant that was removed from the layout
+// (or a typo) would silently return nullptr from apvts.getParameter(), causing
+// crashes or silent no-ops in production.
+// ============================================================================
+TEST_CASE("test_all_param_id_constants_match_layout", "[ParameterState]")
+{
+    StubProcessor proc;
+    auto apvts = makeAPVTS (proc);
+
+    // Build a set of all IDs present in the actual layout.
+    std::unordered_set<std::string> layoutIds;
+    for (auto* param : proc.getParameters())
+    {
+        auto* rap = dynamic_cast<juce::RangedAudioParameter*> (param);
+        if (rap != nullptr)
+            layoutIds.insert (rap->getParameterID().toStdString());
+    }
+
+    // Every constant in the ParamID namespace must appear in that set.
+    const std::vector<const char*> allConstants {
+        ParamID::inputGain,
+        ParamID::outputCeiling,
+        ParamID::algorithm,
+        ParamID::lookahead,
+        ParamID::attack,
+        ParamID::release,
+        ParamID::channelLinkTransients,
+        ParamID::channelLinkRelease,
+        ParamID::truePeakEnabled,
+        ParamID::oversamplingFactor,
+        ParamID::dcFilterEnabled,
+        ParamID::ditherEnabled,
+        ParamID::ditherBitDepth,
+        ParamID::ditherNoiseShaping,
+        ParamID::bypass,
+        ParamID::unityGainMode,
+        ParamID::sidechainHPFreq,
+        ParamID::sidechainLPFreq,
+        ParamID::sidechainTilt,
+        ParamID::delta,
+        ParamID::displayMode,
+        ParamID::loudnessTarget,
+    };
+
+    for (const char* id : allConstants)
+    {
+        INFO ("ParamID constant not found in layout: " << id);
+        REQUIRE (layoutIds.count (id) == 1);
+    }
 }
