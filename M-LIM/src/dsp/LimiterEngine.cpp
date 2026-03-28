@@ -138,6 +138,10 @@ void LimiterEngine::reset()
     mGRdB.store (0.0f);
     mTruePkL.store (0.0f);
     mTruePkR.store (0.0f);
+
+    // Clear stale meter snapshots so the UI sees silence after reset
+    MeterData discard;
+    while (mMeterFIFO.pop(discard)) {}
 }
 
 // ============================================================================

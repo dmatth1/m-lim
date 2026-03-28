@@ -2598,3 +2598,63 @@ TEST_CASE("test_gr_meter_does_not_overestimate_combined_stages", "[LimiterEngine
     REQUIRE(engineGR <= 0.0f);
     REQUIRE(engineGR >= -60.0f);
 }
+
+// ============================================================================
+// Task 503: reset() drains meter FIFO and clears meter atomics
+// ============================================================================
+
+TEST_CASE("LimiterEngine reset drains meter FIFO", "[dsp][limiterengine]")
+{
+    constexpr double kSR = 44100.0;
+    constexpr int kN = 512;
+
+    LimiterEngine engine;
+    engine.prepare(kSR, kN, 2);
+
+    // Process a block of loud audio to populate the meter FIFO
+    juce::AudioBuffer<float> buf(2, kN);
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        float* d = buf.getWritePointer(ch);
+        for (int s = 0; s < kN; ++s)
+            d[s] = 0.9f;
+    }
+    engine.process(buf);
+
+    // Verify FIFO has data before reset
+    REQUIRE_FALSE(engine.getMeterFIFO().isEmpty());
+
+    // Reset should drain the FIFO
+    engine.reset();
+
+    MeterData md;
+    REQUIRE_FALSE(engine.getMeterFIFO().pop(md));
+    REQUIRE(engine.getMeterFIFO().isEmpty());
+}
+
+TEST_CASE("LimiterEngine reset clears meter atomics", "[dsp][limiterengine]")
+{
+    constexpr double kSR = 44100.0;
+    constexpr int kN = 512;
+
+    LimiterEngine engine;
+    engine.prepare(kSR, kN, 2);
+    engine.setTruePeakEnabled(true);
+
+    // Process loud audio to produce non-zero meter readings
+    juce::AudioBuffer<float> buf(2, kN);
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        float* d = buf.getWritePointer(ch);
+        for (int s = 0; s < kN; ++s)
+            d[s] = 0.9f;
+    }
+    engine.process(buf);
+
+    // After reset, all meter atomics should be zero
+    engine.reset();
+
+    REQUIRE(engine.getGainReduction() == 0.0f);
+    REQUIRE(engine.getTruePeakL() == 0.0f);
+    REQUIRE(engine.getTruePeakR() == 0.0f);
+}
