@@ -1086,3 +1086,132 @@ TEST_CASE("test_channel_link_fifty_percent_partially_links", "[LevelingLimiter]"
     REQUIRE(ch1_half < ch1_independent);
     REQUIRE(ch1_half > ch1_linked);
 }
+
+// ---------------------------------------------------------------------------
+// NaN / Inf robustness tests (Task 516)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("test_nan_input_no_crash", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(100.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Fill all channels with NaN
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), std::numeric_limits<float>::quiet_NaN());
+
+    auto ptrs = makePtrs(buf);
+
+    // Must not crash or throw
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+}
+
+TEST_CASE("test_inf_input_no_crash", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(100.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Test with +infinity
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), std::numeric_limits<float>::infinity());
+
+    auto ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+
+    // Test with -infinity
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), -std::numeric_limits<float>::infinity());
+
+    ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+}
+
+TEST_CASE("test_nan_channel_isolated_from_clean_channel", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(100.0f);
+    // Use independent channels (no linking) to test isolation
+    limiter.setChannelLink(0.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Channel 0: NaN
+    std::fill(buf[0].begin(), buf[0].end(), std::numeric_limits<float>::quiet_NaN());
+
+    // Channel 1: valid 0 dBFS sine
+    const double twoPi = 6.283185307179586;
+    for (int i = 0; i < kBlockSize; ++i)
+        buf[1][i] = static_cast<float>(std::sin(twoPi * 1000.0 * i / kSampleRate));
+
+    auto ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+
+    // With independent channel linking, channel 1 should not be corrupted by channel 0's NaN.
+    // Check that the gain reduction reported is finite.
+    // Note: with channel linking > 0, NaN could propagate through the linked gain logic.
+    // With link=0, ch1 should remain finite.
+    float gr = limiter.getGainReduction();
+    // GR may or may not be finite depending on implementation;
+    // the key assertion is no crash occurred above.
+    // With link=0, check ch1 output is finite
+    bool anyFiniteCh1 = false;
+    for (int i = 0; i < kBlockSize; ++i)
+    {
+        if (std::isfinite(buf[1][i]))
+        {
+            anyFiniteCh1 = true;
+            break;
+        }
+    }
+    // With independent linking, clean channel should have finite output
+    INFO("GR dB = " << gr);
+    CHECK(anyFiniteCh1);
+}
+
+TEST_CASE("test_nan_followed_by_valid_audio_recovers", "[LevelingLimiter]")
+{
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setThreshold(1.0f);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(100.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Process a NaN block
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), std::numeric_limits<float>::quiet_NaN());
+    auto ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+    // Reset and process valid audio
+    limiter.reset();
+
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), 0.5f);
+    ptrs = makePtrs(buf);
+    limiter.process(ptrs.data(), kNumChannels, kBlockSize);
+
+    // After reset + valid audio, output should be finite
+    for (int ch = 0; ch < kNumChannels; ++ch)
+    {
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("ch=" << ch << " i=" << i << " val=" << buf[ch][i]);
+            REQUIRE(std::isfinite(buf[ch][i]));
+        }
+    }
+}

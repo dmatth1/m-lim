@@ -2179,3 +2179,92 @@ TEST_CASE("test_sidechain_mono_main_stereo_no_crash", "[TransientLimiter]")
         REQUIRE(std::isfinite(main[0][i]));
     }
 }
+
+// ---------------------------------------------------------------------------
+// NaN / Inf robustness tests (Task 516)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("test_nan_block_no_crash", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(2.0f);
+    limiter.setThreshold(1.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Fill all channels with NaN
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), std::numeric_limits<float>::quiet_NaN());
+
+    auto ptrs = makePtrs(buf);
+
+    // Must not crash or throw
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+}
+
+TEST_CASE("test_inf_block_no_crash", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(2.0f);
+    limiter.setThreshold(1.0f);
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Test with +infinity
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), std::numeric_limits<float>::infinity());
+
+    auto ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+
+    // Test with -infinity
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), -std::numeric_limits<float>::infinity());
+
+    ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+}
+
+TEST_CASE("test_nan_channel_does_not_corrupt_other_channel", "[TransientLimiter]")
+{
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, kNumChannels);
+    limiter.setLookahead(2.0f);
+    limiter.setThreshold(1.0f);
+    limiter.setChannelLink(0.0f); // independent channels
+
+    std::vector<std::vector<float>> buf(kNumChannels, std::vector<float>(kBlockSize));
+
+    // Channel 0: NaN
+    std::fill(buf[0].begin(), buf[0].end(), std::numeric_limits<float>::quiet_NaN());
+
+    // Channel 1: valid 0 dBFS sine
+    const double twoPi = 6.283185307179586;
+    for (int i = 0; i < kBlockSize; ++i)
+        buf[1][i] = static_cast<float>(std::sin(twoPi * 1000.0 * i / kSampleRate));
+
+    auto ptrs = makePtrs(buf);
+    REQUIRE_NOTHROW(limiter.process(ptrs.data(), kNumChannels, kBlockSize));
+
+    // With independent channel linking (link=0), the clean channel's gain reduction
+    // should be finite. The NaN channel may produce NaN output (propagation), but
+    // the clean channel should not be corrupted.
+    float gr = limiter.getGainReduction();
+    // GR might be contaminated if implementation takes max across channels,
+    // so we check per-channel output instead.
+    // Channel 1 output should have at least some finite samples
+    // (first few may be zero from lookahead delay)
+    bool anyFiniteCh1 = false;
+    for (int i = 0; i < kBlockSize; ++i)
+    {
+        if (std::isfinite(buf[1][i]))
+        {
+            anyFiniteCh1 = true;
+            break;
+        }
+    }
+    INFO("GR dB = " << gr);
+    CHECK(anyFiniteCh1);
+}

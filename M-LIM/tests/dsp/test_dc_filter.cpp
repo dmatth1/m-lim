@@ -4,6 +4,7 @@
 #include <vector>
 #include <numeric>
 #include <cfloat>
+#include <limits>
 
 static constexpr double kSampleRate = 44100.0;
 static constexpr double kTwoPi = 6.283185307179586;
@@ -315,4 +316,89 @@ TEST_CASE("test_cutoff_scales_with_sample_rate", "[DCFilter]")
     // R recomputed for 96 kHz: first-order HP at cutoff → -3 dB; tolerance ±1.5 dB
     REQUIRE(attenuationDb > -4.5);
     REQUIRE(attenuationDb < -1.5);
+}
+
+// ---------------------------------------------------------------------------
+// NaN / Inf robustness tests (Task 516)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("test_nan_input_no_crash", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    const int numSamples = 512;
+    std::vector<float> signal(numSamples, std::numeric_limits<float>::quiet_NaN());
+
+    // Must not crash or throw
+    REQUIRE_NOTHROW(filter.process(signal.data(), numSamples));
+}
+
+TEST_CASE("test_inf_input_no_crash", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    const int numSamples = 512;
+
+    // +Inf
+    std::vector<float> signal(numSamples, std::numeric_limits<float>::infinity());
+    REQUIRE_NOTHROW(filter.process(signal.data(), numSamples));
+
+    // -Inf
+    std::fill(signal.begin(), signal.end(), -std::numeric_limits<float>::infinity());
+    REQUIRE_NOTHROW(filter.process(signal.data(), numSamples));
+}
+
+TEST_CASE("test_reset_after_nan_restores_finite_output", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // Contaminate filter state with NaN
+    const int numSamples = 512;
+    std::vector<float> nanBuf(numSamples, std::numeric_limits<float>::quiet_NaN());
+    filter.process(nanBuf.data(), numSamples);
+
+    // Reset the filter
+    filter.reset();
+
+    // Process valid audio — a simple DC offset
+    const int settleLen = 1000;
+    std::vector<float> valid(settleLen, 0.5f);
+    filter.process(valid.data(), settleLen);
+
+    // After reset + valid input, output should be finite within a few samples
+    // Check the last 100 samples are all finite
+    for (int i = settleLen - 100; i < settleLen; ++i)
+    {
+        INFO("sample " << i << " = " << valid[i]);
+        REQUIRE(std::isfinite(valid[i]));
+    }
+}
+
+TEST_CASE("test_reset_after_inf_restores_finite_output", "[DCFilter]")
+{
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    // Contaminate filter state with Inf
+    const int numSamples = 512;
+    std::vector<float> infBuf(numSamples, std::numeric_limits<float>::infinity());
+    filter.process(infBuf.data(), numSamples);
+
+    // Reset the filter
+    filter.reset();
+
+    // Process valid audio
+    const int settleLen = 1000;
+    std::vector<float> valid(settleLen, 0.5f);
+    filter.process(valid.data(), settleLen);
+
+    // After reset + valid input, output should be finite
+    for (int i = settleLen - 100; i < settleLen; ++i)
+    {
+        INFO("sample " << i << " = " << valid[i]);
+        REQUIRE(std::isfinite(valid[i]));
+    }
 }
