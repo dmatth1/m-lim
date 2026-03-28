@@ -1001,6 +1001,11 @@
       "at": "2026-03-28T01:45:37Z",
       "action": "respawned worker-2",
       "reason": "855s backoff; PM groomed 21 tasks, p=28"
+    },
+    {
+      "at": "2026-03-28T01:51:00Z",
+      "action": "monitoring cycle: worker-1 at 0% CPU on task 487 (log at build/test step), giving 1 more cycle before respawn",
+      "reason": "worker-1 recently progressed from task 474\u2192487 via rate-limit; current freeze may be API wait post-build"
     }
   ],
   "learnings": [
