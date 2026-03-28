@@ -297,25 +297,25 @@ void MLIMAudioProcessor::initParameterPointers()
 
 void MLIMAudioProcessor::pushAllParametersToEngine()
 {
-    if (pInputGain)             limiterEngine.setInputGain            (pInputGain->load());
-    if (pOutputCeiling)         limiterEngine.setOutputCeiling        (pOutputCeiling->load());
-    if (pAlgorithm)             limiterEngine.setAlgorithm            (static_cast<LimiterAlgorithm> (static_cast<int> (pAlgorithm->load())));
-    if (pLookahead)             limiterEngine.setLookahead            (pLookahead->load());
-    if (pAttack)                limiterEngine.setAttack               (pAttack->load());
-    if (pRelease)               limiterEngine.setRelease              (pRelease->load());
-    if (pChannelLinkTransients) limiterEngine.setChannelLinkTransients(pChannelLinkTransients->load());
-    if (pChannelLinkRelease)    limiterEngine.setChannelLinkRelease   (pChannelLinkRelease->load());
-    if (pTruePeakEnabled)       limiterEngine.setTruePeakEnabled      (pTruePeakEnabled->load() >= 0.5f);
-    if (pDCFilterEnabled)       limiterEngine.setDCFilterEnabled      (pDCFilterEnabled->load() >= 0.5f);
-    if (pDitherEnabled)         limiterEngine.setDitherEnabled        (pDitherEnabled->load() >= 0.5f);
-    if (pDitherBitDepth)        limiterEngine.setDitherBitDepth       (16 + static_cast<int> (pDitherBitDepth->load()) * 2);
-    if (pDitherNoiseShaping)    limiterEngine.setDitherNoiseShaping   (static_cast<int> (pDitherNoiseShaping->load()));
-    if (pBypass)                limiterEngine.setBypass               (pBypass->load() >= 0.5f);
-    if (pUnityGainMode)         limiterEngine.setUnityGain            (pUnityGainMode->load() >= 0.5f);
-    if (pSidechainHPFreq)       limiterEngine.setSidechainHPFreq      (pSidechainHPFreq->load());
-    if (pSidechainLPFreq)       limiterEngine.setSidechainLPFreq      (pSidechainLPFreq->load());
-    if (pSidechainTilt)         limiterEngine.setSidechainTilt        (pSidechainTilt->load());
-    if (pDelta)                 limiterEngine.setDeltaMode            (pDelta->load() >= 0.5f);
+    limiterEngine.setInputGain            (pInputGain->load());
+    limiterEngine.setOutputCeiling        (pOutputCeiling->load());
+    limiterEngine.setAlgorithm            (static_cast<LimiterAlgorithm> (static_cast<int> (pAlgorithm->load())));
+    limiterEngine.setLookahead            (pLookahead->load());
+    limiterEngine.setAttack               (pAttack->load());
+    limiterEngine.setRelease              (pRelease->load());
+    limiterEngine.setChannelLinkTransients(pChannelLinkTransients->load());
+    limiterEngine.setChannelLinkRelease   (pChannelLinkRelease->load());
+    limiterEngine.setTruePeakEnabled      (pTruePeakEnabled->load() >= 0.5f);
+    limiterEngine.setDCFilterEnabled      (pDCFilterEnabled->load() >= 0.5f);
+    limiterEngine.setDitherEnabled        (pDitherEnabled->load() >= 0.5f);
+    limiterEngine.setDitherBitDepth       (16 + static_cast<int> (pDitherBitDepth->load()) * 2);
+    limiterEngine.setDitherNoiseShaping   (static_cast<int> (pDitherNoiseShaping->load()));
+    limiterEngine.setBypass               (pBypass->load() >= 0.5f);
+    limiterEngine.setUnityGain            (pUnityGainMode->load() >= 0.5f);
+    limiterEngine.setSidechainHPFreq      (pSidechainHPFreq->load());
+    limiterEngine.setSidechainLPFreq      (pSidechainLPFreq->load());
+    limiterEngine.setSidechainTilt        (pSidechainTilt->load());
+    limiterEngine.setDeltaMode            (pDelta->load() >= 0.5f);
 }
 
 void MLIMAudioProcessor::updateLatency()
