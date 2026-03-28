@@ -7,6 +7,10 @@
  *
  * Stores two independent snapshots of the APVTS state so users can quickly
  * compare two sets of settings.  One state is "active" at any time.
+ *
+ * @note Message thread only — not safe to call from the audio thread.
+ *       juce::ValueTree is reference-counted and not thread-safe; concurrent
+ *       access from the audio thread will cause torn reads/writes.
  */
 class ABState
 {

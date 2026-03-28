@@ -1,8 +1,11 @@
 #include "ABState.h"
 
 ABState::ABState()
+    : stateA (juce::ValueTree ("ABState")),
+      stateB (juce::ValueTree ("ABState"))
 {
-    // Both slots start empty; they will be populated on the first captureState call.
+    // Both slots start as valid (but empty) ValueTrees so that isValid() == true
+    // even before the first captureState() call.
 }
 
 void ABState::captureState(juce::AudioProcessorValueTreeState& apvts)
@@ -16,8 +19,10 @@ void ABState::captureState(juce::AudioProcessorValueTreeState& apvts)
 
 void ABState::restoreState(juce::AudioProcessorValueTreeState& apvts)
 {
+    jassert (stateA.isValid());
+    jassert (stateB.isValid());
     const juce::ValueTree& src = activeIsA ? stateA : stateB;
-    if (src.isValid())
+    if (src.isValid() && src.getNumChildren() > 0)
         apvts.replaceState(src.createCopy());
 }
 
@@ -84,7 +89,7 @@ void ABState::fromXml (const juce::XmlElement& xml)
     }
     else
     {
-        stateA = juce::ValueTree();
+        stateA = juce::ValueTree ("ABState");
     }
 
     if (auto* stateBXml = xml.getChildByName ("StateB"))
@@ -94,6 +99,6 @@ void ABState::fromXml (const juce::XmlElement& xml)
     }
     else
     {
-        stateB = juce::ValueTree();
+        stateB = juce::ValueTree ("ABState");
     }
 }

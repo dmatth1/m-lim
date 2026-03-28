@@ -6,6 +6,25 @@
 
 using ABTestProcessor = StateTestProcessor;
 
+TEST_CASE("test_default_state_is_valid", "[ABState]")
+{
+    ABState ab;
+
+    // Default-constructed ABState should have valid (if empty) trees
+    // This ensures that restoreState/copyAtoB/copyBtoA won't silently skip
+    // due to isValid() returning false on uninitialized ValueTrees.
+    REQUIRE(ab.isA());
+
+    // Verify by toggling — if internal trees are invalid, this could
+    // fail assertions or produce unexpected behavior
+    ABTestProcessor proc;
+    REQUIRE_NOTHROW(ab.restoreState(proc.apvts));
+
+    // After restore with default state, params should still be finite
+    REQUIRE(std::isfinite(getParam(proc.apvts, "gain")));
+    REQUIRE(std::isfinite(getParam(proc.apvts, "ceiling")));
+}
+
 TEST_CASE("test_capture_and_restore", "[ABState]")
 {
     ABTestProcessor proc;
