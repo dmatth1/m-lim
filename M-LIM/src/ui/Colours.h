@@ -52,7 +52,7 @@ namespace MLIMColours
     const juce::Colour textSecondary    { 0xff9E9E9E };
 
     // Meter colours
-    const juce::Colour meterSafe        { 0xff6879A0 };  // muted steel-blue (matches Pro-L 2 safe zone — was 0xff4D88CC vivid blue)
+    const juce::Colour meterSafe        { 0xff81828A };  // lighter neutral gray-blue (RGB 129,130,138 — matches Pro-L 2 safe zone)
     const juce::Colour meterWarning     { 0xffFFD54F };  // yellow
     const juce::Colour meterDanger      { 0xffFF5252 };  // red
     const juce::Colour meterAtTarget    { 0xffFF8C00 };  // orange — at target ±2 LU

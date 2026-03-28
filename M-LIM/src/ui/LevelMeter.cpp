@@ -101,7 +101,7 @@ void LevelMeter::drawChannel (juce::Graphics& g,
 
         juce::ColourGradient idleGrad (
             MLIMColours::meterDanger.withAlpha (0.03f),           0.0f, barTop2,
-            MLIMColours::meterSafe.withAlpha (0.80f),             0.0f, barTop2 + barH2,
+            MLIMColours::meterSafe.withAlpha (1.0f),              0.0f, barTop2 + barH2,
             false);
         idleGrad.addColour ((dangerBot2 - barTop2) / barH2,
                             MLIMColours::grMeterMid.withAlpha (0.03f));     // task-425: minimal warm at danger
@@ -115,13 +115,13 @@ void LevelMeter::drawChannel (juce::Graphics& g,
         const float normMidFill = dbToNorm (-24.0f);
         const float midFillY    = barTop2 + barH2 * (1.0f - normMidFill);
         idleGrad.addColour ((midFillY - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.18f));      // task-451: visible blue at -24 dBFS
+                            MLIMColours::meterSafe.withAlpha (0.35f));      // task-508: brighter mid fill
 
         // Transition zone at -18 dBFS — visible blue tint starts here
         const float normTrans = dbToNorm (-18.0f);
         const float transY    = barTop2 + barH2 * (1.0f - normTrans);
         idleGrad.addColour ((transY - barTop2) / barH2,
-                            MLIMColours::meterSafe.withAlpha (0.30f));      // task-451: prominent blue from -18 dB down
+                            MLIMColours::meterSafe.withAlpha (0.55f));      // task-508: prominent neutral from -18 dB down
 
         g.setGradientFill (idleGrad);
         g.fillRect (bar);
