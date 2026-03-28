@@ -68,7 +68,6 @@ target_compile_definitions(MLIMTests
 target_link_libraries(MLIMTests
     PRIVATE
         MLIMLib
-        asound
 )
 
 include(CTest)
