@@ -32,7 +32,7 @@ namespace MLIMColours
     const juce::Colour waveformGridLine     { 0xff9AA0B4 };  // horizontal dB grid lines — lighter than gradient, matches Pro-L 2 subtle grid
     const juce::Colour waveformIdleMidFill  { 0xff828AA5 };  // mid/center tent idle fill (steel blue)
     const juce::Colour waveformIdleLowFill  { 0xff9898A8 };  // lower idle fill (warm neutral)
-const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
+    const juce::Colour waveformHoverOverlay { 0x30FFFFFF };  // mode selector hover highlight
     const juce::Colour waveformCeilingLine  { 0x50DD4444 };  // ceiling line — warm red, ~31% alpha — subtler, closer to Pro-L 2 reference
 
     // Label colours
