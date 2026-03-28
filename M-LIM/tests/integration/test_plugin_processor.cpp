@@ -987,3 +987,135 @@ TEST_CASE("test_processBlockBypassed_populates_meter_fifo", "[PluginProcessor]")
     MeterData md;
     REQUIRE (proc.getMeterFIFO().pop (md));
 }
+
+// ============================================================================
+// test_setstate_zero_length_no_crash
+// Passing nullptr / 0 bytes to setStateInformation must not crash.
+// Parameters must remain at their default values.
+// ============================================================================
+TEST_CASE("test_setstate_zero_length_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Record current inputGain before the call
+    auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGain != nullptr);
+    const float gainBefore = rawGain->load();
+
+    REQUIRE_NOTHROW (proc.setStateInformation (nullptr, 0));
+
+    // Parameter must be unchanged
+    REQUIRE (rawGain->load() == Catch::Approx (gainBefore).margin (0.01f));
+}
+
+// ============================================================================
+// test_setstate_random_garbage_no_crash
+// 1024 bytes of deterministic pseudo-random data must not crash and must
+// leave parameters unchanged.
+// ============================================================================
+TEST_CASE("test_setstate_random_garbage_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGain != nullptr);
+    const float gainBefore = rawGain->load();
+
+    // Generate deterministic pseudo-random data
+    std::vector<uint8_t> garbage (1024);
+    uint32_t lcg = 0xDEADBEEFu;
+    for (auto& byte : garbage)
+    {
+        lcg = lcg * 1664525u + 1013904223u;
+        byte = static_cast<uint8_t> (lcg >> 24);
+    }
+
+    REQUIRE_NOTHROW (proc.setStateInformation (garbage.data(),
+                                               static_cast<int> (garbage.size())));
+
+    // Parameters must be unchanged
+    REQUIRE (rawGain->load() == Catch::Approx (gainBefore).margin (0.01f));
+}
+
+// ============================================================================
+// test_setstate_wrong_tag_rejected
+// Valid XML binary with a mismatched root tag must be silently ignored.
+// ============================================================================
+TEST_CASE("test_setstate_wrong_tag_rejected", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Set a non-default value so we can detect inadvertent replacement
+    if (auto* param = proc.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (6.0f));
+
+    auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGain != nullptr);
+    REQUIRE (rawGain->load() == Catch::Approx (6.0f).margin (0.01f));
+
+    // Create valid XML but with wrong tag
+    auto wrongXml = std::make_unique<juce::XmlElement> ("WrongRootTag");
+    wrongXml->setAttribute ("inputGain", "0.0");
+
+    juce::MemoryBlock wrongBlock;
+    juce::AudioProcessor::copyXmlToBinary (*wrongXml, wrongBlock);
+
+    REQUIRE_NOTHROW (proc.setStateInformation (wrongBlock.getData(),
+                                               static_cast<int> (wrongBlock.getSize())));
+
+    // Parameters must be unchanged
+    REQUIRE (rawGain->load() == Catch::Approx (6.0f).margin (0.01f));
+}
+
+// ============================================================================
+// test_setstate_truncated_binary_no_crash
+// The first half of a valid getStateInformation() output (truncated) must not
+// crash — it may be invalid binary that getXmlFromBinary() rejects.
+// ============================================================================
+TEST_CASE("test_setstate_truncated_binary_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Export valid state
+    juce::MemoryBlock fullState;
+    proc.getStateInformation (fullState);
+    REQUIRE (fullState.getSize() > 0);
+
+    // Truncate to first 50%
+    const int truncatedSize = static_cast<int> (fullState.getSize() / 2);
+
+    REQUIRE_NOTHROW (proc.setStateInformation (fullState.getData(), truncatedSize));
+}
+
+// ============================================================================
+// test_setstate_double_restore_no_crash
+// Two consecutive setStateInformation calls must not crash; the final state
+// must reflect the second call's data.
+// ============================================================================
+TEST_CASE("test_setstate_double_restore_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor procA;
+
+    // Build first state with inputGain = 6 dB
+    if (auto* param = procA.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (6.0f));
+    juce::MemoryBlock state1;
+    procA.getStateInformation (state1);
+
+    // Build second state with inputGain = 12 dB
+    if (auto* param = procA.apvts.getParameter (ParamID::inputGain))
+        param->setValueNotifyingHost (param->convertTo0to1 (12.0f));
+    juce::MemoryBlock state2;
+    procA.getStateInformation (state2);
+
+    MLIMAudioProcessor proc;
+    REQUIRE_NOTHROW (proc.setStateInformation (state1.getData(),
+                                               static_cast<int> (state1.getSize())));
+    REQUIRE_NOTHROW (proc.setStateInformation (state2.getData(),
+                                               static_cast<int> (state2.getSize())));
+
+    // Final state must reflect the second call (12 dB)
+    auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
+    REQUIRE (rawGain != nullptr);
+    REQUIRE (rawGain->load() == Catch::Approx (12.0f).margin (0.01f));
+}
