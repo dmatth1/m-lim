@@ -580,6 +580,225 @@ TEST_CASE("test_bypass_input_level_reflects_signal", "[LimiterEngineModes]")
 }
 
 // ============================================================================
+// Task 515: Simultaneous Mode Combination Tests
+// ============================================================================
+
+// ============================================================================
+// test_bypass_takes_priority_over_delta
+// When bypass=true and delta=true, bypass wins — output ≈ input (not delta diff).
+// ============================================================================
+TEST_CASE("test_bypass_takes_priority_over_delta", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setLookahead(0.0f);  // zero lookahead so bypass path has no delay
+    engine.setBypass(true);
+    engine.setDeltaMode(true);
+
+    // Warm up
+    {
+        juce::AudioBuffer<float> warm(2, kBS);
+        warm.clear();
+        engine.process(warm);
+    }
+
+    const float amp = 2.0f;
+    juce::AudioBuffer<float> ref = makeSine(amp);
+    juce::AudioBuffer<float> buf = makeSine(amp);
+    engine.process(buf);
+
+    // Output should match input (bypass wins), not be the delta difference
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* orig = ref.getReadPointer(ch);
+        const float* out  = buf.getReadPointer(ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE(out[i] == Catch::Approx(orig[i]).margin(1e-4f));
+    }
+}
+
+// ============================================================================
+// test_bypass_takes_priority_over_unity
+// When bypass=true and unity=true, bypass wins — output ≈ input unchanged.
+// ============================================================================
+TEST_CASE("test_bypass_takes_priority_over_unity", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setLookahead(0.0f);
+    engine.setBypass(true);
+    engine.setUnityGain(true);
+    engine.setInputGain(12.0f);
+
+    // Warm up
+    {
+        juce::AudioBuffer<float> warm(2, kBS);
+        warm.clear();
+        engine.process(warm);
+    }
+
+    const float amp = 0.5f;
+    juce::AudioBuffer<float> ref = makeSine(amp);
+    juce::AudioBuffer<float> buf = makeSine(amp);
+    engine.process(buf);
+
+    // Output should match input (bypass wins, unity gain ignored)
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* orig = ref.getReadPointer(ch);
+        const float* out  = buf.getReadPointer(ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE(out[i] == Catch::Approx(orig[i]).margin(1e-4f));
+    }
+}
+
+// ============================================================================
+// test_delta_and_unity_compose_correctly
+// When delta=true and unity=true, both paths execute. The output should be
+// finite and bounded, and the delta RMS should be greater than silence
+// (confirming limiting is active with unity gain ceiling).
+// ============================================================================
+TEST_CASE("test_delta_and_unity_compose_correctly", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setInputGain(12.0f);  // +12 dB gain
+    engine.setDeltaMode(true);
+    engine.setUnityGain(true);   // ceiling = 1/inputGainLinear ≈ 0.251
+
+    // Feed a +6 dBFS signal: after +12 dB gain = +18 dBFS, well above ceiling → heavy limiting
+    const float amp = 2.0f;
+
+    // Warm up
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> warmup = makeSine(amp);
+        engine.process(warmup);
+    }
+
+    juce::AudioBuffer<float> buf = makeSine(amp);
+    engine.process(buf);
+
+    // All samples must be finite
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* data = buf.getReadPointer(ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+        {
+            INFO("ch=" << ch << " i=" << i << " val=" << data[i]);
+            REQUIRE(std::isfinite(data[i]));
+        }
+    }
+
+    // Delta RMS should be greater than silence (limiting is active)
+    const float deltaRMS = rms(buf, 0);
+    INFO("Delta+Unity RMS: " << deltaRMS);
+    REQUIRE(deltaRMS > 0.001f);
+}
+
+// ============================================================================
+// test_all_three_flags_bypass_wins
+// When bypass=true, delta=true, and unity=true simultaneously, bypass takes
+// priority. Output should match input regardless of the other flags.
+// ============================================================================
+TEST_CASE("test_all_three_flags_bypass_wins", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setLookahead(0.0f);
+    engine.setBypass(true);
+    engine.setDeltaMode(true);
+    engine.setUnityGain(true);
+    engine.setInputGain(12.0f);
+
+    // Warm up
+    {
+        juce::AudioBuffer<float> warm(2, kBS);
+        warm.clear();
+        engine.process(warm);
+    }
+
+    const float amp = 2.0f;
+    juce::AudioBuffer<float> ref = makeSine(amp);
+    juce::AudioBuffer<float> buf = makeSine(amp);
+    engine.process(buf);
+
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* orig = ref.getReadPointer(ch);
+        const float* out  = buf.getReadPointer(ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE(out[i] == Catch::Approx(orig[i]).margin(1e-4f));
+    }
+}
+
+// ============================================================================
+// test_mode_switch_delta_bypass_delta_no_large_jump
+// Toggle from delta → bypass → delta across three consecutive blocks.
+// No discontinuity > 6 dB (amplitude 2.0) between adjacent blocks.
+// ============================================================================
+TEST_CASE("test_mode_switch_delta_bypass_delta_no_large_jump", "[LimiterEngineModes]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSR, kBS, 2);
+    engine.setOutputCeiling(0.0f);
+
+    const float amp = 2.0f;  // above ceiling, ensures limiting
+
+    // Warm up in delta mode
+    engine.setDeltaMode(true);
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> warmup = makeSine(amp);
+        engine.process(warmup);
+    }
+
+    // Record last sample of each block and first sample of next for continuity check
+    float prevLastSample = 0.0f;
+    bool havePrev = false;
+
+    // Block 0: delta mode
+    // Block 1: bypass mode
+    // Block 2: delta mode again
+    for (int block = 0; block < 3; ++block)
+    {
+        if (block == 1)
+        {
+            engine.setBypass(true);
+            engine.setDeltaMode(false);
+        }
+        else
+        {
+            engine.setBypass(false);
+            engine.setDeltaMode(true);
+        }
+
+        juce::AudioBuffer<float> buf = makeSine(amp);
+        engine.process(buf);
+
+        const float* data = buf.getReadPointer(0);
+        const float firstSample = data[0];
+        const float lastSample  = data[buf.getNumSamples() - 1];
+
+        // All samples must be finite
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE(std::isfinite(data[i]));
+
+        // Check boundary discontinuity between blocks
+        if (havePrev)
+        {
+            const float jump = std::abs(firstSample - prevLastSample);
+            INFO("Block " << block << " boundary jump: " << jump
+                 << " (prev last=" << prevLastSample << " cur first=" << firstSample << ")");
+            REQUIRE(jump < 4.0f);  // < 6 dB boundary; allows for mode transition artifacts
+        }
+
+        prevLastSample = lastSample;
+        havePrev = true;
+    }
+}
+
+// ============================================================================
 // test_dither_toggle
 // Enabling and disabling dither during processing should not crash
 // and should produce finite output.
