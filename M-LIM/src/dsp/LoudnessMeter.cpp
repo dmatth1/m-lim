@@ -163,6 +163,40 @@ void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
         // Stereo SIMD path: process L and R simultaneously via Biquad2.
         // On SSE2 platforms this computes both channels in parallel;
         // on non-SSE2 platforms Biquad2::processStereo falls through to scalar.
+#if MLIM_HAS_SSE2
+        // Accumulate yL*yL in low lane, yR*yR in high lane; reduce at block
+        // boundaries. Avoids per-sample scalar += on double.
+        __m128d vAccum = _mm_setzero_pd();
+        for (int i = 0; i < numSmp; ++i)
+        {
+            const double xL = static_cast<double>(buffer.getSample(0, i));
+            const double xR = static_cast<double>(buffer.getSample(1, i));
+            double yL, yR;
+            mPreFilter2.processStereo(xL, xR, yL, yR);
+            mRlbFilter2.processStereo(yL, yR, yL, yR);
+
+            const __m128d vY = _mm_set_pd(yR, yL);
+            vAccum = _mm_add_pd(vAccum, _mm_mul_pd(vY, vY));
+
+            ++mBlockAccum;
+            if (mBlockAccum >= mBlockSize)
+            {
+                // Horizontal sum: low + high lane
+                const __m128d vHigh = _mm_unpackhi_pd(vAccum, vAccum);
+                const double accumScalar = _mm_cvtsd_f64(_mm_add_pd(vAccum, vHigh));
+                mBlockPower += accumScalar;
+                vAccum = _mm_setzero_pd();
+
+                double blockMeanSquare = mBlockPower / static_cast<double>(mBlockSize);
+                mBlockPower = 0.0;
+                mBlockAccum = 0;
+                onBlockComplete(blockMeanSquare);
+            }
+        }
+        // Flush remaining accumulation
+        const __m128d vHigh = _mm_unpackhi_pd(vAccum, vAccum);
+        mBlockPower += _mm_cvtsd_f64(_mm_add_pd(vAccum, vHigh));
+#else
         for (int i = 0; i < numSmp; ++i)
         {
             const double xL = static_cast<double>(buffer.getSample(0, i));
@@ -181,6 +215,7 @@ void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
                 onBlockComplete(blockMeanSquare);
             }
         }
+#endif
     }
     else
     {
