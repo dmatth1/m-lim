@@ -20,7 +20,6 @@ void DCFilter::process(float* data, int numSamples)
         float y = x - xPrev + static_cast<float>(R) * yPrev;
         xPrev = x;
         yPrev = y;
-        if (std::abs(yPrev) < 1e-15f) yPrev = 0.0f;
         data[i] = y;
     }
 }

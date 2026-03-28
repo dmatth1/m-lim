@@ -402,3 +402,33 @@ TEST_CASE("test_reset_after_inf_restores_finite_output", "[DCFilter]")
         REQUIRE(std::isfinite(valid[i]));
     }
 }
+
+TEST_CASE("test_tiny_signal_preserved", "[DCFilter]")
+{
+    // Verify that a signal at 1e-20 amplitude passes through without being
+    // zeroed out by an overly aggressive denormal flush threshold.
+    DCFilter filter;
+    filter.prepare(kSampleRate);
+
+    const float tinyAmplitude = 1e-20f;
+    const int numSamples = 4096;
+    std::vector<float> signal(numSamples);
+
+    // Generate a tiny 100 Hz sine
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = tinyAmplitude * static_cast<float>(std::sin(kTwoPi * 100.0 * i / kSampleRate));
+
+    filter.process(signal.data(), numSamples);
+
+    // Measure RMS of latter half (steady state) — should be non-zero
+    double sumSq = 0.0;
+    const int start = numSamples / 2;
+    for (int i = start; i < numSamples; ++i)
+        sumSq += static_cast<double>(signal[i]) * static_cast<double>(signal[i]);
+    double rmsOut = std::sqrt(sumSq / (numSamples - start));
+
+    // RMS should be close to the input RMS (tinyAmplitude / sqrt(2))
+    double expectedRms = tinyAmplitude / std::sqrt(2.0);
+    REQUIRE(rmsOut > expectedRms * 0.5); // at least half the expected energy preserved
+    REQUIRE(rmsOut < expectedRms * 1.5); // not wildly amplified
+}
