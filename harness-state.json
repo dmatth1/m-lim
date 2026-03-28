@@ -951,6 +951,11 @@
       "at": "2026-03-28T00:26:19Z",
       "action": "respawned workers 1 and 3",
       "reason": "worker-1: 1494s backoff (~25 min), worker-3: 1800s backoff (30 min). p=32 needs throughput."
+    },
+    {
+      "at": "2026-03-28T00:30:24Z",
+      "action": "sweep 38 fully complete",
+      "reason": "UIParityAuditor committed 6 visual parity tasks. Total sweep 38: +2 VPA +6 UPA +7 QA +7 PE +3 PA +2 DSP = 27 new tasks groomed. p=30, d=467."
     }
   ],
   "learnings": [
