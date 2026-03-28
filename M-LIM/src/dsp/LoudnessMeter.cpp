@@ -152,6 +152,12 @@ void LoudnessMeter::processBlock(const juce::AudioBuffer<float>& buffer)
     const int numCh  = std::min(buffer.getNumChannels(), mNumChannels);
     const int numSmp = buffer.getNumSamples();
 
+    // Guard: prepare() has not been called yet — mBlockSize is 0 and
+    // mHistoryBuf is empty, so any accumulation would divide by zero
+    // and access out-of-bounds memory.
+    if (mBlockSize <= 0)
+        return;
+
     if (numCh == 2)
     {
         // Stereo SIMD path: process L and R simultaneously via Biquad2.

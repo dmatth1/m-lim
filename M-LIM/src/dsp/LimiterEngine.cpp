@@ -222,6 +222,17 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     const int numChannels = std::min(buffer.getNumChannels(), mNumChannels);
     if (numSamples == 0 || numChannels == 0)
         return;
+
+    // Guard: if prepare() has not been called, working buffers are empty.
+    // Silently pass through to avoid crashing during host plugin scanning or
+    // race conditions where processBlock runs before prepareToPlay.
+    if (mUpPtrs.empty() || mSidePtrs.empty())
+        return;
+
+    // Guard: if the host sends a block larger than we prepared for, clamp to
+    // avoid out-of-bounds writes into pre-allocated working buffers.
+    if (numSamples > mMaxBlockSize)
+        return;
     const float inLevelL = peakLevel(buffer, 0, numSamples);
     const float inLevelR = (numChannels > 1) ? peakLevel(buffer, 1, numSamples) : inLevelL;
     if (mBypass.load())

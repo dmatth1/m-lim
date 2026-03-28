@@ -11,8 +11,10 @@
 #include "Parameters.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
 #include <cmath>
 #include <limits>
+#include <thread>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -1118,4 +1120,129 @@ TEST_CASE("test_setstate_double_restore_no_crash", "[PluginProcessor]")
     auto* rawGain = proc.apvts.getRawParameterValue (ParamID::inputGain);
     REQUIRE (rawGain != nullptr);
     REQUIRE (rawGain->load() == Catch::Approx (12.0f).margin (0.01f));
+}
+
+// ============================================================================
+// test_processblock_before_preparetoplay_no_crash
+// A freshly constructed processor must not crash if processBlock is called
+// without prior prepareToPlay — a scenario that can occur during host plugin
+// scanning or race conditions.
+// ============================================================================
+TEST_CASE("test_processblock_before_preparetoplay_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+
+    // Do NOT call prepareToPlay — go straight to processBlock
+    juce::AudioBuffer<float> buf (2, 512);
+    buf.clear();
+    juce::MidiBuffer midi;
+
+    REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+
+    // Output must be finite (zero is acceptable for a safe no-op)
+    for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+    {
+        const float* data = buf.getReadPointer (ch);
+        for (int i = 0; i < buf.getNumSamples(); ++i)
+            REQUIRE (std::isfinite (data[i]));
+    }
+}
+
+// ============================================================================
+// test_processblock_after_release_resources_no_crash
+// After prepareToPlay → releaseResources, a stray processBlock call must not
+// crash. Some hosts rewire the audio graph and may call processBlock before
+// the next prepareToPlay.
+// ============================================================================
+TEST_CASE("test_processblock_after_release_resources_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+    proc.releaseResources();
+
+    juce::AudioBuffer<float> buf (2, kBlockSize);
+    buf.clear();
+    juce::MidiBuffer midi;
+
+    REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+}
+
+// ============================================================================
+// test_processblock_oversized_buffer_no_crash
+// JUCE normally guarantees numSamples <= maxBlockSize, but we verify that
+// passing a larger buffer doesn't crash. If the implementation hard-asserts,
+// this documents that as expected behaviour.
+// ============================================================================
+TEST_CASE("test_processblock_oversized_buffer_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize); // prepared for 512
+
+    juce::AudioBuffer<float> buf (2, kBlockSize * 2); // 1024 — exceeds prepared size
+    buf.clear();
+    juce::MidiBuffer midi;
+
+    // If the engine asserts on oversized blocks in debug mode this will still
+    // catch crashes in release builds.
+    REQUIRE_NOTHROW (proc.processBlock (buf, midi));
+}
+
+// ============================================================================
+// test_concurrent_prepare_and_processblock_no_crash
+// Exercises the race between prepareToPlay on the message thread and
+// processBlock on the audio thread. Both run concurrently for a short burst.
+// The requirement is: no crash, no undefined behaviour (as detectable without
+// sanitisers).
+// ============================================================================
+TEST_CASE("test_concurrent_prepare_and_processblock_no_crash", "[PluginProcessor]")
+{
+    MLIMAudioProcessor proc;
+    proc.prepareToPlay (kSampleRate, kBlockSize);
+
+    constexpr int kIterations = 10;
+    std::atomic<bool> go { false };
+    std::atomic<bool> crashed { false };
+
+    // Thread 1: repeated prepareToPlay calls
+    std::thread prepareThread ([&]()
+    {
+        while (!go.load()) {} // spin until start signal
+        for (int i = 0; i < kIterations; ++i)
+        {
+            try
+            {
+                proc.prepareToPlay (kSampleRate, kBlockSize);
+            }
+            catch (...)
+            {
+                crashed.store (true);
+            }
+        }
+    });
+
+    // Thread 2: repeated processBlock calls
+    std::thread processThread ([&]()
+    {
+        while (!go.load()) {} // spin until start signal
+        juce::AudioBuffer<float> buf (2, kBlockSize);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < kIterations; ++i)
+        {
+            buf.clear();
+            try
+            {
+                proc.processBlock (buf, midi);
+            }
+            catch (...)
+            {
+                crashed.store (true);
+            }
+        }
+    });
+
+    go.store (true);
+    prepareThread.join();
+    processThread.join();
+
+    REQUIRE_FALSE (crashed.load());
 }
