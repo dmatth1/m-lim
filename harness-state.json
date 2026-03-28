@@ -996,6 +996,11 @@
       "at": "2026-03-28T01:40:48Z",
       "action": "ran PM sweep 39 early (22 tasks in needs-grooming, p=7 dropping fast)",
       "reason": "UIParityAuditor still running at 14 min but 22 grooming tasks urgent"
+    },
+    {
+      "at": "2026-03-28T01:45:37Z",
+      "action": "respawned worker-2",
+      "reason": "855s backoff; PM groomed 21 tasks, p=28"
     }
   ],
   "learnings": [
