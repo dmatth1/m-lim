@@ -976,6 +976,11 @@
       "at": "2026-03-28T01:01:26Z",
       "action": "respawned worker-3, unstuck task 486",
       "reason": "log frozen 3 cycles at same entry (fixing test after build success). Pattern matches previous worker-1 hangs."
+    },
+    {
+      "at": "2026-03-28T01:15:52Z",
+      "action": "respawned worker-1",
+      "reason": "882s backoff (attempt 2, ~15 min); p=22"
     }
   ],
   "learnings": [
