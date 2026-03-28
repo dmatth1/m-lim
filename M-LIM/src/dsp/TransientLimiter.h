@@ -26,8 +26,17 @@ public:
 
     TransientLimiter() = default;
 
-    /** Call before processing begins or when sample rate / channel count changes. */
-    void prepare(double sampleRate, int maxBlockSize, int numChannels);
+    /** Call before processing begins or when sample rate / channel count changes.
+     *  @param operatingSampleRate  The actual rate at which audio will be processed
+     *                              (may be upsampled, e.g. 176400 Hz for 4× OS at 44100 Hz).
+     *  @param maxBlockSize         Maximum number of samples per block.
+     *  @param numChannels          Number of audio channels.
+     *  @param originalSampleRate   The host/project sample rate before oversampling.
+     *                              If 0 (default), assumed equal to operatingSampleRate
+     *                              (i.e. no oversampling). Used only to make
+     *                              getLatencyInSamples() return original-rate samples. */
+    void prepare(double operatingSampleRate, int maxBlockSize, int numChannels,
+                 double originalSampleRate = 0.0);
 
     /** Process audio in-place.
      *  When sidechainData is non-null, use it for peak detection while applying
@@ -51,11 +60,12 @@ public:
     /** Returns current gain reduction in dB (0 = no reduction, negative = reducing). */
     float getGainReduction() const;
 
-    /** Returns the lookahead delay in samples **at the rate this instance was prepared with**.
-     *  When the limiter is prepared at an oversampled rate (as done by LimiterEngine),
-     *  this value is in upsampled-domain samples, NOT original-rate samples.
-     *  Do NOT use this value directly for host latency reporting.
-     *  Use LimiterEngine::getLatencySamples() for the host-facing latency. */
+    /** Returns the lookahead delay in **original-rate** samples.
+     *  When the limiter is prepared at an oversampled rate, this method divides
+     *  the internal upsampled-domain delay by the oversampling factor so that
+     *  the returned value is always in terms of the host sample rate.
+     *  Use LimiterEngine::getLatencySamples() for the final host-facing latency
+     *  (which also includes the oversampler FIR latency). */
     int getLatencyInSamples() const;
 
     /** Reset the sliding-window deques and write counters to start at the given
@@ -70,7 +80,8 @@ private:
     /** Soft saturation: tanh waveshaping scaled by amount (0 = bypass, 1 = full). */
     static float softSaturate(float x, float amount);
 
-    double mSampleRate    = 44100.0;
+    double mSampleRate         = 44100.0;   // operating rate (may be upsampled)
+    double mOriginalSampleRate = 44100.0;   // host rate before oversampling
     int    mNumChannels   = 2;
     int    mLookaheadSamples = 0;   // current lookahead size in samples
     int    mMaxLookaheadSamples = 0; // allocated buffer size

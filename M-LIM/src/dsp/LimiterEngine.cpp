@@ -39,7 +39,7 @@ void LimiterEngine::prepare(double sampleRate, int maxBlockSize, int numChannels
     const int    usBlockSize  = maxBlockSize * osFactorPow2;
 
     // Prepare limiters at the upsampled rate
-    mTransientLimiter.prepare(usSampleRate, usBlockSize, numChannels);
+    mTransientLimiter.prepare(usSampleRate, usBlockSize, numChannels, sampleRate);
     mTransientLimiter.setLookahead(mLookaheadMs.load());
     mTransientLimiter.setChannelLink(mChannelLinkTransients.load());
     mTransientLimiter.setAlgorithmParams(

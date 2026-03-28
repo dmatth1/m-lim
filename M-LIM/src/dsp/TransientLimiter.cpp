@@ -17,14 +17,16 @@ static constexpr float kReleaseMaxMs = 500.0f;
 // ---------------------------------------------------------------------------
 // prepare
 // ---------------------------------------------------------------------------
-void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numChannels)
+void TransientLimiter::prepare(double operatingSampleRate, int /*maxBlockSize*/, int numChannels,
+                               double originalSampleRate)
 {
-    mSampleRate   = sampleRate;
+    mSampleRate         = operatingSampleRate;
+    mOriginalSampleRate = (originalSampleRate > 0.0) ? originalSampleRate : operatingSampleRate;
     jassert (numChannels <= kMaxChannels);
     mNumChannels  = std::min (numChannels, kMaxChannels);
 
     // Allocate delay buffers for maximum possible lookahead
-    mMaxLookaheadSamples = static_cast<int>(kMaxLookaheadMs * 0.001 * sampleRate) + 1;
+    mMaxLookaheadSamples = static_cast<int>(kMaxLookaheadMs * 0.001 * operatingSampleRate) + 1;
 
     mDelayBuffers.assign(numChannels, std::vector<float>(mMaxLookaheadSamples + 1, 0.0f));
     mWritePos.assign(numChannels, 0);
@@ -47,7 +49,7 @@ void TransientLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numC
 
     // Default release: ~50 ms
     const float releaseMs = 50.0f;
-    mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(sampleRate)));
+    mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(operatingSampleRate)));
 
     mCurrentGRdB = 0.0f;
 
@@ -125,7 +127,15 @@ float TransientLimiter::getGainReduction() const
 // ---------------------------------------------------------------------------
 int TransientLimiter::getLatencyInSamples() const
 {
-    return mLookaheadSamples;
+    // Return latency in original-rate samples so that callers always get the
+    // host-domain value regardless of whether the limiter is running at an
+    // upsampled rate.  The internal mLookaheadSamples is in operating-rate
+    // samples; divide by the oversampling factor (mSampleRate / mOriginalSampleRate).
+    if (mSampleRate <= 0.0 || mOriginalSampleRate <= 0.0)
+        return mLookaheadSamples;
+
+    const double osFactor = mSampleRate / mOriginalSampleRate;
+    return static_cast<int>(std::round(static_cast<double>(mLookaheadSamples) / osFactor));
 }
 
 // ---------------------------------------------------------------------------

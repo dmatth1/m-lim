@@ -1901,3 +1901,62 @@ TEST_CASE("test_soft_saturate_small_signal", "[TransientLimiter]")
         REQUIRE(buf[i] < 0.01f);
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_latency_in_original_rate_samples_when_prepared_at_upsampled_rate
+//   When TransientLimiter is prepared at an upsampled rate (as LimiterEngine
+//   does for oversampling), getLatencyInSamples() must return the latency
+//   expressed in *original-rate* samples, not upsampled-domain samples.
+//
+//   Example: 4× OS at 44100 Hz → operatingSampleRate = 176400 Hz.
+//   1 ms lookahead at 176400 Hz = 176 upsampled samples.
+//   Original-rate equivalent = 176 / 4 = 44 samples (at 44100 Hz).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_latency_in_original_rate_samples_when_prepared_at_upsampled_rate",
+          "[TransientLimiter]")
+{
+    constexpr double kOriginalRate   = 44100.0;
+    constexpr int    kOversampFactor = 4;
+    constexpr double kUpsampledRate  = kOriginalRate * kOversampFactor;  // 176400 Hz
+    constexpr float  kLookaheadMs   = 1.0f;
+
+    TransientLimiter limiter;
+    limiter.prepare(kUpsampledRate, kBlockSize * kOversampFactor, 2, kOriginalRate);
+    limiter.setLookahead(kLookaheadMs);
+
+    const int reported = limiter.getLatencyInSamples();
+
+    // Expected: 1 ms at 44100 Hz = 44 original-rate samples
+    const int expected = static_cast<int>(kLookaheadMs * 0.001f * static_cast<float>(kOriginalRate));
+
+    INFO("reported latency=" << reported << " expected=" << expected);
+    // Must equal the original-rate value (tolerance ±1 for rounding)
+    REQUIRE(reported == Catch::Approx(expected).margin(1));
+
+    // Must NOT equal the upsampled-domain value (176) — that would indicate the bug
+    const int upsampledDomainValue = static_cast<int>(
+        kLookaheadMs * 0.001f * static_cast<float>(kUpsampledRate));
+    REQUIRE(reported != upsampledDomainValue);
+}
+
+// ---------------------------------------------------------------------------
+// test_latency_no_oversampling_unaffected
+//   When TransientLimiter is prepared at the original rate (no oversampling),
+//   getLatencyInSamples() behaves as before — returns the lookahead in
+//   samples at the given rate.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_latency_no_oversampling_unaffected", "[TransientLimiter]")
+{
+    constexpr float kLookaheadMs = 1.0f;
+
+    TransientLimiter limiter;
+    // Prepare without oversampling (default originalSampleRate = 0 → same as operating)
+    limiter.prepare(kSampleRate, kBlockSize, 2);
+    limiter.setLookahead(kLookaheadMs);
+
+    const int reported = limiter.getLatencyInSamples();
+    const int expected = static_cast<int>(kLookaheadMs * 0.001f * static_cast<float>(kSampleRate));
+
+    INFO("reported=" << reported << " expected=" << expected);
+    REQUIRE(reported == Catch::Approx(expected).margin(1));
+}
