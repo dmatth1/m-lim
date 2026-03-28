@@ -76,7 +76,7 @@ namespace MLIMColours
     const juce::Colour topBarGradientBottom { 0xff3C3842 };
 
     // Button colours
-    const juce::Colour algoButtonInactive       { 0xff545870 };  // +24R +8G -15B lighten for better match (task-409)
+    const juce::Colour algoButtonInactive       { 0xff545463 };  // R=84 G=84 B=99 reduce blue to match reference (task-521)
     const juce::Colour algoButtonSelected       { 0xff2E3E58 };  // selected algo button — dark navy, subtle blue highlight (task-346)
     const juce::Colour buttonBackground         { 0xff242424 };  // default button/toggle background
     const juce::Colour buttonOnBackground       { 0xff1A4A1A };  // toggle-on background (dark green)
