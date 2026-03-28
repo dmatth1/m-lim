@@ -17,8 +17,8 @@ void SidechainFilter::prepare(double sampleRate, int /*maxBlockSize*/)
     mSampleRate = sampleRate;
 
     // Compute initial tilt gains for the shelf filters.
-    const float lowGain  = std::pow(10.0f, -mTiltDb * 0.5f / 20.0f);
-    const float highGain = std::pow(10.0f,  mTiltDb * 0.5f / 20.0f);
+    const float lowGain  = decibelsToGain(-mTiltDb * 0.5f);
+    const float highGain = decibelsToGain( mTiltDb * 0.5f);
 
     using Coeffs = juce::dsp::IIR::Coefficients<float>;
 
@@ -215,8 +215,8 @@ void SidechainFilter::updateCoefficients()
     // High-shelf flips the sign of the aminus1*cos terms and swaps a1 sign.
     // -----------------------------------------------------------------------
     {
-        const float lowGain  = std::pow(10.0f, -mTiltDb * 0.5f / 20.0f);
-        const float highGain = std::pow(10.0f,  mTiltDb * 0.5f / 20.0f);
+        const float lowGain  = decibelsToGain(-mTiltDb * 0.5f);
+        const float highGain = decibelsToGain( mTiltDb * 0.5f);
 
         const float twoPi    = juce::MathConstants<float>::twoPi;
         const float omega    = twoPi * 1000.0f / static_cast<float>(mSampleRate);

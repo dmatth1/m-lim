@@ -207,7 +207,7 @@ float TransientLimiter::computeRequiredGain(float peakAbs) const
     // Within knee: quadratic interpolation of gain in dB
     const float t      = (peakDb - mLowerKneeDb) / mParams.kneeWidth;  // 0–1 across knee
     const float gainDb = (mThresholdDb - mUpperKneeDb) * t * t;
-    return std::pow(10.0f, gainDb / 20.0f);
+    return decibelsToGain(gainDb);
 }
 
 // ---------------------------------------------------------------------------

@@ -440,7 +440,7 @@ void LimiterEngine::setAlgorithm(LimiterAlgorithm algo)
 
 void LimiterEngine::setInputGain(float dB)
 {
-    const float newLinear = std::pow(10.0f, dB / 20.0f);
+    const float newLinear = decibelsToGain(dB);
     if (floatBitsEqual(mInputGainLinear.load(std::memory_order_relaxed), newLinear))
         return;
     mInputGainLinear.store(newLinear);
@@ -449,7 +449,7 @@ void LimiterEngine::setInputGain(float dB)
 
 void LimiterEngine::setOutputCeiling(float dB)
 {
-    const float newLinear = std::pow(10.0f, dB / 20.0f);
+    const float newLinear = decibelsToGain(dB);
     if (floatBitsEqual(mOutputCeilingLinear.load(std::memory_order_relaxed), newLinear))
         return;
     mOutputCeilingLinear.store(newLinear);
