@@ -1648,3 +1648,117 @@ TEST_CASE("test_all_algorithms_distinct_output_through_engine", "[LimiterEngine]
     INFO("Distinct algorithm RMS count: " << distinctCount);
     REQUIRE(distinctCount >= 6);
 }
+
+// ============================================================================
+// test_reset_clears_gain_reduction
+// Process a loud signal until GR > 3 dB, call reset(), then process silence.
+// After reset, getGainReduction() should return 0.
+// ============================================================================
+TEST_CASE("test_reset_clears_gain_reduction", "[LimiterEngine][reset]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    // Drive hard signal to build up GR
+    for (int i = 0; i < 20; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(10.0f, kBlockSize);
+        engine.process(buf);
+    }
+
+    const float grBefore = engine.getGainReduction();
+    INFO("GR before reset: " << grBefore << " dB");
+    REQUIRE(grBefore < -3.0f);  // significant gain reduction
+
+    engine.reset();
+
+    // Process silence — GR should be zero after reset
+    juce::AudioBuffer<float> silence(2, kBlockSize);
+    silence.clear();
+    engine.process(silence);
+
+    const float grAfter = engine.getGainReduction();
+    INFO("GR after reset + silence: " << grAfter << " dB");
+    REQUIRE(grAfter == 0.0f);
+}
+
+// ============================================================================
+// test_reset_output_matches_fresh_engine
+// After reset(), output should match a freshly-prepared engine given same input.
+// ============================================================================
+TEST_CASE("test_reset_output_matches_fresh_engine", "[LimiterEngine][reset]")
+{
+    // Engine A: process loud signal, then reset, then process a sine
+    LimiterEngine engineA;
+    engineA.prepare(kSampleRate, kBlockSize, 2);
+    engineA.setOutputCeiling(0.0f);
+
+    for (int i = 0; i < 20; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(10.0f, kBlockSize);
+        engineA.process(buf);
+    }
+
+    engineA.reset();
+
+    // Engine B: freshly prepared, no prior processing
+    LimiterEngine engineB;
+    engineB.prepare(kSampleRate, kBlockSize, 2);
+    engineB.setOutputCeiling(0.0f);
+
+    // Process the same sine through both
+    const float testAmp = 2.0f;
+    juce::AudioBuffer<float> bufA = makeSine(testAmp, kBlockSize);
+    juce::AudioBuffer<float> bufB = makeSine(testAmp, kBlockSize);
+
+    engineA.process(bufA);
+    engineB.process(bufB);
+
+    float maxDiff = 0.0f;
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        const float* a = bufA.getReadPointer(ch);
+        const float* b = bufB.getReadPointer(ch);
+        for (int s = 0; s < kBlockSize; ++s)
+            maxDiff = std::max(maxDiff, std::abs(a[s] - b[s]));
+    }
+
+    INFO("Max sample difference after reset vs fresh engine: " << maxDiff);
+    REQUIRE(maxDiff < 1e-6f);
+}
+
+// ============================================================================
+// test_reset_clears_true_peak_state
+// Process loud signal, verify getTruePeakL() > 0, reset, then process silence.
+// After silence, getTruePeakL() should reflect only the silence block (≈ 0).
+// ============================================================================
+TEST_CASE("test_reset_clears_true_peak_state", "[LimiterEngine][reset]")
+{
+    LimiterEngine engine;
+    engine.prepare(kSampleRate, kBlockSize, 2);
+    engine.setOutputCeiling(0.0f);
+
+    // Process loud signal to drive true peak meters
+    for (int i = 0; i < 10; ++i)
+    {
+        juce::AudioBuffer<float> buf = makeSine(5.0f, kBlockSize);
+        engine.process(buf);
+    }
+
+    const float truePkBefore = engine.getTruePeakL();
+    INFO("TruePeakL before reset: " << truePkBefore);
+    REQUIRE(truePkBefore > 0.0f);
+
+    engine.reset();
+
+    // Process silence — true peak should now reflect only this silent block
+    juce::AudioBuffer<float> silence(2, kBlockSize);
+    silence.clear();
+    engine.process(silence);
+
+    const float truePkAfter = engine.getTruePeakL();
+    INFO("TruePeakL after reset + silence: " << truePkAfter);
+    // After reset and processing silence, true peak should be near zero (no state leakage)
+    REQUIRE(truePkAfter < 1e-6f);
+}

@@ -140,6 +140,17 @@ void TransientLimiter::resetCounters(int64_t startOffset)
         mMainDeques[ch].reset();
         mSCDeques[ch].reset();
     }
+
+    // Clear gain and GR state so no GR carries over after reset
+    std::fill(mGainState.begin(), mGainState.end(), 1.0f);
+    mCurrentGRdB = 0.0f;
+
+    // Clear lookahead delay buffers
+    for (auto& buf : mDelayBuffers)
+        std::fill(buf.begin(), buf.end(), 0.0f);
+
+    // Reset write/read positions
+    std::fill(mWritePos.begin(), mWritePos.end(), 0);
 }
 
 // ---------------------------------------------------------------------------
