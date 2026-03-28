@@ -2268,3 +2268,41 @@ TEST_CASE("test_nan_channel_does_not_corrupt_other_channel", "[TransientLimiter]
     INFO("GR dB = " << gr);
     CHECK(anyFiniteCh1);
 }
+
+// ---------------------------------------------------------------------------
+// test_4_channel_peak_limiting
+//   Prepare with 4 channels and process loud signal, verify outputs are finite.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_4_channel_peak_limiting", "[TransientLimiter]")
+{
+    const int numChannels = 4;
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, numChannels);
+    limiter.setLookahead(2.0f);  // 2ms lookahead
+    limiter.setThreshold(1.0f);
+    limiter.setChannelLink(1.0f);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    limiter.setAlgorithmParams(params);
+
+    std::vector<std::vector<float>> buf(numChannels, std::vector<float>(kBlockSize, 0.0f));
+    auto ptrs = makePtrs(buf);
+
+    // Process several blocks of loud signal
+    for (int block = 0; block < 5; ++block)
+    {
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), 4.0f);
+        limiter.process(ptrs.data(), numChannels, kBlockSize);
+    }
+
+    // All outputs must be finite
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("ch=" << ch << " i=" << i << " val=" << buf[ch][i]);
+            REQUIRE(std::isfinite(buf[ch][i]));
+        }
+    }
+}

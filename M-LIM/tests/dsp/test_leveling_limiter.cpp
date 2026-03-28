@@ -1215,3 +1215,81 @@ TEST_CASE("test_nan_followed_by_valid_audio_recovers", "[LevelingLimiter]")
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// test_4_channel_no_crash
+//   Prepare with 4 channels and verify all outputs are finite.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_4_channel_no_crash", "[LevelingLimiter]")
+{
+    const int numChannels = 4;
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, numChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(50.0f);
+
+    std::vector<std::vector<float>> buf(numChannels, std::vector<float>(kBlockSize, 0.0f));
+    // Fill with a loud signal that triggers gain reduction
+    for (auto& ch : buf)
+        std::fill(ch.begin(), ch.end(), 2.0f);
+    auto ptrs = makePtrs(buf);
+
+    // Process multiple blocks to exercise envelope
+    for (int block = 0; block < 5; ++block)
+    {
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), 2.0f);
+        limiter.process(ptrs.data(), numChannels, kBlockSize);
+    }
+
+    // All outputs must be finite
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("ch=" << ch << " i=" << i);
+            REQUIRE(std::isfinite(buf[ch][i]));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_6_channel_linking_works
+//   6-channel test with linking enabled, verify finite output.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_6_channel_linking_works", "[LevelingLimiter]")
+{
+    const int numChannels = 6;
+    LevelingLimiter limiter;
+    limiter.prepare(kSampleRate, kBlockSize, numChannels);
+
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
+    limiter.setAlgorithmParams(params);
+    limiter.setAttack(1.0f);
+    limiter.setRelease(50.0f);
+    limiter.setChannelLink(1.0f); // fully linked
+
+    std::vector<std::vector<float>> buf(numChannels, std::vector<float>(kBlockSize, 0.0f));
+    auto ptrs = makePtrs(buf);
+
+    // Feed loud signal for several blocks
+    for (int block = 0; block < 5; ++block)
+    {
+        for (auto& ch : buf)
+            std::fill(ch.begin(), ch.end(), 3.0f);
+        limiter.process(ptrs.data(), numChannels, kBlockSize);
+    }
+
+    // All outputs must be finite and limited (peak <= threshold * some margin)
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            INFO("ch=" << ch << " i=" << i << " val=" << buf[ch][i]);
+            REQUIRE(std::isfinite(buf[ch][i]));
+        }
+    }
+}

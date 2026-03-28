@@ -886,3 +886,61 @@ TEST_CASE("test_tilt_unity_at_pivot_frequency", "[SidechainFilter]")
     REQUIRE(attenuationDb > -0.5);
     REQUIRE(attenuationDb < 0.5);
 }
+
+// ---------------------------------------------------------------------------
+// test_8khz_sample_rate_stable
+//   HP=2000Hz is near Nyquist at 8kHz — verify no NaN or explosion.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_8khz_sample_rate_stable", "[SidechainFilter]")
+{
+    const double sampleRate = 8000.0;
+    const int numSamples = 4096;
+
+    SidechainFilter filter;
+    filter.prepare(sampleRate, numSamples);
+    filter.setHighPassFreq(2000.0f); // near Nyquist (4kHz)
+
+    auto buf = makeSine(1000.0, 1.0, numSamples, sampleRate);
+    filter.process(buf);
+
+    // All output samples must be finite (no NaN or Inf)
+    const float* data = buf.getReadPointer(0);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("i=" << i << " val=" << data[i]);
+        REQUIRE(std::isfinite(data[i]));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_384khz_sample_rate_stable
+//   Very high sample rate — verify stability and finite output.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_384khz_sample_rate_stable", "[SidechainFilter]")
+{
+    const double sampleRate = 384000.0;
+    const int numSamples = 8192;
+
+    SidechainFilter filter;
+    filter.prepare(sampleRate, numSamples);
+    filter.setHighPassFreq(200.0f);
+    filter.setLowPassFreq(15000.0f);
+
+    auto buf = makeSine(1000.0, 1.0, numSamples, sampleRate);
+    filter.process(buf);
+
+    // All output samples must be finite
+    const float* data = buf.getReadPointer(0);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("i=" << i << " val=" << data[i]);
+        REQUIRE(std::isfinite(data[i]));
+    }
+
+    // RMS should be reasonable (1kHz is well within passband)
+    double sum = 0.0;
+    for (int i = numSamples / 2; i < numSamples; ++i)
+        sum += static_cast<double>(data[i]) * data[i];
+    double measuredRms = std::sqrt(sum / (numSamples / 2));
+    REQUIRE(measuredRms > 0.01); // signal should pass through
+}

@@ -854,3 +854,75 @@ TEST_CASE("test_reset_clears_error_state", "[Dither]")
     REQUIRE(rmsA < bound);
     REQUIRE(rmsB < bound);
 }
+
+// ---------------------------------------------------------------------------
+// test_18bit_quantization_step
+// ---------------------------------------------------------------------------
+TEST_CASE("test_18bit_quantization_step", "[Dither]")
+{
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(18);
+    dither.setNoiseShaping(0);
+
+    const float step    = std::pow(2.0f, 1.0f - 18.0f);
+    const float epsilon = step * 0.01f;
+
+    const int numSamples = 1024;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = -1.0f + 2.0f * static_cast<float>(i) / static_cast<float>(numSamples - 1);
+
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(isQuantized(signal[i], step, epsilon));
+}
+
+// ---------------------------------------------------------------------------
+// test_20bit_quantization_step
+// ---------------------------------------------------------------------------
+TEST_CASE("test_20bit_quantization_step", "[Dither]")
+{
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(20);
+    dither.setNoiseShaping(0);
+
+    const float step    = std::pow(2.0f, 1.0f - 20.0f);
+    const float epsilon = step * 0.01f;
+
+    const int numSamples = 1024;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = -1.0f + 2.0f * static_cast<float>(i) / static_cast<float>(numSamples - 1);
+
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(isQuantized(signal[i], step, epsilon));
+}
+
+// ---------------------------------------------------------------------------
+// test_22bit_quantization_step
+// ---------------------------------------------------------------------------
+TEST_CASE("test_22bit_quantization_step", "[Dither]")
+{
+    Dither dither;
+    dither.prepare(kSampleRate);
+    dither.setBitDepth(22);
+    dither.setNoiseShaping(0);
+
+    const float step    = std::pow(2.0f, 1.0f - 22.0f);
+    const float epsilon = step * 0.01f;
+
+    const int numSamples = 1024;
+    std::vector<float> signal(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        signal[i] = -1.0f + 2.0f * static_cast<float>(i) / static_cast<float>(numSamples - 1);
+
+    dither.process(signal.data(), numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        REQUIRE(isQuantized(signal[i], step, epsilon));
+}
