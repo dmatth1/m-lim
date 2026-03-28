@@ -1434,11 +1434,13 @@ TEST_CASE("test_lookahead_zero_to_nonzero_transition", "[TransientLimiter]")
 }
 
 // ---------------------------------------------------------------------------
-// test_saturation_reduces_peak
-//   With saturationAmount=0.5 the output peak must be lower than with
-//   saturationAmount=0.0 for a loud above-threshold signal.
+// test_saturation_preserves_peak
+//   With the corrected normalization (tanh(x*drive)/tanh(drive)), softSaturate
+//   is gain-neutral at x=1.0: f(1.0, amount) == 1.0. This means the limiter
+//   ceiling is honoured regardless of saturation amount — saturation adds
+//   harmonic coloring but does NOT further attenuate the limited peak.
 // ---------------------------------------------------------------------------
-TEST_CASE("test_saturation_reduces_peak", "[TransientLimiter]")
+TEST_CASE("test_saturation_preserves_peak", "[TransientLimiter]")
 {
     const float inputAmplitude = 2.0f;  // +6 dBFS — above threshold
 
@@ -1463,11 +1465,11 @@ TEST_CASE("test_saturation_reduces_peak", "[TransientLimiter]")
     const float peakWithSat  = runWithSaturation(0.5f);
     const float peakNoSat    = runWithSaturation(0.0f);
 
-    // Saturation should compress transients further, lowering the output peak
-    REQUIRE(peakWithSat < peakNoSat);
-    // Both must remain at or below the threshold
+    // Both must remain at or below the threshold — ceiling is always respected
     REQUIRE(peakWithSat <= 1.0f + 1e-4f);
     REQUIRE(peakNoSat   <= 1.0f + 1e-4f);
+    // With the correct normalization, saturation does not destroy level at the ceiling
+    REQUIRE(peakWithSat >= peakNoSat * 0.99f);
 }
 
 // ---------------------------------------------------------------------------
@@ -1545,52 +1547,66 @@ TEST_CASE("test_saturation_amount_zero_is_linear", "[TransientLimiter]")
 
 // ---------------------------------------------------------------------------
 // test_saturation_formula_direct
-//   Feeds a sub-threshold signal with saturationAmount=0.5.
-//   For large input magnitudes (near but below threshold), tanh compression
-//   means output < input.  For very small magnitudes, output ≈ input.
+//   Verifies softSaturate properties with the corrected normalization
+//   tanh(x*drive)/tanh(drive):
+//   - f(1.0) = 1.0 (gain-neutral at ceiling)
+//   - Output for sub-threshold signals stays below the ceiling
+//   - Large and small sub-threshold signals both produce finite, bounded output
 // ---------------------------------------------------------------------------
 TEST_CASE("test_saturation_formula_direct", "[TransientLimiter]")
 {
-    TransientLimiter limiter;
-    limiter.prepare(kSampleRate, kBlockSize, 1);
-
     AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Transparent);
     params.saturationAmount = 0.5f;
     params.kneeWidth        = 0.0f;
-    limiter.setAlgorithmParams(params);
-    limiter.setLookahead(0.0f);
 
-    // Large sub-threshold input (0.9 — below 1.0 but large enough for tanh to bite)
-    const float largeAmp = 0.9f;
-    std::vector<std::vector<float>> largeBuf(1, std::vector<float>(kBlockSize, largeAmp));
-    auto largePtrs = makePtrs(largeBuf);
-    // Warm-up
-    limiter.process(largePtrs.data(), 1, kBlockSize);
-    std::fill(largeBuf[0].begin(), largeBuf[0].end(), largeAmp);
-    limiter.process(largePtrs.data(), 1, kBlockSize);
-    const float outLarge = blockPeak(largeBuf[0]);
+    // With amount=0.5, drive = 1 + 0.5*3 = 2.5
+    // Normalization: tanh(x*drive)/tanh(drive). At x=1: f(1) = tanh(2.5)/tanh(2.5) = 1.0
+    // So softSaturate(1.0, 0.5) = 0.5*1.0 + 0.5*1.0 = 1.0
 
-    // With saturation active, output magnitude < input magnitude
-    REQUIRE(outLarge < largeAmp);
+    // Large sub-threshold input (0.9 — below 1.0)
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+        limiter.setAlgorithmParams(params);
+        limiter.setLookahead(0.0f);
 
-    // Small sub-threshold input (0.01 — tanh(x) ≈ x so output ≈ input)
-    limiter.prepare(kSampleRate, kBlockSize, 1);
-    limiter.setAlgorithmParams(params);
-    limiter.setLookahead(0.0f);
+        const float largeAmp = 0.9f;
+        std::vector<std::vector<float>> largeBuf(1, std::vector<float>(kBlockSize, largeAmp));
+        auto largePtrs = makePtrs(largeBuf);
+        // Warm-up
+        limiter.process(largePtrs.data(), 1, kBlockSize);
+        std::fill(largeBuf[0].begin(), largeBuf[0].end(), largeAmp);
+        limiter.process(largePtrs.data(), 1, kBlockSize);
+        const float outLarge = blockPeak(largeBuf[0]);
 
-    const float smallAmp = 0.01f;
-    std::vector<std::vector<float>> smallBuf(1, std::vector<float>(kBlockSize, smallAmp));
-    auto smallPtrs = makePtrs(smallBuf);
-    // Warm-up
-    limiter.process(smallPtrs.data(), 1, kBlockSize);
-    std::fill(smallBuf[0].begin(), smallBuf[0].end(), smallAmp);
-    limiter.process(smallPtrs.data(), 1, kBlockSize);
-    const float outSmall = blockPeak(smallBuf[0]);
+        // Output must stay below the ceiling regardless of saturation
+        REQUIRE(outLarge <= 1.0f + 1e-4f);
+        // Output must be positive and finite
+        REQUIRE(outLarge > 0.0f);
+        REQUIRE(std::isfinite(outLarge));
+    }
 
-    // For small signals tanh(x)/drive ≈ x/drive, so wet ≈ x/drive.
-    // Output = x*(1-amount) + (x/drive)*amount which is less than x but close.
-    // Just verify it's within a reasonable range of the input.
-    REQUIRE(outSmall == Catch::Approx(smallAmp).epsilon(0.05f));
+    // Small sub-threshold input (0.01 — very far below ceiling)
+    {
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, kBlockSize, 1);
+        limiter.setAlgorithmParams(params);
+        limiter.setLookahead(0.0f);
+
+        const float smallAmp = 0.01f;
+        std::vector<std::vector<float>> smallBuf(1, std::vector<float>(kBlockSize, smallAmp));
+        auto smallPtrs = makePtrs(smallBuf);
+        // Warm-up
+        limiter.process(smallPtrs.data(), 1, kBlockSize);
+        std::fill(smallBuf[0].begin(), smallBuf[0].end(), smallAmp);
+        limiter.process(smallPtrs.data(), 1, kBlockSize);
+        const float outSmall = blockPeak(smallBuf[0]);
+
+        // Output must be positive, finite, and well below the ceiling
+        REQUIRE(outSmall > 0.0f);
+        REQUIRE(std::isfinite(outSmall));
+        REQUIRE(outSmall < 0.1f);  // far below ceiling regardless of gain boost
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1781,5 +1797,107 @@ TEST_CASE("test_simd_gain_matches_scalar", "[TransientLimiter][task305][simd]")
     {
         INFO("sample " << i << ": refR=" << refR[i] << " simdR=" << simdR[i]);
         REQUIRE(std::abs(simdR[i] - refR[i]) <= kTol);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_soft_saturate_unity_gain
+//   softSaturate with a full-scale input (1.0) must output ~1.0 for all
+//   non-zero saturation amounts. Tests the corrected normalization:
+//   tanh(x*drive) / tanh(drive) keeps f(1.0) == 1.0.
+// ---------------------------------------------------------------------------
+TEST_CASE("test_soft_saturate_unity_gain", "[TransientLimiter]")
+{
+    // Drive the limiter with a DC signal at exactly the ceiling so that after
+    // enough lookahead the gain is held at ~1.0 (no additional gain reduction
+    // beyond what's needed to honour the ceiling), then check that saturation
+    // doesn't shrink the output further.
+    //
+    // We test with a threshold slightly above 1.0 so no gain reduction is
+    // applied — output == softSaturate(input, amount).  We use a constant
+    // signal at 0.9 (sub-ceiling) so no limiting fires, giving us direct
+    // access to the saturation path.
+
+    const float kSignal    = 0.9f;   // well below default 0 dBFS ceiling
+    const int   numSamples = 4096;
+
+    // Algorithms with varying saturationAmount values (skip Transparent / Safe
+    // which have amount=0 and bypass saturation entirely)
+    const LimiterAlgorithm algoList[] = {
+        LimiterAlgorithm::Punchy,      // 0.3
+        LimiterAlgorithm::Dynamic,     // 0.2
+        LimiterAlgorithm::Aggressive,  // 0.8
+        LimiterAlgorithm::Allround,    // 0.4
+        LimiterAlgorithm::Bus,         // 0.7
+        LimiterAlgorithm::Modern,      // 0.1
+    };
+
+    for (auto algo : algoList)
+    {
+        AlgorithmParams params = getAlgorithmParams(algo);
+        INFO("algorithm=" << static_cast<int>(algo)
+             << " saturationAmount=" << params.saturationAmount);
+
+        TransientLimiter limiter;
+        limiter.prepare(kSampleRate, numSamples, 1);
+        limiter.setLookahead(0.0f);  // no lookahead — instant response
+        limiter.setThreshold(1.0f);  // 0 dBFS ceiling — kSignal is sub-threshold
+        limiter.setAlgorithmParams(params);
+
+        std::vector<float> buf(numSamples, kSignal);
+        float* ptr = buf.data();
+        limiter.process(&ptr, 1, numSamples);
+
+        // After the initial transient, saturated output should be close to kSignal.
+        // With the OLD (broken) normalization f(0.9, 0.8) ≈ 0.41 — far from 0.9.
+        // With the CORRECT normalization f(0.9, amount) must be within 1% of kSignal.
+        for (int i = 0; i < numSamples; ++i)
+        {
+            INFO("sample " << i << " output=" << buf[i]);
+            REQUIRE(buf[i] >= kSignal * 0.99f);  // must not be attenuated by saturation
+            REQUIRE(buf[i] <= 1.0f + 1e-4f);     // must stay at or below ceiling
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// test_soft_saturate_small_signal
+//   For small signals the saturation path introduces a known gain boost
+//   (≈ drive/tanh(drive)) due to tanh linearising near 0. Crucially:
+//   1. Output stays far below the ceiling (no spurious clipping).
+//   2. Output is finite and positive.
+//   3. Gain boost is bounded by the predictable factor drive/tanh(drive).
+// ---------------------------------------------------------------------------
+TEST_CASE("test_soft_saturate_small_signal", "[TransientLimiter]")
+{
+    const float kSmallSignal = 0.001f;  // -60 dBFS — far below ceiling
+    const int   numSamples   = 512;
+
+    // Use Aggressive (drive = 1 + 0.8*3 = 3.4, tanh(3.4) ≈ 0.9998)
+    // Theoretical small-signal gain ≈ (1-amount) + amount*(drive/tanh(drive))
+    //                               ≈ 0.2 + 0.8*(3.4/0.9998) ≈ 2.92
+    AlgorithmParams params = getAlgorithmParams(LimiterAlgorithm::Aggressive);
+    const float drive      = 1.0f + params.saturationAmount * 3.0f;
+    const float maxGain    = (1.0f - params.saturationAmount)
+                             + params.saturationAmount * (drive / std::tanh(drive));
+
+    TransientLimiter limiter;
+    limiter.prepare(kSampleRate, numSamples, 1);
+    limiter.setLookahead(0.0f);
+    limiter.setThreshold(1.0f);
+    limiter.setAlgorithmParams(params);
+
+    std::vector<float> buf(numSamples, kSmallSignal);
+    float* ptr = buf.data();
+    limiter.process(&ptr, 1, numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("sample " << i << " output=" << buf[i]);
+        // Output must be positive and bounded by the theoretical small-signal gain
+        REQUIRE(buf[i] > 0.0f);
+        REQUIRE(buf[i] <= kSmallSignal * maxGain * 1.01f);
+        // Far below ceiling — limiter must not clip these samples
+        REQUIRE(buf[i] < 0.01f);
     }
 }

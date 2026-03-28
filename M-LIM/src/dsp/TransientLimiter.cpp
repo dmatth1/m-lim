@@ -218,9 +218,10 @@ float TransientLimiter::softSaturate(float x, float amount)
     if (amount < 0.001f)
         return x;
 
-    // Drive > 1 increases soft-clipping effect; blend with dry by (1-amount)
+    // Drive > 1 increases soft-clipping effect; blend with dry by (1-amount).
+    // Normalize so f(1.0) == 1.0: divide by tanh(drive), not drive.
     const float drive = 1.0f + amount * 3.0f;
-    const float wet   = std::tanh(x * drive) / drive;
+    const float wet   = std::tanh(x * drive) / std::tanh(drive);
     return x * (1.0f - amount) + wet * amount;
 }
 
