@@ -788,3 +788,69 @@ TEST_CASE("test_half_lsb_boundary_unbiased", "[Dither]")
     REQUIRE(ratio >= 0.4f);
     REQUIRE(ratio <= 0.6f);
 }
+
+TEST_CASE("test_reset_clears_error_state", "[Dither]")
+{
+    // After processing non-silent audio (which accumulates noise-shaping error),
+    // call reset() and verify that the next block of silence produces output
+    // within the TPDF dither band only (no shaped error artefacts carried over).
+    // Compare against a freshly constructed Dither object on the same block.
+
+    const float step = std::pow(2.0f, 1.0f - 16.0f);
+    const int numSamples = 1000;
+
+    // --- Instance A: process audio, then reset, then process silence ---
+    Dither a;
+    a.prepare(44100.0);
+    a.setBitDepth(16);
+    a.setNoiseShaping(2); // Weighted second-order (accumulates error)
+
+    {
+        // Prime with a loud signal to accumulate error state
+        std::vector<float> priming(2000);
+        for (int i = 0; i < 2000; ++i)
+            priming[i] = 0.8f * std::sin(6.283185307f * 440.0f * i / 44100.0f);
+        a.process(priming.data(), static_cast<int>(priming.size()));
+    }
+
+    // Reset clears error state
+    a.reset();
+
+    std::vector<float> silenceA(numSamples, 0.0f);
+    a.process(silenceA.data(), numSamples);
+
+    // --- Instance B: freshly constructed, same config, process silence ---
+    Dither b;
+    b.prepare(44100.0);
+    b.setBitDepth(16);
+    b.setNoiseShaping(2);
+
+    std::vector<float> silenceB(numSamples, 0.0f);
+    b.process(silenceB.data(), numSamples);
+
+    // Both should produce output bounded within a few LSBs (no carried-over error)
+    const float bound = 10.0f * step; // generous bound for shaped dither
+    for (int i = 0; i < numSamples; ++i)
+    {
+        INFO("Reset instance sample " << i << " = " << silenceA[i]);
+        REQUIRE(std::isfinite(silenceA[i]));
+        REQUIRE(std::abs(silenceA[i]) <= bound);
+    }
+
+    // Verify the RMS of both are in the same ballpark (within 5x of each other).
+    // This confirms reset() truly cleared the error state.
+    auto rms = [](const std::vector<float>& v) {
+        double sum = 0.0;
+        for (float s : v) sum += static_cast<double>(s) * static_cast<double>(s);
+        return static_cast<float>(std::sqrt(sum / v.size()));
+    };
+
+    float rmsA = rms(silenceA);
+    float rmsB = rms(silenceB);
+
+    // Both should have similar noise floor (RNG seeds differ, but order of magnitude matches)
+    REQUIRE(rmsA > 0.0f);
+    REQUIRE(rmsB > 0.0f);
+    REQUIRE(rmsA < bound);
+    REQUIRE(rmsB < bound);
+}

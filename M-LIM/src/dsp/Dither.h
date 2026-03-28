@@ -20,8 +20,13 @@ public:
     Dither() = default;
 
     /** Call before processing or when sample rate changes.
-     *  Selects noise shaping coefficients and resets error state. */
+     *  Selects noise shaping coefficients and resets error state.
+     *  For stream reset without reconfiguring, call reset() instead. */
     void prepare(double sampleRate);
+
+    /** Clear runtime state (error history) without recomputing coefficients.
+     *  Use this for stream resets when sample rate hasn't changed. */
+    void reset() noexcept;
 
     /** Process samples in-place, quantizing to target bit depth with dither. */
     void process(float* data, int numSamples);

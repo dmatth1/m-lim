@@ -119,9 +119,9 @@ void LimiterEngine::reset()
     for (auto& dcf : mDCFilters)
         dcf.reset();
 
-    // Dither state — re-prepare to clear noise-shaping error buffers
+    // Dither state — clear noise-shaping error buffers without recomputing coefficients
     for (auto& d : mDithers)
-        d.prepare(mSampleRate);
+        d.reset();
 
     // Sidechain filter — clear IIR state without reallocating coefficients
     mSidechainFilter.reset();

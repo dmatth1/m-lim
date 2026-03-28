@@ -40,6 +40,12 @@ void Dither::prepare(double sampleRate)
     mError2 = 0.0f;
 }
 
+void Dither::reset() noexcept
+{
+    mError1 = 0.0f;
+    mError2 = 0.0f;
+}
+
 void Dither::setBitDepth(int bits)
 {
     mBitDepth = bits;
