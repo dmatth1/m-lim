@@ -1,4 +1,4 @@
-# Fix GR Meter Overestimation from Summed Per-Block Stage Minimums
+# Task 487: Fix GR Meter Overestimation from Combined Stages
 
 ## Description
 

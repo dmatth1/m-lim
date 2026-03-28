@@ -1,4 +1,4 @@
-# Task: LockFreeFIFO — Capacity Zero and Concurrent Stress Edge Cases
+# Task 495: LockFreeFIFO — Capacity-Zero and Concurrent Integrity Tests
 
 ## Description
 The existing `LockFreeFIFO` tests cover: push/pop ordering, concurrent producer/consumer,

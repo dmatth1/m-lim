@@ -1,4 +1,4 @@
-# Task: Fix Internal Bypass Skipping Lookahead Delay (DAW Track Misalignment)
+# Task 488: Fix Internal Bypass Skips Lookahead Delay
 
 ## Description
 When the plugin's internal bypass button is engaged (`pBypass` parameter = true),

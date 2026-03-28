@@ -1,4 +1,4 @@
-# Task: LimiterEngine — Extreme Input Gain Boundary Tests
+# Task 494: LimiterEngine — Extreme Input Gain Boundary Tests
 
 ## Description
 `LimiterEngine::setInputGain(float dB)` has no range clamping: it converts dB to linear

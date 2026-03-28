@@ -1,4 +1,4 @@
-# Task: Fix Channel Link Parameter Unit Mismatch (0–100% vs 0–1)
+# Task 486: Fix Channel Link Parameter Unit Mismatch (0–100% vs 0–1)
 
 ## Description
 The APVTS parameters `channelLinkTransients` and `channelLinkRelease` are defined in

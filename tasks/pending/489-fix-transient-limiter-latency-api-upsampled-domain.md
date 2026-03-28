@@ -1,4 +1,4 @@
-# Fix TransientLimiter::getLatencyInSamples() Upsampled-Domain Ambiguity
+# Task 489: Fix TransientLimiter Latency API Returns Upsampled-Domain Value
 
 ## Description
 

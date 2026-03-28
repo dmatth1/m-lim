@@ -1,4 +1,4 @@
-# Task: LimiterEngine — Channel Count Mismatch Handling Tests
+# Task 493: LimiterEngine — Channel Count Mismatch Tests
 
 ## Description
 `LimiterEngine::prepare(sampleRate, maxBlockSize, numChannels)` allocates internal buffers

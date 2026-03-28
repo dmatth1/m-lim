@@ -1,4 +1,4 @@
-# Task: Persist ABState Snapshots in getStateInformation / setStateInformation
+# Task 490: Persist A/B State Snapshots in Session State
 
 ## Description
 `MLIMAudioProcessor::getStateInformation()` only serializes the APVTS state:

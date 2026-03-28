@@ -1,4 +1,4 @@
-# Task: Parameters — Duplicate Parameter ID Detection Test
+# Task 496: Parameters — Unique Parameter ID Tests
 
 ## Description
 `Parameters::createParameterLayout()` defines all APVTS parameters with string IDs.

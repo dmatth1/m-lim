@@ -1,4 +1,4 @@
-# Task: DCFilter — Cutoff Frequency Characterization Tests
+# Task 491: DCFilter — Cutoff Frequency Characterization Tests
 
 ## Description
 `DCFilter` is documented as a first-order high-pass with ~5 Hz cutoff

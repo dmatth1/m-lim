@@ -1,4 +1,4 @@
-# Task: Dither — Invalid Noise Shaping Mode Robustness Tests
+# Task 492: Dither — Invalid Noise Shaping Mode Robustness Tests
 
 ## Description
 `Dither::setNoiseShaping()` accepts any integer but has no clamping/validation:
