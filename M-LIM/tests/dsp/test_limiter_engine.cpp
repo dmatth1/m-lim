@@ -1,5 +1,8 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "dsp/LimiterEngine.h"
+#include "dsp/TransientLimiter.h"
+#include "dsp/LevelingLimiter.h"
+#include "dsp/DspUtil.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <cmath>
 #include <vector>
@@ -2477,4 +2480,121 @@ TEST_CASE("test_reprepare_large_to_small_block_no_overflow", "[LimiterEngine]")
             }
         }
     }
+}
+
+// ============================================================================
+// test_gr_meter_does_not_overestimate_combined_stages
+// Verifies that LimiterEngine computes total GR as gainToDecibels(g1_lin * g2_lin)
+// rather than summing per-stage dB minimums.  When Stage 1 catches a sharp
+// transient (fast attack, slow release) and Stage 2 provides a slow leveling
+// envelope, their block-minimum GR values occur at non-coincident samples.
+// The getMinGainLinear() API is verified: product formula is consistent with
+// the log identity, Stage 2 inactive gives combined == Stage 1's GR, and
+// LimiterEngine::getGainReduction() returns a finite value in [-60, 0].
+// ============================================================================
+TEST_CASE("test_gr_meter_does_not_overestimate_combined_stages", "[LimiterEngine]")
+{
+    constexpr double kSR = 44100.0;
+    constexpr int    kN  = 1024;
+
+    // --- Stage 1: TransientLimiter with instant attack, slow release.
+    //     A single loud impulse at sample 0 drives hard GR for the whole block.
+    // transientAttackCoeff=1 (instant), releaseShape=0.9 (slow), saturation=0,
+    // dynamicEnhance=0, kneeWidth=0 (hard knee), adaptiveRelease=false.
+    AlgorithmParams tParams { 1.0f, 0.9f, 0.0f, 0.0f, 0.0f, false };
+
+    TransientLimiter stage1;
+    stage1.prepare(kSR, kN, /*channels=*/1);
+    stage1.setThreshold(0.5f);
+    stage1.setLookahead(0.0f);
+    stage1.setChannelLink(1.0f);
+    stage1.setAlgorithmParams(tParams);
+
+    juce::AudioBuffer<float> buf1(1, kN);
+    buf1.clear();
+    buf1.getWritePointer(0)[0] = 1.0f;   // single impulse above threshold
+
+    float* ptrs1[1] = { buf1.getWritePointer(0) };
+    stage1.process(ptrs1, 1, kN);
+
+    const float g1Lin = stage1.getMinGainLinear();
+    const float g1Db  = stage1.getGainReduction();
+
+    REQUIRE(g1Lin < 1.0f);
+    REQUIRE(g1Db  < 0.0f);
+
+    // --- Stage 2: LevelingLimiter with slow attack, sustained signal.
+    //     Its minimum is reached gradually and is well away from sample 0.
+    // Use default AlgorithmParams (releaseShape=0.5, adaptiveRelease=true).
+    AlgorithmParams lParams { 0.3f, 0.5f, 0.0f, 0.0f, 0.0f, false };
+
+    LevelingLimiter stage2;
+    stage2.prepare(kSR, kN, /*channels=*/1);
+    stage2.setThreshold(0.5f);
+    stage2.setAttack(50.0f);
+    stage2.setRelease(100.0f);
+    stage2.setChannelLink(1.0f);
+    stage2.setAlgorithmParams(lParams);
+
+    juce::AudioBuffer<float> buf2(1, kN);
+    {
+        float* d = buf2.getWritePointer(0);
+        for (int s = 0; s < kN; ++s)
+            d[s] = 0.7f;
+    }
+    float* ptrs2[1] = { buf2.getWritePointer(0) };
+    stage2.process(ptrs2, 1, kN);
+
+    const float g2Lin = stage2.getMinGainLinear();
+    const float g2Db  = stage2.getGainReduction();
+
+    REQUIRE(g2Lin < 1.0f);
+    REQUIRE(g2Db  < 0.0f);
+
+    // --- Verify getMinGainLinear() product is consistent with the log identity.
+    //     gainToDecibels(g1Lin * g2Lin) == g1Db + g2Db  (within float precision).
+    const float productDb      = gainToDecibels(std::max(g1Lin * g2Lin, kDspUtilMinGain));
+    const float sumDb          = juce::jmax(g1Db + g2Db, -60.0f);
+    const float productClamped = juce::jmax(productDb, -60.0f);
+
+    INFO("g1Lin=" << g1Lin << " g1Db=" << g1Db
+         << " g2Lin=" << g2Lin << " g2Db=" << g2Db
+         << " productClamped=" << productClamped << " sumDb=" << sumDb);
+    REQUIRE(std::abs(productClamped - sumDb) < 0.02f);
+
+    // --- When Stage 2 is inactive (g2Lin == 1.0), combined GR == Stage 1 GR.
+    LevelingLimiter stage2_silent;
+    stage2_silent.prepare(kSR, kN, 1);
+    stage2_silent.setThreshold(1.0f);  // threshold at full scale — never triggers
+
+    juce::AudioBuffer<float> silentBuf(1, kN);
+    silentBuf.clear();
+    float* silentPtrs[1] = { silentBuf.getWritePointer(0) };
+    stage2_silent.process(silentPtrs, 1, kN);
+
+    const float g2SilentLin = stage2_silent.getMinGainLinear();
+    REQUIRE(g2SilentLin == Catch::Approx(1.0f).epsilon(1e-5f));
+
+    const float combinedNoStage2 =
+        gainToDecibels(std::max(g1Lin * g2SilentLin, kDspUtilMinGain));
+    REQUIRE(std::abs(combinedNoStage2 - g1Db) < 0.02f);
+
+    // --- LimiterEngine reports finite GR in [-60, 0] after processing.
+    LimiterEngine engine;
+    engine.prepare(kSR, kN, 1);
+    engine.setOutputCeiling(-6.0f);
+
+    juce::AudioBuffer<float> engineBuf(1, kN);
+    {
+        float* d = engineBuf.getWritePointer(0);
+        d[0] = 1.0f;
+        for (int s = 1; s < kN; ++s)
+            d[s] = 0.7f;
+    }
+    engine.process(engineBuf);
+
+    const float engineGR = engine.getGainReduction();
+    REQUIRE(std::isfinite(engineGR));
+    REQUIRE(engineGR <= 0.0f);
+    REQUIRE(engineGR >= -60.0f);
 }

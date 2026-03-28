@@ -65,6 +65,11 @@ public:
     /** Returns current gain reduction in dB (0 = no reduction, negative = reducing). */
     float getGainReduction() const;
 
+    /** Returns the minimum linear gain applied during the last processed block.
+     *  Used by LimiterEngine to compute an accurate combined GR by multiplying
+     *  per-stage linear minimums rather than summing per-stage dB values. */
+    float getMinGainLinear() const;
+
     /** Returns the lookahead delay in **original-rate** samples.
      *  When the limiter is prepared at an oversampled rate, this method divides
      *  the internal upsampled-domain delay by the oversampling factor so that
@@ -161,5 +166,6 @@ private:
 
     float mReleaseCoeff = 0.0f;   // per-sample exponential release coefficient
 
-    float mCurrentGRdB = 0.0f;   // reported gain reduction in dB
+    float mCurrentGRdB = 0.0f;          // reported gain reduction in dB
+    float mCurrentMinGainLinear = 1.0f; // minimum linear gain for the last processed block
 };

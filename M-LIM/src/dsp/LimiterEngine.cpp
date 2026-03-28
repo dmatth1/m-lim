@@ -245,7 +245,8 @@ void LimiterEngine::process(juce::AudioBuffer<float>& buffer)
     stepDither(buffer, numChannels, numSamples);
     stepEnforceTruePeak(buffer, numChannels, numSamples, ceiling);
     stepDeltaMode(buffer, numChannels, numSamples);
-    const float totalGR = juce::jmax(mTransientLimiter.getGainReduction() + mLevelingLimiter.getGainReduction(), -60.0f);
+    const float combinedMinGain = mTransientLimiter.getMinGainLinear() * mLevelingLimiter.getMinGainLinear();
+    const float totalGR = juce::jmax(gainToDecibels(std::max(combinedMinGain, kDspUtilMinGain)), -60.0f);
     snapAndPushMeterData(buffer, inLevelL, inLevelR, totalGR, numChannels, numSamples);
 }
 

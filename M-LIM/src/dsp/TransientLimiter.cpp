@@ -49,6 +49,7 @@ void TransientLimiter::prepare(double operatingSampleRate, int /*maxBlockSize*/,
     mReleaseCoeff = std::exp(-1.0f / (releaseMs * 0.001f * static_cast<float>(operatingSampleRate)));
 
     mCurrentGRdB = 0.0f;
+    mCurrentMinGainLinear = 1.0f;
 
     // Apply current params to update release coeff
     setAlgorithmParams(mParams);
@@ -120,6 +121,14 @@ float TransientLimiter::getGainReduction() const
 }
 
 // ---------------------------------------------------------------------------
+// getMinGainLinear
+// ---------------------------------------------------------------------------
+float TransientLimiter::getMinGainLinear() const
+{
+    return mCurrentMinGainLinear;
+}
+
+// ---------------------------------------------------------------------------
 // getLatencyInSamples
 // ---------------------------------------------------------------------------
 int TransientLimiter::getLatencyInSamples() const
@@ -151,6 +160,7 @@ void TransientLimiter::resetCounters(int64_t startOffset)
     // Clear gain and GR state so no GR carries over after reset
     std::fill(mGainState.begin(), mGainState.end(), 1.0f);
     mCurrentGRdB = 0.0f;
+    mCurrentMinGainLinear = 1.0f;
 
     // Clear lookahead delay buffers
     for (auto& buf : mDelayBuffers)
@@ -275,6 +285,7 @@ void TransientLimiter::processBypassDelay(float** channelData, int numChannels, 
     // Keep gain state at unity (no GR in bypass)
     std::fill(mGainState.begin(), mGainState.begin() + chCount, 1.0f);
     mCurrentGRdB = 0.0f;
+    mCurrentMinGainLinear = 1.0f;
 }
 
 // ---------------------------------------------------------------------------
@@ -540,7 +551,8 @@ void TransientLimiter::process(float** channelData, int numChannels, int numSamp
     }
 
     // Update reported GR (convert minimum gain this block to dB)
+    mCurrentMinGainLinear = std::max(minGain, kDspUtilMinGain);
     mCurrentGRdB = (minGain < 1.0f)
-                       ? gainToDecibels(std::max(minGain, kDspUtilMinGain))
+                       ? gainToDecibels(mCurrentMinGainLinear)
                        : 0.0f;
 }

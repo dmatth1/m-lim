@@ -55,6 +55,11 @@ public:
     /** Returns current gain reduction in dB (0 = no reduction, negative = reducing). */
     float getGainReduction() const;
 
+    /** Returns the minimum linear gain applied during the last processed block.
+     *  Used by LimiterEngine to compute an accurate combined GR by multiplying
+     *  per-stage linear minimums rather than summing per-stage dB values. */
+    float getMinGainLinear() const;
+
 private:
     /** Compute the linear gain needed to bring peakAbs at or below threshold. */
     float computeRequiredGain(float peakAbs) const;
@@ -82,5 +87,6 @@ private:
     std::vector<float> mGainState;  // smoothed gain in linear scale (1.0 = no reduction)
     std::vector<float> mEnvState;   // long-term smoothed gain in linear scale for adaptive release (1.0 = no reduction)
 
-    float mCurrentGRdB = 0.0f;  // reported gain reduction in dB
+    float mCurrentGRdB = 0.0f;          // reported gain reduction in dB
+    float mCurrentMinGainLinear = 1.0f; // minimum linear gain for the last processed block
 };

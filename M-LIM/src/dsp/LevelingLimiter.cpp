@@ -24,6 +24,7 @@ void LevelingLimiter::prepare(double sampleRate, int /*maxBlockSize*/, int numCh
     updateCoefficients();
 
     mCurrentGRdB = 0.0f;
+    mCurrentMinGainLinear = 1.0f;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,7 @@ void LevelingLimiter::reset()
     std::fill(mGainState.begin(), mGainState.end(), 1.0f);
     std::fill(mEnvState.begin(),  mEnvState.end(),  1.0f);
     mCurrentGRdB = 0.0f;
+    mCurrentMinGainLinear = 1.0f;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,14 @@ void LevelingLimiter::setAlgorithmParams(const AlgorithmParams& params)
 float LevelingLimiter::getGainReduction() const
 {
     return mCurrentGRdB;
+}
+
+// ---------------------------------------------------------------------------
+// getMinGainLinear
+// ---------------------------------------------------------------------------
+float LevelingLimiter::getMinGainLinear() const
+{
+    return mCurrentMinGainLinear;
 }
 
 // ---------------------------------------------------------------------------
@@ -308,7 +318,8 @@ void LevelingLimiter::process(float** channelData, int numChannels, int numSampl
         }
     }
 
+    mCurrentMinGainLinear = std::max(minGain, kDspUtilMinGain);
     mCurrentGRdB = (minGain < 1.0f)
-                       ? gainToDecibels(minGain)
+                       ? gainToDecibels(mCurrentMinGainLinear)
                        : 0.0f;
 }
